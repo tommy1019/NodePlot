@@ -189,8 +189,8 @@ int main(int argc, char** argv) {
                                     node.pos.second + render_node_graph.scene_translation.y,
                                 },
                                 ImGuiCond_Always);
-                            ImGui::BeginChild(std::to_string(node.id).c_str(), {0, 0}, ImGuiChildFlags_FrameStyle | ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None);
-                            {
+                            if (ImGui::BeginChild(
+                                    std::to_string(node.id).c_str(), {0, 0}, ImGuiChildFlags_FrameStyle | ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None)) {
 
                                 if (ImGui::IsWindowHovered()) {
                                     if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
