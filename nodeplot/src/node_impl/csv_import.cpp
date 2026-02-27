@@ -21,6 +21,11 @@ ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const CSVImportNode& 
         return ERR("Input CSV file does not exist");
     }
 
+    if (std::filesystem::is_directory(source_path)) {
+        std::print("Trying to load: {}\n", source_path.c_str());
+        return ERR("Input CSV file is a directory");
+    }
+
     auto file_size = std::filesystem::file_size(source_path);
 
     int fd = open(source_path.c_str(), O_RDWR);
