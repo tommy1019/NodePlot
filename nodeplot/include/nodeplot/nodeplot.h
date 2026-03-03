@@ -61,6 +61,13 @@ struct MappedFile {
     ~MappedFile();
 };
 
+struct ColumnName {
+    std::string name;
+
+    friend void to_json(nlohmann::json& json, const ColumnName& c) { json = c.name; }
+    friend void from_json(const nlohmann::json& json, ColumnName& c) { json.get_to(c.name); }
+};
+
 // TODO: Use shared_ptr to maybe make the column storage copy on write
 struct Column {
     std::shared_ptr<MappedFile> mapped_file;
@@ -139,7 +146,7 @@ struct Graph {
 
 struct EvaluatedNodeGraph;
 
-using NodeOutput = std::variant<Table, Column, Series, GraphStyle, Graph, std::string, std::filesystem::path, Margins, Color, bool, double, int32_t>;
+using NodeOutput = std::variant<Table, ColumnName, Column, Series, GraphStyle, Graph, std::string, std::filesystem::path, Margins, Color, bool, double, int32_t>;
 
 struct BaseNode {
     NodeId id;
@@ -167,7 +174,7 @@ struct CSVImportNode : public BaseNode {
 
 struct FilterTableNode : public BaseNode {
     InputPin<Table> i_table;
-    Input<std::string> i_column_name;
+    Input<ColumnName> i_column_name;
     Input<int32_t> i_compare_type;
     Input<std::string> i_compare_value;
     Input<bool> i_numeric_compare;
@@ -189,7 +196,7 @@ struct FilterTableNode : public BaseNode {
 
 struct ColumnSelectNode : public BaseNode {
     InputPin<Table> i_table;
-    Input<std::string> i_column_name;
+    Input<ColumnName> i_column_name;
 
     static std::string name() { return "Column Select"; }
     static std::string type() { return "column_select"; }

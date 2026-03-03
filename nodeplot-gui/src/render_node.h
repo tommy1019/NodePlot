@@ -155,6 +155,53 @@ void node_generic_render(RenderNodeGraph* rng, const char* window_title, auto no
                 ImGui::SetNextItemWidth(200);
                 return ImGui::InputText(input_id, &input, ImGuiInputTextFlags_None);
             },
+            [&](const char* input_id, ColumnName& input) {
+                ImGui::SetNextItemWidth(200);
+                bool res = false;
+                res |= ImGui::InputText(input_id, &input.name, ImGuiInputTextFlags_None);
+
+                std::apply(
+                    [&](auto&&... args) {
+                        (
+                            // TODO: Should probabaly check for something other than table
+                            [&]() {
+                                if (std::get<1>(args) == "table") {
+                                    overloaded{
+                                        [&]<typename T>(InputPin<T> pin) {
+                                            if (auto lng = rng->eval_node_graph.loaded_nodes.find(pin.node); lng != rng->eval_node_graph.loaded_nodes.end()) {
+                                                if (auto v = lng->second.cache.find(pin.output_index); v != lng->second.cache.end()) {
+                                                    std::visit(overloaded{
+                                                                   [&](Table t) {
+                                                                       ImGui::SameLine();
+                                                                       ImGui::SetNextItemWidth(ImGui::GetFrameHeight());
+                                                                       if (ImGui::BeginCombo("##choose_column", "")) {
+
+                                                                           for (auto n : t.column_names) {
+                                                                               if (ImGui::Selectable(n.c_str(), false)) {
+                                                                                   input.name = n;
+                                                                                   res = true;
+                                                                               }
+                                                                           }
+
+                                                                           ImGui::EndCombo();
+                                                                       }
+                                                                   },
+                                                                   [](auto) {},
+                                                               },
+                                                               v->second);
+                                                }
+                                            }
+                                        },
+                                        [](auto) {},
+                                    }(std::get<0>(args));
+                                };
+                            }(),
+                            ...);
+                    },
+                    node.inputs());
+
+                return res;
+            },
             [&](const char* input_id, std::filesystem::path& input) {
                 ImGui::SetNextItemWidth(200);
                 bool text_input = ImGui::InputText(input_id, const_cast<std::string*>(&input.native()), ImGuiInputTextFlags_None);

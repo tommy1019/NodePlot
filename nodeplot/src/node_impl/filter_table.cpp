@@ -10,7 +10,7 @@ ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const FilterTableNode
     auto numeric_compare = TRY_OR(graph->get_input(node.i_numeric_compare), return ERR("Could not get 'Numeric Compare' input"));
     auto compare_value = TRY_OR(graph->get_input(node.i_compare_value), return ERR("Could not get 'Compare Value' input"));
 
-    auto compare_col = table.columns.find(column_name);
+    auto compare_col = table.columns.find(column_name.name);
     if (compare_col == table.columns.end())
         return ERR("No column by the specified name found");
 
