@@ -148,22 +148,6 @@ struct BaseNode {
     std::pair<float, float> pos = {};
 };
 
-#define DEPENDENT_NODE_LIST_START                                                                                                                                                                      \
-    std::vector<NodeId> dependent_nodes() {                                                                                                                                                            \
-        std::vector<NodeId> res;
-
-#define DEPENDENT_NODE_LIST_INPUT(type, name)                                                                                                                                                          \
-    if (std::holds_alternative<InputPin<type>>(name) && std::get<InputPin<type>>(name).node >= 0)                                                                                                      \
-        res.push_back(std::get<InputPin<type>>(name).node);
-
-#define DEPENDENT_NODE_LIST_INPUT_PIN(name)                                                                                                                                                            \
-    if (name.node >= 0)                                                                                                                                                                                \
-        res.push_back(name.node);
-
-#define DEPENDENT_NODE_LIST_END                                                                                                                                                                        \
-    return res;                                                                                                                                                                                        \
-    }
-
 struct CSVImportNode : public BaseNode {
     Input<std::filesystem::path> i_source_path;
     Input<bool> i_has_headers = true;
@@ -180,11 +164,6 @@ struct CSVImportNode : public BaseNode {
     }
 
     constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputId{0}, "table_data", "Table Data")); }
-
-    DEPENDENT_NODE_LIST_START
-    DEPENDENT_NODE_LIST_INPUT(std::filesystem::path, i_source_path);
-    DEPENDENT_NODE_LIST_INPUT(bool, i_has_headers);
-    DEPENDENT_NODE_LIST_END
 };
 
 struct FilterTableNode : public BaseNode {
@@ -207,14 +186,6 @@ struct FilterTableNode : public BaseNode {
     }
 
     constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputId{0}, "table", "Table")); }
-
-    DEPENDENT_NODE_LIST_START
-    DEPENDENT_NODE_LIST_INPUT_PIN(i_table)
-    DEPENDENT_NODE_LIST_INPUT(std::string, i_column_name);
-    DEPENDENT_NODE_LIST_INPUT(int32_t, i_compare_type);
-    DEPENDENT_NODE_LIST_INPUT(std::string, i_compare_value);
-    DEPENDENT_NODE_LIST_INPUT(bool, i_numeric_compare);
-    DEPENDENT_NODE_LIST_END
 };
 
 struct ColumnSelectNode : public BaseNode {
@@ -230,11 +201,6 @@ struct ColumnSelectNode : public BaseNode {
     }
 
     constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputId{0}, "column", "Column")); }
-
-    DEPENDENT_NODE_LIST_START
-    DEPENDENT_NODE_LIST_INPUT_PIN(i_table)
-    DEPENDENT_NODE_LIST_INPUT(std::string, i_column_name);
-    DEPENDENT_NODE_LIST_END
 };
 
 struct SampledPropertyExtractNode : public BaseNode {
@@ -254,11 +220,6 @@ struct SampledPropertyExtractNode : public BaseNode {
                                std::make_tuple(OutputId{0}, "stdev", "Standard Deviation"),
                                std::make_tuple(OutputId{0}, "max", "Maximum"));
     }
-
-    DEPENDENT_NODE_LIST_START
-    DEPENDENT_NODE_LIST_INPUT_PIN(i_x)
-    DEPENDENT_NODE_LIST_INPUT_PIN(i_y)
-    DEPENDENT_NODE_LIST_END
 };
 
 struct ScatterSeriesCreateNode : public BaseNode {
@@ -279,13 +240,6 @@ struct ScatterSeriesCreateNode : public BaseNode {
     }
 
     constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputId{0}, "series", "Series")); }
-
-    DEPENDENT_NODE_LIST_START
-    DEPENDENT_NODE_LIST_INPUT_PIN(i_x)
-    DEPENDENT_NODE_LIST_INPUT_PIN(i_y)
-    DEPENDENT_NODE_LIST_INPUT(Color, i_color)
-    DEPENDENT_NODE_LIST_INPUT(double, i_point_size)
-    DEPENDENT_NODE_LIST_END
 };
 
 struct LineSeriesCreateNode : public BaseNode {
@@ -306,13 +260,6 @@ struct LineSeriesCreateNode : public BaseNode {
     }
 
     constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputId{0}, "series", "Series")); }
-
-    DEPENDENT_NODE_LIST_START
-    DEPENDENT_NODE_LIST_INPUT_PIN(i_x)
-    DEPENDENT_NODE_LIST_INPUT_PIN(i_y)
-    DEPENDENT_NODE_LIST_INPUT(Color, i_color)
-    DEPENDENT_NODE_LIST_INPUT(double, i_stroke_width)
-    DEPENDENT_NODE_LIST_END
 };
 
 struct RibbonSeriesCreateNode : public BaseNode {
@@ -333,13 +280,6 @@ struct RibbonSeriesCreateNode : public BaseNode {
     }
 
     constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputId{0}, "series", "Series")); }
-
-    DEPENDENT_NODE_LIST_START
-    DEPENDENT_NODE_LIST_INPUT_PIN(i_x)
-    DEPENDENT_NODE_LIST_INPUT_PIN(i_y_min)
-    DEPENDENT_NODE_LIST_INPUT_PIN(i_y_max)
-    DEPENDENT_NODE_LIST_INPUT(Color, i_color)
-    DEPENDENT_NODE_LIST_END
 };
 
 struct CreateGraphStyleNode : public BaseNode {
@@ -387,18 +327,6 @@ struct CreateGraphStyleNode : public BaseNode {
     }
 
     constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputId{0}, "graph_style", "Graph Style")); }
-
-    DEPENDENT_NODE_LIST_START
-    DEPENDENT_NODE_LIST_INPUT(Margins, i_plot_margines)
-    DEPENDENT_NODE_LIST_INPUT(Margins, i_internal_margines)
-    DEPENDENT_NODE_LIST_INPUT(double, i_x_axis_tick_mark_font_size)
-    DEPENDENT_NODE_LIST_INPUT(double, i_x_axis_tick_mark_size)
-    DEPENDENT_NODE_LIST_INPUT(double, i_x_axis_label_font_size)
-    DEPENDENT_NODE_LIST_INPUT(double, i_y_axis_tick_mark_font_size)
-    DEPENDENT_NODE_LIST_INPUT(double, i_y_axis_tick_mark_size)
-    DEPENDENT_NODE_LIST_INPUT(double, i_y_axis_label_font_size)
-    DEPENDENT_NODE_LIST_INPUT(double, i_title_font_size)
-    DEPENDENT_NODE_LIST_END
 };
 
 struct CreateGraphNode : public BaseNode {
@@ -429,17 +357,6 @@ struct CreateGraphNode : public BaseNode {
     }
 
     constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputId{0}, "graph", "Graph")); }
-
-    DEPENDENT_NODE_LIST_START
-    for (auto& p : i_series)
-        DEPENDENT_NODE_LIST_INPUT_PIN(p)
-    DEPENDENT_NODE_LIST_INPUT(std::string, i_title)
-    DEPENDENT_NODE_LIST_INPUT(std::string, i_xlab)
-    DEPENDENT_NODE_LIST_INPUT(std::string, i_ylab)
-    DEPENDENT_NODE_LIST_INPUT(bool, i_x_axis_log_scale)
-    DEPENDENT_NODE_LIST_INPUT(bool, i_y_axis_log_scale)
-    DEPENDENT_NODE_LIST_INPUT_PIN(i_style)
-    DEPENDENT_NODE_LIST_END
 };
 
 struct OutputNode : public BaseNode {
@@ -467,16 +384,6 @@ struct OutputNode : public BaseNode {
     }
 
     constexpr auto outputs() { return std::make_tuple(); }
-
-    DEPENDENT_NODE_LIST_START
-    for (auto& pin : i_graphs)
-        DEPENDENT_NODE_LIST_INPUT_PIN(pin)
-    DEPENDENT_NODE_LIST_INPUT(std::string, i_output_filename)
-    DEPENDENT_NODE_LIST_INPUT(double, i_width)
-    DEPENDENT_NODE_LIST_INPUT(double, i_height)
-    DEPENDENT_NODE_LIST_INPUT(int32_t, i_grid_cols)
-    DEPENDENT_NODE_LIST_INPUT(int32_t, i_grid_rows)
-    DEPENDENT_NODE_LIST_END
 
     ErrorOr<std::string> get_svg(EvaluatedNodeGraph* graph);
 };
@@ -539,6 +446,58 @@ struct EvaluatedNodeGraph {
     };
 
     std::map<NodeId, LoadedNode> loaded_nodes;
+
+    ErrorOr<std::vector<NodeId>> dependent_nodes(NodeId id) {
+        auto n = node_graph.nodes().find(id);
+        if (n == node_graph.nodes().end())
+            return ERR("Invalid Node ID");
+
+        std::vector<NodeId> res;
+
+        std::visit(
+            [&](auto node) {
+                std::apply(
+                    [&](auto&&... args) {
+                        (overloaded{
+                             [&]<typename T>(std::vector<T> list) {
+                                 for (auto& e : list) {
+                                     overloaded{
+                                         [&]<typename V>(Input<V> input) {
+                                             if (std::holds_alternative<InputPin<V>>(input)) {
+                                                 NodeId id = std::get<InputPin<V>>(input).node;
+                                                 if (id >= 0)
+                                                     res.push_back(id);
+                                             }
+                                         },
+                                         [&]<typename V>(InputPin<V> pin) {
+                                             if (pin.node >= 0)
+                                                 res.push_back(pin.node);
+                                         },
+                                     }(e);
+                                 }
+                             },
+                             [&]<typename T>(Input<T> input) {
+                                 if (std::holds_alternative<InputPin<T>>(input)) {
+                                     NodeId id = std::get<InputPin<T>>(input).node;
+                                     if (id >= 0)
+                                         res.push_back(id);
+                                 }
+                             },
+                             [&]<typename T>(InputPin<T> pin) {
+                                 if (pin.node >= 0)
+                                     res.push_back(pin.node);
+                             },
+                         }(std::get<0>(args))
+
+                             ,
+                         ...);
+                    },
+                    node.inputs());
+            },
+            n->second);
+
+        return res;
+    }
 
     template <typename T>
     ErrorOr<T> get_input(const Input<T>& input) {

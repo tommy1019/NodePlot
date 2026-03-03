@@ -16,7 +16,11 @@ void RenderNodeGraph::update_target(NodeId updated_node) {
             for (auto& n : eval_node_graph.node_graph.nodes()) {
                 std::visit(
                     [&](auto& n) {
-                        for (auto other : n.dependent_nodes()) {
+                        auto dep_nodes = eval_node_graph.dependent_nodes(n.id);
+                        if (!dep_nodes.has_value())
+                            return;
+
+                        for (auto other : dep_nodes.value()) {
                             if (nodes_to_clear.contains(n.id))
                                 continue;
 
