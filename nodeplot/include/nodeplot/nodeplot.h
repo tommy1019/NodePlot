@@ -221,10 +221,10 @@ struct SampledPropertyExtractNode : public BaseNode {
 
     constexpr auto outputs() {
         return std::make_tuple(std::make_tuple(OutputId{0}, "x", "X Values"),
-                               std::make_tuple(OutputId{0}, "min", "Minimum"),
-                               std::make_tuple(OutputId{0}, "avg", "Average"),
-                               std::make_tuple(OutputId{0}, "stdev", "Standard Deviation"),
-                               std::make_tuple(OutputId{0}, "max", "Maximum"));
+                               std::make_tuple(OutputId{1}, "min", "Minimum"),
+                               std::make_tuple(OutputId{2}, "avg", "Average"),
+                               std::make_tuple(OutputId{3}, "stdev", "Standard Deviation"),
+                               std::make_tuple(OutputId{4}, "max", "Maximum"));
     }
 };
 
