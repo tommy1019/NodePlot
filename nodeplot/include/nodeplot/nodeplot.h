@@ -175,7 +175,7 @@ struct CSVImportNode : public BaseNode {
 struct FilterTableNode : public BaseNode {
     InputPin<Table> i_table;
     Input<ColumnName> i_column_name;
-    Input<int32_t> i_compare_type;
+    Input<std::string> i_compare_type;
     Input<std::string> i_compare_value;
     Input<bool> i_numeric_compare;
 
@@ -186,7 +186,17 @@ struct FilterTableNode : public BaseNode {
     constexpr auto inputs() {
         return std::make_tuple(std::make_tuple(std::reference_wrapper{i_table}, "table", "Table"),
                                std::make_tuple(std::reference_wrapper{i_column_name}, "column_name", "Column Name"),
-                               std::make_tuple(std::reference_wrapper{i_compare_type}, "compare_type", "Compare Type"),
+                               std::make_tuple(std::reference_wrapper{i_compare_type},
+                                               "compare_type",
+                                               "Compare Type",
+                                               std::map<std::string, std::string>{
+                                                   {"<", "< Less Than"},
+                                                   {"<=", "<= Less Than or Equal To"},
+                                                   {"==", "== Equals"},
+                                                   {"!=", "!= Not Equals"},
+                                                   {">=", ">= Greater Than or Equal To"},
+                                                   {">", "> Greater Than"},
+                                               }),
                                std::make_tuple(std::reference_wrapper{i_compare_value}, "compare_value", "Compare Value"),
                                std::make_tuple(std::reference_wrapper{i_numeric_compare}, "numeric_compare", "Numeric Compare"));
     }

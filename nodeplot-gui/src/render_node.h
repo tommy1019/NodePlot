@@ -5,6 +5,7 @@
 #include <misc/cpp/imgui_stdlib.h>
 
 #include <portable-file-dialogs.h>
+#include <tuple>
 #include <type_traits>
 
 #include "nodeplot/nodeplot.h"
@@ -16,9 +17,47 @@ void node_render(RenderNodeGraph* rng, T& node) {
         rng,
         node.name().c_str(),
         node,
-        [&](auto input) {
+        [&](auto input, auto input_custom) {
             std::apply(
-                [&](auto&&... args) { ((input((std::string("##i_") + std::get<1>(args)).c_str(), (std::string("##ii_") + std::get<1>(args)).c_str(), std::get<2>(args), std::get<0>(args))), ...); },
+                [&](auto&&... args) {
+                    (
+                        [&]() {
+                            if constexpr (std::tuple_size_v<std::remove_reference_t<decltype(args)>> == 4) {
+
+                                auto map = std::get<3>(args);
+
+                                input_custom((std::string("##i_") + std::get<1>(args)).c_str(),
+                                             (std::string("##ii_") + std::get<1>(args)).c_str(),
+                                             std::get<2>(args),
+                                             std::get<0>(args),
+                                             [&](const char* input_id, auto& input) {
+                                                 bool res = false;
+                                                 if (ImGui::BeginCombo(input_id,
+                                                                       [&]() {
+                                                                           if (auto v = map.find(input); v != map.end())
+                                                                               return v->second;
+                                                                           return std::string("ERR");
+                                                                       }()
+                                                                           .c_str())) {
+
+                                                     for (auto e : map) {
+                                                         if (ImGui::Selectable(e.second.c_str(), false)) {
+                                                             input = e.first;
+                                                             res = true;
+                                                         }
+                                                     }
+
+                                                     ImGui::EndCombo();
+                                                 }
+                                                 return res;
+                                             });
+
+                            } else {
+                                input((std::string("##i_") + std::get<1>(args)).c_str(), (std::string("##ii_") + std::get<1>(args)).c_str(), std::get<2>(args), std::get<0>(args));
+                            }
+                        }(),
+                        ...);
+                },
                 node.inputs());
         },
         [&](auto output) { std::apply([&](auto&&... args) { ((output((std::string("##o_") + std::get<1>(args)).c_str(), std::get<0>(args), std::get<2>(args))), ...); }, node.outputs()); });

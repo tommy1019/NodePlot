@@ -29,48 +29,47 @@ ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const FilterTableNode
 
     size_t amt = 0;
 
-    auto comparision_check = [&](size_t i) -> bool {
-        if (numeric_compare)
-            switch (compare_type) {
-            case 0:
+    auto comparision_check = [&](size_t i) -> ErrorOr<bool> {
+        if (numeric_compare) {
+            if (compare_type == "<") {
                 return (*col.numeric_values)[i] < numeric_compare_val;
-            case 1:
+            } else if (compare_type == "<=") {
                 return (*col.numeric_values)[i] <= numeric_compare_val;
-            case 2:
+            } else if (compare_type == "==") {
                 return (*col.numeric_values)[i] == numeric_compare_val;
-            case 3:
+            } else if (compare_type == "!=") {
                 return (*col.numeric_values)[i] != numeric_compare_val;
-            case 4:
+            } else if (compare_type == ">=") {
                 return (*col.numeric_values)[i] >= numeric_compare_val;
-            case 5:
+            } else if (compare_type == ">") {
                 return (*col.numeric_values)[i] > numeric_compare_val;
-            default:
-                return false;
+            } else {
+                return ERR("Invalid comparision type");
             }
-        else
-            switch (compare_type) {
-            case 0:
+        } else {
+            if (compare_type == "<") {
                 return col.values[i] < compare_value;
-            case 1:
+            } else if (compare_type == "<=") {
                 return col.values[i] <= compare_value;
-            case 2:
+            } else if (compare_type == "==") {
                 return col.values[i] == compare_value;
-            case 3:
+            } else if (compare_type == "!=") {
                 return col.values[i] != compare_value;
-            case 4:
+            } else if (compare_type == ">=") {
                 return col.values[i] >= compare_value;
-            case 5:
+            } else if (compare_type == ">") {
                 return col.values[i] > compare_value;
-            default:
-                return false;
-            };
+            } else {
+                return ERR("Invalid comparision type");
+            }
+        }
     };
 
     std::vector<bool> compare_vals;
     compare_vals.reserve(col.values.size());
 
     for (size_t i = 0; i < col.values.size(); i++) {
-        if (comparision_check(i)) {
+        if (TRY(comparision_check(i))) {
             amt++;
             compare_vals.push_back(true);
         } else {

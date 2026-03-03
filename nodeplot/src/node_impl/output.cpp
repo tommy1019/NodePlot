@@ -65,12 +65,12 @@ ErrorOr<std::string> OutputNode::get_svg(EvaluatedNodeGraph* lng) {
         }
 
         if (graph.x_log) {
-            x_lims.first = std::max(0.0, std::log10(x_lims.first));
+            x_lims.first = std::log10(x_lims.first);
             x_lims.second = std::log10(x_lims.second);
         }
 
         if (graph.y_log) {
-            y_lims.first = std::max(0.0, std::log10(y_lims.first));
+            y_lims.first = std::log10(y_lims.first);
             y_lims.second = std::log10(y_lims.second);
         }
 
