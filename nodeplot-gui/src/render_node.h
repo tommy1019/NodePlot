@@ -168,28 +168,26 @@ void node_generic_render(RenderNodeGraph* rng, const char* window_title, auto no
                                 if (std::get<1>(args) == "table") {
                                     overloaded{
                                         [&]<typename T>(InputPin<T> pin) {
-                                            if (auto lng = rng->eval_node_graph.loaded_nodes.find(pin.node); lng != rng->eval_node_graph.loaded_nodes.end()) {
-                                                if (auto v = lng->second.cache.find(pin.output_index); v != lng->second.cache.end()) {
-                                                    std::visit(overloaded{
-                                                                   [&](Table t) {
-                                                                       ImGui::SameLine();
-                                                                       ImGui::SetNextItemWidth(ImGui::GetFrameHeight());
-                                                                       if (ImGui::BeginCombo("##choose_column", "")) {
+                                            if (auto v = rng->eval_node_graph.get_output(pin.node, pin.output_index); v.has_value()) {
+                                                std::visit(overloaded{
+                                                               [&](Table t) {
+                                                                   ImGui::SameLine();
+                                                                   ImGui::SetNextItemWidth(ImGui::GetFrameHeight());
+                                                                   if (ImGui::BeginCombo("##choose_column", "")) {
 
-                                                                           for (auto n : t.column_names) {
-                                                                               if (ImGui::Selectable(n.c_str(), false)) {
-                                                                                   input.name = n;
-                                                                                   res = true;
-                                                                               }
+                                                                       for (auto n : t.column_names) {
+                                                                           if (ImGui::Selectable(n.c_str(), false)) {
+                                                                               input.name = n;
+                                                                               res = true;
                                                                            }
-
-                                                                           ImGui::EndCombo();
                                                                        }
-                                                                   },
-                                                                   [](auto) {},
+
+                                                                       ImGui::EndCombo();
+                                                                   }
                                                                },
-                                                               v->second);
-                                                }
+                                                               [](auto) {},
+                                                           },
+                                                           v.value());
                                             }
                                         },
                                         [](auto) {},
