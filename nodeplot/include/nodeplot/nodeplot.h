@@ -51,7 +51,6 @@ void from_json(const nlohmann::json& j, Input<T>& p) {
 
 struct Color {
     float r, g, b, a;
-
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(Color, r, g, b, a);
 };
 
@@ -76,7 +75,7 @@ struct ScatterSeries {
     Column x;
     Column y;
 
-    Color color = {1, 0, 0, 1};
+    Color color;
     double point_size = 1;
 };
 
@@ -84,7 +83,7 @@ struct LineSeries {
     Column x;
     Column y;
 
-    Color color = {1, 0, 0, 1};
+    Color color;
     double stroke_width = 1;
 };
 
@@ -93,7 +92,7 @@ struct RibbonSeries {
     Column y_min;
     Column y_max;
 
-    Color color = {1, 0, 0, 0.2};
+    Color color;
 };
 
 using Series = std::variant<ScatterSeries, LineSeries, RibbonSeries>;
@@ -225,8 +224,8 @@ struct SampledPropertyExtractNode : public BaseNode {
 struct ScatterSeriesCreateNode : public BaseNode {
     InputPin<Column> i_x;
     InputPin<Column> i_y;
-    Input<Color> i_color;
-    Input<double> i_point_size;
+    Input<Color> i_color = Color{.r = 1, .g = 0, .b = 0, .a = 1};
+    Input<double> i_point_size = 3.0;
 
     static std::string name() { return "Scatter Series Create"; }
     static std::string type() { return "scatter_series_create"; }
@@ -245,8 +244,8 @@ struct ScatterSeriesCreateNode : public BaseNode {
 struct LineSeriesCreateNode : public BaseNode {
     InputPin<Column> i_x;
     InputPin<Column> i_y;
-    Input<Color> i_color;
-    Input<double> i_stroke_width;
+    Input<Color> i_color = Color{.r = 1, .g = 0, .b = 0, .a = 1};
+    Input<double> i_stroke_width = 3.0;
 
     static std::string name() { return "Line Series Create"; }
     static std::string type() { return "line_series_create"; }
@@ -266,7 +265,7 @@ struct RibbonSeriesCreateNode : public BaseNode {
     InputPin<Column> i_x;
     InputPin<Column> i_y_min;
     InputPin<Column> i_y_max;
-    Input<Color> i_color;
+    Input<Color> i_color = Color{.r = 1, .g = 0, .b = 0, .a = 0.25};
 
     static std::string name() { return "Ribbon Series Create"; }
     static std::string type() { return "ribbon_series_create"; }
