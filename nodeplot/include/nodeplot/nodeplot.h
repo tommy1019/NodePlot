@@ -6,6 +6,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <variant>
 #include <vector>
 
@@ -165,13 +166,20 @@ struct BaseNode {
 
 struct CSVImportNode : public BaseNode {
     Input<std::filesystem::path> i_source_path;
-    Input<bool> i_has_headers;
+    Input<bool> i_has_headers = true;
 
     OutputId output_id;
 
     static std::string name() { return "CSV Input"; }
     static std::string type() { return "csv_import"; }
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(CSVImportNode, id, pos, i_source_path, i_has_headers, output_id);
+
+    constexpr auto inputs() {
+        return std::make_tuple(std::make_tuple(std::reference_wrapper{i_source_path}, "source_path", "Source Path"),
+                               std::make_tuple(std::reference_wrapper{i_has_headers}, "has_headers", "Has Headers"));
+    }
+
+    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputId{0}, "table_data", "Table Data")); }
 
     DEPENDENT_NODE_LIST_START
     DEPENDENT_NODE_LIST_INPUT(std::filesystem::path, i_source_path);
@@ -190,6 +198,16 @@ struct FilterTableNode : public BaseNode {
     static std::string type() { return "filter_table"; }
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(FilterTableNode, id, pos, i_table, i_column_name, i_compare_type, i_compare_value, i_numeric_compare);
 
+    constexpr auto inputs() {
+        return std::make_tuple(std::make_tuple(std::reference_wrapper{i_table}, "table", "Table"),
+                               std::make_tuple(std::reference_wrapper{i_column_name}, "column_name", "Column Name"),
+                               std::make_tuple(std::reference_wrapper{i_compare_type}, "compare_type", "Compare Type"),
+                               std::make_tuple(std::reference_wrapper{i_compare_value}, "compare_value", "Compare Value"),
+                               std::make_tuple(std::reference_wrapper{i_numeric_compare}, "numeric_compare", "Numeric Compare"));
+    }
+
+    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputId{0}, "table", "Table")); }
+
     DEPENDENT_NODE_LIST_START
     DEPENDENT_NODE_LIST_INPUT_PIN(i_table)
     DEPENDENT_NODE_LIST_INPUT(std::string, i_column_name);
@@ -207,6 +225,12 @@ struct ColumnSelectNode : public BaseNode {
     static std::string type() { return "column_select"; }
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(ColumnSelectNode, id, pos, i_table, i_column_name);
 
+    constexpr auto inputs() {
+        return std::make_tuple(std::make_tuple(std::reference_wrapper{i_table}, "table", "Table"), std::make_tuple(std::reference_wrapper{i_column_name}, "column_name", "Column Name"));
+    }
+
+    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputId{0}, "column", "Column")); }
+
     DEPENDENT_NODE_LIST_START
     DEPENDENT_NODE_LIST_INPUT_PIN(i_table)
     DEPENDENT_NODE_LIST_INPUT(std::string, i_column_name);
@@ -220,6 +244,16 @@ struct SampledPropertyExtractNode : public BaseNode {
     static std::string name() { return "Sampled Property Extract"; }
     static std::string type() { return "sampled_property_extract"; }
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(SampledPropertyExtractNode, id, pos, i_x, i_y);
+
+    constexpr auto inputs() { return std::make_tuple(std::make_tuple(std::reference_wrapper{i_x}, "x", "X"), std::make_tuple(std::reference_wrapper{i_y}, "y", "Y")); }
+
+    constexpr auto outputs() {
+        return std::make_tuple(std::make_tuple(OutputId{0}, "x", "X Values"),
+                               std::make_tuple(OutputId{0}, "min", "Minimum"),
+                               std::make_tuple(OutputId{0}, "avg", "Average"),
+                               std::make_tuple(OutputId{0}, "stdev", "Standard Deviation"),
+                               std::make_tuple(OutputId{0}, "max", "Maximum"));
+    }
 
     DEPENDENT_NODE_LIST_START
     DEPENDENT_NODE_LIST_INPUT_PIN(i_x)
@@ -236,6 +270,15 @@ struct ScatterSeriesCreateNode : public BaseNode {
     static std::string name() { return "Scatter Series Create"; }
     static std::string type() { return "scatter_series_create"; }
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(ScatterSeriesCreateNode, id, pos, i_x, i_y, i_color, i_point_size);
+
+    constexpr auto inputs() {
+        return std::make_tuple(std::make_tuple(std::reference_wrapper{i_x}, "x", "X"),
+                               std::make_tuple(std::reference_wrapper{i_y}, "y", "Y"),
+                               std::make_tuple(std::reference_wrapper{i_color}, "color", "Color"),
+                               std::make_tuple(std::reference_wrapper{i_point_size}, "point_size", "Point Size"));
+    }
+
+    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputId{0}, "series", "Series")); }
 
     DEPENDENT_NODE_LIST_START
     DEPENDENT_NODE_LIST_INPUT_PIN(i_x)
@@ -255,6 +298,15 @@ struct LineSeriesCreateNode : public BaseNode {
     static std::string type() { return "line_series_create"; }
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(LineSeriesCreateNode, id, pos, i_x, i_y, i_color, i_stroke_width);
 
+    constexpr auto inputs() {
+        return std::make_tuple(std::make_tuple(std::reference_wrapper{i_x}, "x", "X"),
+                               std::make_tuple(std::reference_wrapper{i_y}, "y", "Y"),
+                               std::make_tuple(std::reference_wrapper{i_color}, "color", "Color"),
+                               std::make_tuple(std::reference_wrapper{i_stroke_width}, "stroke_width", "Stroke Width"));
+    }
+
+    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputId{0}, "series", "Series")); }
+
     DEPENDENT_NODE_LIST_START
     DEPENDENT_NODE_LIST_INPUT_PIN(i_x)
     DEPENDENT_NODE_LIST_INPUT_PIN(i_y)
@@ -273,6 +325,15 @@ struct RibbonSeriesCreateNode : public BaseNode {
     static std::string type() { return "ribbon_series_create"; }
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(RibbonSeriesCreateNode, id, pos, i_x, i_y_min, i_y_max, i_color);
 
+    constexpr auto inputs() {
+        return std::make_tuple(std::make_tuple(std::reference_wrapper{i_x}, "x", "X"),
+                               std::make_tuple(std::reference_wrapper{i_y_min}, "y_min", "Y Min"),
+                               std::make_tuple(std::reference_wrapper{i_y_max}, "y_max", "Y Max"),
+                               std::make_tuple(std::reference_wrapper{i_color}, "color", "Color"));
+    }
+
+    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputId{0}, "series", "Series")); }
+
     DEPENDENT_NODE_LIST_START
     DEPENDENT_NODE_LIST_INPUT_PIN(i_x)
     DEPENDENT_NODE_LIST_INPUT_PIN(i_y_min)
@@ -283,7 +344,7 @@ struct RibbonSeriesCreateNode : public BaseNode {
 
 struct CreateGraphStyleNode : public BaseNode {
     Input<Margins> i_plot_margines = Margins{.left = 10, .right = 10, .top = 10, .bottom = 10};
-    Input<Margins> i_internal_plot_margines = Margins{.left = 0, .right = 0, .top = 0, .bottom = 0};
+    Input<Margins> i_internal_margines = Margins{.left = 0, .right = 0, .top = 0, .bottom = 0};
 
     Input<double> i_x_axis_tick_mark_font_size = 12.0;
     Input<double> i_x_axis_tick_mark_size = 12.0;
@@ -301,7 +362,7 @@ struct CreateGraphStyleNode : public BaseNode {
                                                 id,
                                                 pos,
                                                 i_plot_margines,
-                                                i_internal_plot_margines,
+                                                i_internal_margines,
                                                 i_x_axis_tick_mark_font_size,
                                                 i_x_axis_tick_mark_size,
                                                 i_x_axis_label_font_size,
@@ -310,9 +371,26 @@ struct CreateGraphStyleNode : public BaseNode {
                                                 i_y_axis_label_font_size,
                                                 i_title_font_size);
 
+    constexpr auto inputs() {
+        return std::make_tuple(std::make_tuple(std::reference_wrapper{i_plot_margines}, "plot_margines", "Plot Margines"),
+                               std::make_tuple(std::reference_wrapper{i_internal_margines}, "internal_margines", "Internal Margines"),
+
+                               std::make_tuple(std::reference_wrapper{i_x_axis_tick_mark_font_size}, "x_axis_tick_mark_font_size", "X Axis Tick Mark Font Size"),
+                               std::make_tuple(std::reference_wrapper{i_x_axis_tick_mark_size}, "x_axis_tick_mark_size", "X Axis Tick Mark Size"),
+                               std::make_tuple(std::reference_wrapper{i_x_axis_label_font_size}, "x_axis_label_font_size", "X Axis Label Font Size"),
+
+                               std::make_tuple(std::reference_wrapper{i_y_axis_tick_mark_font_size}, "y_axis_tick_mark_font_size", "Y Axis Tick Mark Font Size"),
+                               std::make_tuple(std::reference_wrapper{i_y_axis_tick_mark_size}, "y_axis_tick_mark_size", "Y Axis Tick Mark Size"),
+                               std::make_tuple(std::reference_wrapper{i_y_axis_label_font_size}, "y_axis_label_font_size", "Y Axis Label Font Size"),
+
+                               std::make_tuple(std::reference_wrapper{i_title_font_size}, "title_font_size", "Title Font Size"));
+    }
+
+    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputId{0}, "graph_style", "Graph Style")); }
+
     DEPENDENT_NODE_LIST_START
     DEPENDENT_NODE_LIST_INPUT(Margins, i_plot_margines)
-    DEPENDENT_NODE_LIST_INPUT(Margins, i_internal_plot_margines)
+    DEPENDENT_NODE_LIST_INPUT(Margins, i_internal_margines)
     DEPENDENT_NODE_LIST_INPUT(double, i_x_axis_tick_mark_font_size)
     DEPENDENT_NODE_LIST_INPUT(double, i_x_axis_tick_mark_size)
     DEPENDENT_NODE_LIST_INPUT(double, i_x_axis_label_font_size)
@@ -340,6 +418,18 @@ struct CreateGraphNode : public BaseNode {
     static std::string type() { return "create_graph"; }
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(CreateGraphNode, id, pos, i_series, i_title, i_xlab, i_ylab, i_x_axis_log_scale, i_y_axis_log_scale, i_style);
 
+    constexpr auto inputs() {
+        return std::make_tuple(std::make_tuple(std::reference_wrapper{i_series}, "series", "Series"),
+                               std::make_tuple(std::reference_wrapper{i_title}, "title", "Title"),
+                               std::make_tuple(std::reference_wrapper{i_xlab}, "xlab", "X Label"),
+                               std::make_tuple(std::reference_wrapper{i_ylab}, "ylab", "X Label"),
+                               std::make_tuple(std::reference_wrapper{i_x_axis_log_scale}, "x_axis_log_scale", "X Axis Log Scale"),
+                               std::make_tuple(std::reference_wrapper{i_y_axis_log_scale}, "y_axis_log_scale", "Y Axis Log Scale"),
+                               std::make_tuple(std::reference_wrapper{i_style}, "style", "Style"));
+    }
+
+    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputId{0}, "graph", "Graph")); }
+
     DEPENDENT_NODE_LIST_START
     for (auto& p : i_series)
         DEPENDENT_NODE_LIST_INPUT_PIN(p)
@@ -366,6 +456,17 @@ struct OutputNode : public BaseNode {
     static std::string name() { return "Output"; }
     static std::string type() { return "output"; }
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(OutputNode, id, pos, i_graphs, i_output_filename, i_width, i_height, i_grid_cols, i_grid_rows);
+
+    constexpr auto inputs() {
+        return std::make_tuple(std::make_tuple(std::reference_wrapper{i_graphs}, "graphs", "Graphs"),
+                               std::make_tuple(std::reference_wrapper{i_output_filename}, "output_filename", "Output Filename"),
+                               std::make_tuple(std::reference_wrapper{i_width}, "width", "Width"),
+                               std::make_tuple(std::reference_wrapper{i_height}, "height", "Height"),
+                               std::make_tuple(std::reference_wrapper{i_grid_cols}, "grid_cols", "Grid Columns"),
+                               std::make_tuple(std::reference_wrapper{i_grid_rows}, "grid_rows", "Grid Rows"));
+    }
+
+    constexpr auto outputs() { return std::make_tuple(); }
 
     DEPENDENT_NODE_LIST_START
     for (auto& pin : i_graphs)

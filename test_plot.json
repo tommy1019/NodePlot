@@ -1,0 +1,230 @@
+{
+  "nodes": [
+    [
+      0,
+      {
+        "i_has_headers": {
+          "type": "value",
+          "value": true
+        },
+        "i_source_path": {
+          "type": "value",
+          "value": "test_data.csv"
+        },
+        "id": 0,
+        "output_id": 0,
+        "pos": [
+          103.5,
+          91.0
+        ],
+        "type": "csv_import"
+      }
+    ],
+    [
+      1,
+      {
+        "i_column_name": {
+          "type": "value",
+          "value": "raw_index"
+        },
+        "i_table": {
+          "node": 0,
+          "output_index": 0
+        },
+        "id": 1,
+        "pos": [
+          519.5,
+          92.0
+        ],
+        "type": "column_select"
+      }
+    ],
+    [
+      2,
+      {
+        "i_column_name": {
+          "type": "value",
+          "value": "random"
+        },
+        "i_table": {
+          "node": 0,
+          "output_index": 0
+        },
+        "id": 2,
+        "pos": [
+          521.5,
+          219.0
+        ],
+        "type": "column_select"
+      }
+    ],
+    [
+      3,
+      {
+        "i_color": {
+          "type": "value",
+          "value": {
+            "a": 1.0,
+            "b": 0.0,
+            "g": 0.0,
+            "r": 1.0
+          }
+        },
+        "i_point_size": {
+          "type": "value",
+          "value": 3.0
+        },
+        "i_x": {
+          "node": 1,
+          "output_index": 0
+        },
+        "i_y": {
+          "node": 2,
+          "output_index": 0
+        },
+        "id": 3,
+        "pos": [
+          924.5,
+          99.0
+        ],
+        "type": "scatter_series_create"
+      }
+    ],
+    [
+      5,
+      {
+        "i_internal_margines": {
+          "type": "value",
+          "value": {
+            "bottom": 0.0,
+            "left": 0.0,
+            "right": 0.0,
+            "top": 0.0
+          }
+        },
+        "i_plot_margines": {
+          "type": "value",
+          "value": {
+            "bottom": 30.0,
+            "left": 40.0,
+            "right": 10.0,
+            "top": 10.0
+          }
+        },
+        "i_title_font_size": {
+          "type": "value",
+          "value": 16.0
+        },
+        "i_x_axis_label_font_size": {
+          "type": "value",
+          "value": 12.0
+        },
+        "i_x_axis_tick_mark_font_size": {
+          "type": "value",
+          "value": 12.0
+        },
+        "i_x_axis_tick_mark_size": {
+          "type": "value",
+          "value": 12.0
+        },
+        "i_y_axis_label_font_size": {
+          "type": "value",
+          "value": 12.0
+        },
+        "i_y_axis_tick_mark_font_size": {
+          "type": "value",
+          "value": 12.0
+        },
+        "i_y_axis_tick_mark_size": {
+          "type": "value",
+          "value": 12.0
+        },
+        "id": 5,
+        "pos": [
+          784.5,
+          494.0
+        ],
+        "type": "create_graph_style"
+      }
+    ],
+    [
+      6,
+      {
+        "i_series": [
+          {
+            "node": 3,
+            "output_index": 0
+          }
+        ],
+        "i_style": {
+          "node": 5,
+          "output_index": 0
+        },
+        "i_title": {
+          "type": "value",
+          "value": ""
+        },
+        "i_x_axis_log_scale": {
+          "type": "value",
+          "value": false
+        },
+        "i_xlab": {
+          "type": "value",
+          "value": ""
+        },
+        "i_y_axis_log_scale": {
+          "type": "value",
+          "value": false
+        },
+        "i_ylab": {
+          "type": "value",
+          "value": ""
+        },
+        "id": 6,
+        "pos": [
+          1324.5,
+          253.0
+        ],
+        "type": "create_graph"
+      }
+    ],
+    [
+      7,
+      {
+        "i_graphs": [
+          {
+            "node": 6,
+            "output_index": 0
+          }
+        ],
+        "i_grid_cols": {
+          "type": "value",
+          "value": 1
+        },
+        "i_grid_rows": {
+          "type": "value",
+          "value": 1
+        },
+        "i_height": {
+          "type": "value",
+          "value": 300.0
+        },
+        "i_output_filename": {
+          "type": "value",
+          "value": "test.svg"
+        },
+        "i_width": {
+          "type": "value",
+          "value": 300.0
+        },
+        "id": 7,
+        "pos": [
+          1798.5,
+          346.0
+        ],
+        "type": "output"
+      }
+    ]
+  ],
+  "visualize_node": 7
+}

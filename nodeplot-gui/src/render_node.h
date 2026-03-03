@@ -11,7 +11,18 @@
 #include "render_node_graph.h"
 
 template <typename T>
-void node_render(RenderNodeGraph* rng, T& node);
+void node_render(RenderNodeGraph* rng, T& node) {
+    node_generic_render(
+        rng,
+        node.name().c_str(),
+        node,
+        [&](auto input) {
+            std::apply(
+                [&](auto&&... args) { ((input((std::string("##i_") + std::get<1>(args)).c_str(), (std::string("##ii_") + std::get<1>(args)).c_str(), std::get<2>(args), std::get<0>(args))), ...); },
+                node.inputs());
+        },
+        [&](auto output) { std::apply([&](auto&&... args) { ((output((std::string("##o_") + std::get<1>(args)).c_str(), std::get<0>(args), std::get<2>(args))), ...); }, node.outputs()); });
+}
 
 void node_generic_render(RenderNodeGraph* rng, const char* window_title, auto node, auto get_inputs, auto get_outputs) {
     ImDrawList* draw_list = ImGui::GetWindowDrawList();

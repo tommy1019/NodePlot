@@ -18,6 +18,7 @@ void node_render(RenderNodeGraph* rng, OutputNode& node) {
                 input("##i_graph", "##ii_graph", std::format("Graph ({}, {})", (i % cols) + 1, (i / cols) + 1).c_str(), node.i_graphs[i]);
                 ImGui::PopID();
             }
+
             input("##i_output_filename", "##ii_output_filename", "Output Filename", node.i_output_filename);
             input("##i_width", "##ii_width", "Width", node.i_width);
             input("##i_height", "##ii_height", "Height", node.i_height);

@@ -9,7 +9,7 @@ template <>
 ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const CreateGraphStyleNode& node, OutputId id) {
     GraphStyle res;
     res.plot_margines = GET_INPUT(plot_margines, Plot Margines);
-    res.internal_plot_margines = GET_INPUT(internal_plot_margines, Internal Plot Margines);
+    res.internal_plot_margines = GET_INPUT(internal_margines, Internal Plot Margines);
 
     res.x_axis_tick_mark_font_size = GET_INPUT(x_axis_tick_mark_font_size, X Axis Tick Mark Font Size);
     res.x_axis_tick_mark_size = GET_INPUT(x_axis_tick_mark_size, X Axis Tick Mark Size);
