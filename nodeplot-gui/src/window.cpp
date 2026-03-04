@@ -39,9 +39,9 @@ DetailedErrorOr<std::shared_ptr<Window>> Window::create(CreateWindowParams param
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
-    ImGuiStyle& style = ImGui::GetStyle();
-    style.ScaleAllSizes(res->m_scale);
-    style.FontScaleDpi = res->m_scale;
+    // ImGuiStyle& style = ImGui::GetStyle();
+    // style.ScaleAllSizes(res->m_scale);
+    // style.FontScaleDpi = res->m_scale;
 
     const char* glsl_version = "#version 150";
     ImGui_ImplSDL2_InitForOpenGL(res->m_window, res->m_gl_context);

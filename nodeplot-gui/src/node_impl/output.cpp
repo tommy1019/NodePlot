@@ -23,7 +23,7 @@ void node_render(RenderNodeGraph* rng, OutputNode& node) {
             input("##i_width", "##ii_width", "Width", node.i_width);
             input("##i_height", "##ii_height", "Height", node.i_height);
             input_custom("##i_grid_cols", "##ii_grid_cols", "Grid Cols", node.i_grid_cols, [&](const char* input_id, int32_t& input) {
-                ImGui::SetNextItemWidth(200);
+                ImGui::SetNextItemWidth(200 * rng->scene_scale);
                 if (ImGui::InputInt(input_id, &input)) {
                     node.i_graphs.resize(std::get<int32_t>(node.i_grid_cols) * std::get<int32_t>(node.i_grid_rows));
                     return true;
@@ -31,7 +31,7 @@ void node_render(RenderNodeGraph* rng, OutputNode& node) {
                 return false;
             });
             input_custom("##i_grid_rows", "##ii_grid_rows", "Grid Rows", node.i_grid_rows, [&](const char* input_id, int32_t& input) {
-                ImGui::SetNextItemWidth(200);
+                ImGui::SetNextItemWidth(200 * rng->scene_scale);
                 if (ImGui::InputInt(input_id, &input)) {
                     node.i_graphs.resize(std::get<int32_t>(node.i_grid_cols) * std::get<int32_t>(node.i_grid_rows));
                     return true;

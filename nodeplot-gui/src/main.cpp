@@ -16,7 +16,10 @@
 #include "window.h"
 
 auto SideBySide = [](auto A_id, auto A, auto B_id, auto B, float inital_seperation = 0.5f) {
-    ImGui::BeginChild(A_id, ImVec2(ImGui::GetContentRegionAvail().x * inital_seperation, 0), ImGuiChildFlags_ResizeX | ImGuiChildFlags_Borders, ImGuiWindowFlags_None);
+    ImGui::BeginChild(A_id,
+                      ImVec2(ImGui::GetContentRegionAvail().x * inital_seperation, 0),
+                      ImGuiChildFlags_ResizeX | ImGuiChildFlags_Borders,
+                      ImGuiWindowFlags_None | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
     A();
     ImGui::EndChild();
     ImGui::SameLine();
@@ -136,40 +139,35 @@ int main(int argc, char** argv) {
 
                     auto render_list = ImGui::GetWindowDrawList();
 
-                    constexpr float GRID_X = 100.0f;
-                    constexpr float GRID_Y = 100.0f;
+                    ImVec2 grid_size = ImVec2(100, 100);
 
-                    float x_offset = render_node_graph.scene_translation.x - std::floor(render_node_graph.scene_translation.x / GRID_X) * GRID_X;
-                    float y_offset = render_node_graph.scene_translation.y - std::floor(render_node_graph.scene_translation.y / GRID_Y) * GRID_Y;
+                    ImVec2 grid_size_screen = ImVec2(render_node_graph.world_to_screen(grid_size).x - render_node_graph.world_to_screen(ImVec2(0, 0)).x,
+                                                     render_node_graph.world_to_screen(grid_size).y - render_node_graph.world_to_screen(ImVec2(0, 0)).y);
 
-                    for (float x = 0; x < render_node_editor_size.x; x += GRID_X) {
-                        render_list->AddLine(
-                            {
-                                render_node_editor_position.x + x - style.WindowPadding.x + x_offset,
-                                render_node_editor_position.y - style.WindowPadding.y,
-                            },
-                            {
-                                render_node_editor_position.x + x - style.WindowPadding.x + x_offset,
-                                render_node_editor_position.y + render_node_editor_size.y + style.WindowPadding.y,
-                            },
-                            color);
+                    ImVec2 start = render_node_graph.screen_to_world(ImVec2());
+                    ImVec2 end = render_node_graph.screen_to_world(render_node_editor_size);
+
+                    start.x = std::floor(start.x / 100.0f) * 100.0f;
+                    start.y = std::floor(start.y / 100.0f) * 100.0f;
+
+                    end.x = std::ceil(end.x / 100.0f) * 100.0f;
+                    end.y = std::ceil(end.y / 100.0f) * 100.0f;
+
+                    start = render_node_graph.world_to_screen(start);
+                    end = render_node_graph.world_to_screen(end);
+
+                    for (float x = start.x; x <= end.x; x += grid_size_screen.x) {
+                        render_list->AddLine({x, start.y}, {x, end.y}, color);
                     }
 
-                    for (float y = 0; y < render_node_editor_size.y; y += GRID_Y) {
-                        render_list->AddLine(
-                            {
-                                render_node_editor_position.x - style.WindowPadding.x,
-                                render_node_editor_position.y + y - style.WindowPadding.y + y_offset,
-                            },
-                            {
-                                render_node_editor_position.x + render_node_editor_size.x + style.WindowPadding.x,
-                                render_node_editor_position.y + y - style.WindowPadding.y + y_offset,
-                            },
-                            color);
+                    for (float y = start.y; y <= end.y; y += grid_size_screen.y) {
+                        render_list->AddLine({start.x, y}, {end.x, y}, color);
                     }
                 }
 
-                // style.ScaleAllSizes(1);
+                auto old_style = ImGui::GetStyle();
+                ImGui::GetStyle().ScaleAllSizes(render_node_graph.scene_scale);
+                ImGui::PushFont(NULL, render_node_graph.scene_scale * 13);
 
                 std::set<NodeId> nodes_to_delete;
 
@@ -183,19 +181,14 @@ int main(int argc, char** argv) {
                             if (node_error.has_value())
                                 ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(1.0f, 0.7f, 0.7f, 1.0f));
 
-                            ImGui::SetNextWindowPos(
-                                ImVec2{
-                                    node.pos.first + render_node_graph.scene_translation.x,
-                                    node.pos.second + render_node_graph.scene_translation.y,
-                                },
-                                ImGuiCond_Always);
+                            ImGui::SetNextWindowPos(render_node_graph.world_to_screen(ImVec2(node.pos.first, node.pos.second)), ImGuiCond_Always);
                             if (ImGui::BeginChild(
                                     std::to_string(node.id).c_str(), {0, 0}, ImGuiChildFlags_FrameStyle | ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None)) {
 
                                 if (ImGui::IsWindowHovered()) {
                                     if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
-                                        node.pos.first += io.MouseDelta.x;
-                                        node.pos.second += io.MouseDelta.y;
+                                        node.pos.first += io.MouseDelta.x / render_node_graph.scene_scale;
+                                        node.pos.second += io.MouseDelta.y / render_node_graph.scene_scale;
                                     }
                                 }
 
@@ -241,9 +234,27 @@ int main(int argc, char** argv) {
 
                 if (ImGui::IsWindowHovered()) {
                     if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
-                        render_node_graph.scene_translation.x += io.MouseDelta.x;
-                        render_node_graph.scene_translation.y += io.MouseDelta.y;
+                        render_node_graph.scene_translation.x -= io.MouseDelta.x / render_node_graph.scene_scale;
+                        render_node_graph.scene_translation.y -= io.MouseDelta.y / render_node_graph.scene_scale;
                     }
+                }
+
+                ImGui::GetStyle() = old_style;
+                ImGui::PopFont();
+
+                if (ImGui::GetIO().MouseWheel != 0.0) {
+
+                    ImVec2 mouse_pos = ImVec2(ImGui::GetIO().MousePos.x - ImGui::GetWindowPos().x, ImGui::GetIO().MousePos.y - ImGui::GetWindowPos().y);
+
+                    auto pre = render_node_graph.screen_to_world(mouse_pos);
+
+                    float scale_delta = (ImGui::GetIO().MouseWheel > 0.0f) ? 1.1f : 0.9f;
+                    render_node_graph.scene_scale *= scale_delta;
+
+                    auto post = render_node_graph.screen_to_world(mouse_pos);
+
+                    render_node_graph.scene_translation.x += pre.x - post.x;
+                    render_node_graph.scene_translation.y += pre.y - post.y;
                 }
 
                 ImGui::GetForegroundDrawList()->PopClipRect();
