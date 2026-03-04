@@ -1,5 +1,7 @@
 #include "error.h"
 #include "nodeplot.h"
+#include <string>
+#include <string_view>
 #include <vector>
 
 template <>
@@ -16,79 +18,64 @@ ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const FilterTableNode
 
     auto& col = compare_col->second;
 
-    Table res;
-    res.column_names = table.column_names;
-    res.mapped_file = table.mapped_file;
-
     double numeric_compare_val;
 
     if (numeric_compare) {
-        col.ensure_numeric();
+        col = {TRY(graph->column_as_numeric(col))};
         numeric_compare_val = TRY_OR(string_to_double(compare_value), return ERR("Compare value is not a valid number"));
     }
 
-    size_t amt = 0;
-
-    auto comparision_check = [&](size_t i) -> ErrorOr<bool> {
-        if (numeric_compare) {
+    auto comparision_check = [&](auto col, auto compare_val) -> ErrorOr<std::vector<bool>> {
+        std::vector<bool> res;
+        res.reserve(col.values.size());
+        for (auto& v : col.values) {
             if (compare_type == "<") {
-                return (*col.numeric_values)[i] < numeric_compare_val;
+                res.push_back(v < compare_val);
             } else if (compare_type == "<=") {
-                return (*col.numeric_values)[i] <= numeric_compare_val;
+                res.push_back(v <= compare_val);
             } else if (compare_type == "==") {
-                return (*col.numeric_values)[i] == numeric_compare_val;
+                res.push_back(v == compare_val);
             } else if (compare_type == "!=") {
-                return (*col.numeric_values)[i] != numeric_compare_val;
+                res.push_back(v != compare_val);
             } else if (compare_type == ">=") {
-                return (*col.numeric_values)[i] >= numeric_compare_val;
+                res.push_back(v >= compare_val);
             } else if (compare_type == ">") {
-                return (*col.numeric_values)[i] > numeric_compare_val;
-            } else {
-                return ERR("Invalid comparision type");
-            }
-        } else {
-            if (compare_type == "<") {
-                return col.values[i] < compare_value;
-            } else if (compare_type == "<=") {
-                return col.values[i] <= compare_value;
-            } else if (compare_type == "==") {
-                return col.values[i] == compare_value;
-            } else if (compare_type == "!=") {
-                return col.values[i] != compare_value;
-            } else if (compare_type == ">=") {
-                return col.values[i] >= compare_value;
-            } else if (compare_type == ">") {
-                return col.values[i] > compare_value;
+                res.push_back(v > compare_val);
             } else {
                 return ERR("Invalid comparision type");
             }
         }
+        return res;
     };
 
-    std::vector<bool> compare_vals;
-    compare_vals.reserve(col.values.size());
+    std::vector<bool> compare_vals = TRY(std::visit(overloaded{
+                                                        [&](ColumnNumeric col, double compare_val) -> ErrorOr<std::vector<bool>> { return comparision_check(col, compare_val); },
+                                                        [&](ColumnCSVImported col, std::string_view compare_val) -> ErrorOr<std::vector<bool>> { return comparision_check(col, compare_val); },
+                                                        [](auto, auto) -> ErrorOr<std::vector<bool>> { return ERR("Column types can't be compared"); },
+                                                    },
+                                                    col.raw_column,
+                                                    numeric_compare ? Column::ValueType{numeric_compare_val} : Column::ValueType{compare_value}));
 
-    for (size_t i = 0; i < col.values.size(); i++) {
-        if (TRY(comparision_check(i))) {
-            amt++;
-            compare_vals.push_back(true);
-        } else {
-            compare_vals.push_back(false);
-        }
-    }
+    size_t retain_amt = 0;
+    for (auto v : compare_vals)
+        if (v)
+            retain_amt++;
 
-    if (amt == col.values.size())
-        return table;
+    Table res;
+    res.column_names = table.column_names;
 
     for (auto& c : table.columns) {
-        Column n;
-        n.values.reserve(amt);
+        res.columns[c.first] = std::visit(
+            [&](auto raw_col) {
+                decltype(raw_col) res;
+                res.values.reserve(retain_amt);
 
-        for (size_t i = 0; i < compare_vals.size(); i++)
-            if (compare_vals[i])
-                n.values.push_back(c.second.values[i]);
-
-        res.columns[c.first] = n;
+                for (size_t i = 0; i < compare_vals.size(); i++)
+                    if (compare_vals[i])
+                        res.values.push_back(raw_col.values[i]);
+                return Column{raw_col};
+            },
+            c.second.raw_column);
     }
 
     return res;

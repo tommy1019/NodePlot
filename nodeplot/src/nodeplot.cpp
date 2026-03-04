@@ -1,9 +1,11 @@
 #include "nodeplot.h"
 
+#include <limits>
 #include <sys/mman.h>
 
 #include <charconv>
 #include <fstream>
+#include <variant>
 
 MappedFile::~MappedFile() {
     if (munmap(data, file_size) == -1) {
@@ -132,25 +134,6 @@ ErrorOr<NodeGraph> NodeGraph::create(std::filesystem::path path) {
     return res;
 };
 
-void Column::ensure_numeric() {
-    if (numeric_values.has_value())
-        return;
-
-    auto to_double = [](std::string_view s) {
-        double dbl;
-        auto result = std::from_chars(s.data(), s.data() + s.size(), dbl);
-        if (result.ec == std::errc()) {
-            return dbl;
-        }
-        return std::numeric_limits<double>::quiet_NaN();
-    };
-
-    numeric_values = std::vector<double>{};
-    for (auto& str : values) {
-        numeric_values->push_back(to_double(str));
-    }
-}
-
 ErrorOr<double> string_to_double(std::string_view s) {
     double dbl;
     auto result = std::from_chars(s.data(), s.data() + s.size(), dbl);
@@ -158,4 +141,23 @@ ErrorOr<double> string_to_double(std::string_view s) {
         return dbl;
     }
     return ERR("Invalid number");
+}
+
+ErrorOr<ColumnNumeric> EvaluatedNodeGraph::column_as_numeric(Column column) {
+    return std::visit(overloaded{
+                          [&](ColumnNumeric& col) -> ErrorOr<ColumnNumeric> { return col; },
+                          [&](ColumnCSVImported& col) -> ErrorOr<ColumnNumeric> {
+                              ColumnNumeric res;
+                              res.values.reserve(col.values.size());
+                              for (auto& v : col.values) {
+                                  auto parsed = string_to_double(v);
+                                  if (parsed.has_value())
+                                      res.values.push_back(*parsed);
+                                  else
+                                      res.values.push_back(std::numeric_limits<double>::quiet_NaN());
+                              }
+                              return res;
+                          },
+                      },
+                      column.raw_column);
 }

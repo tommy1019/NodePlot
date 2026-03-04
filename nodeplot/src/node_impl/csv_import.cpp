@@ -38,9 +38,10 @@ ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const CSVImportNode& 
         return ERR("Failed to map CSV input file");
     }
 
+    auto mapped_file = std::shared_ptr<MappedFile>(new MappedFile{.data = map, .file_size = file_size});
+
     Table res;
-    res.mapped_file = std::shared_ptr<MappedFile>(new MappedFile{.data = map, .file_size = file_size});
-    res.mapped_file->full_string_view = std::string_view(res.mapped_file->data, res.mapped_file->file_size);
+    auto full_string_view = std::string_view(mapped_file->data, mapped_file->file_size);
 
     auto extract_csv_elements = [](std::string_view line) {
         std::vector<std::string_view> res;
@@ -81,7 +82,7 @@ ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const CSVImportNode& 
         return str;
     };
 
-    auto cur = res.mapped_file->full_string_view;
+    auto cur = full_string_view;
     if (has_headers) {
         auto extracted_names = extract_csv_elements(extract_line(cur));
         for (auto& s : extracted_names)
@@ -114,11 +115,10 @@ ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const CSVImportNode& 
 
     for (size_t i = 0; i < res.column_names.size(); i++)
         res.columns.emplace(res.column_names[i],
-                            Column{
-                                .name = res.column_names[i],
+                            Column{ColumnCSVImported{
                                 .values = std::move(extracted_values[i]),
-                                .mapped_file = res.mapped_file,
-                            });
+                                .mapped_file = mapped_file,
+                            }});
 
     printf("Loaded CSV file with %zu columns and %zu rows\n", res.columns.size(), rows_loaded);
 

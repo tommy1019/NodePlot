@@ -28,9 +28,8 @@ ErrorOr<std::string> OutputNode::get_svg(EvaluatedNodeGraph* lng) {
         std::pair<double, double> x_lims = {std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity()};
         std::pair<double, double> y_lims = {std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity()};
 
-        auto expand_limits = [](Column& col, std::pair<double, double>& lims) {
-            col.ensure_numeric();
-            for (auto& v : *col.numeric_values) {
+        auto expand_limits = [](ColumnNumeric& col, std::pair<double, double>& lims) {
+            for (auto& v : col.values) {
                 lims.first = std::min(lims.first, v);
                 lims.second = std::max(lims.second, v);
             }
@@ -160,7 +159,7 @@ ErrorOr<std::string> OutputNode::get_svg(EvaluatedNodeGraph* lng) {
             std::visit(overloaded{
                            [&](ScatterSeries& s) {
                                for (size_t i = 0; i < s.x.values.size(); i++) {
-                                   auto [x, y] = normalize_coords({s.x.numeric_values.value()[i], s.y.numeric_values.value()[i]});
+                                   auto [x, y] = normalize_coords({s.x.values[i], s.y.values[i]});
                                    circle(x,
                                           y,
                                           s.point_size,
@@ -170,8 +169,8 @@ ErrorOr<std::string> OutputNode::get_svg(EvaluatedNodeGraph* lng) {
                            },
                            [&](LineSeries& s) {
                                for (size_t i = 1; i < s.x.values.size(); i++) {
-                                   auto [x1, y1] = normalize_coords({s.x.numeric_values.value()[i - 1], s.y.numeric_values.value()[i - 1]});
-                                   auto [x2, y2] = normalize_coords({s.x.numeric_values.value()[i], s.y.numeric_values.value()[i]});
+                                   auto [x1, y1] = normalize_coords({s.x.values[i - 1], s.y.values[i - 1]});
+                                   auto [x2, y2] = normalize_coords({s.x.values[i], s.y.values[i]});
                                    line(x1,
                                         y1,
                                         x2,
@@ -185,20 +184,20 @@ ErrorOr<std::string> OutputNode::get_svg(EvaluatedNodeGraph* lng) {
                                ss << "<polygon points=\"";
 
                                for (size_t i = 0; i < s.x.values.size(); i++) {
-                                   auto [x, y] = normalize_coords({s.x.numeric_values.value()[i], s.y_min.numeric_values.value()[i]});
+                                   auto [x, y] = normalize_coords({s.x.values[i], s.y_min.values[i]});
                                    if (i != 0)
                                        ss << ",";
                                    ss << (x + x_offset) << "," << (y + y_offset);
                                }
 
                                for (size_t i = s.x.values.size(); i > 0; i--) {
-                                   auto [x, y] = normalize_coords({s.x.numeric_values.value()[i - 1], s.y_max.numeric_values.value()[i - 1]});
+                                   auto [x, y] = normalize_coords({s.x.values[i - 1], s.y_max.values[i - 1]});
                                    ss << ",";
                                    ss << (x + x_offset) << "," << (y + y_offset);
                                }
 
                                if (s.x.values.size() > 0) {
-                                   auto [x, y] = normalize_coords({s.x.numeric_values.value()[0], s.y_min.numeric_values.value()[0]});
+                                   auto [x, y] = normalize_coords({s.x.values[0], s.y_min.values[0]});
                                    ss << "," << (x + x_offset) << "," << (y + y_offset);
                                }
 

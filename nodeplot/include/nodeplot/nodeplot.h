@@ -68,36 +68,48 @@ struct ColumnName {
     friend void from_json(const nlohmann::json& json, ColumnName& c) { json.get_to(c.name); }
 };
 
-// TODO: Use shared_ptr to maybe make the column storage copy on write
-struct Column {
+struct ColumnCSVImported {
     std::shared_ptr<MappedFile> mapped_file;
-    std::string name;
     std::vector<std::string_view> values;
-    std::optional<std::vector<double>> numeric_values;
+};
 
-    void ensure_numeric();
+struct ColumnNumeric {
+    std::vector<double> values;
+};
+
+struct Column {
+    using ValueType = std::variant<std::string_view, double>;
+    std::variant<ColumnCSVImported, ColumnNumeric> raw_column;
+
+    size_t size() {
+        return std::visit([](auto c) { return c.values.size(); }, raw_column);
+    }
+
+    ValueType operator[](size_t index) {
+        return std::visit([&](auto c) -> ValueType { return c.values[index]; }, raw_column);
+    }
 };
 
 struct ScatterSeries {
-    Column x;
-    Column y;
+    ColumnNumeric x;
+    ColumnNumeric y;
 
     Color color;
     double point_size = 1;
 };
 
 struct LineSeries {
-    Column x;
-    Column y;
+    ColumnNumeric x;
+    ColumnNumeric y;
 
     Color color;
     double stroke_width = 1;
 };
 
 struct RibbonSeries {
-    Column x;
-    Column y_min;
-    Column y_max;
+    ColumnNumeric x;
+    ColumnNumeric y_min;
+    ColumnNumeric y_max;
 
     Color color;
 };
@@ -105,7 +117,6 @@ struct RibbonSeries {
 using Series = std::variant<ScatterSeries, LineSeries, RibbonSeries>;
 
 struct Table {
-    std::shared_ptr<MappedFile> mapped_file;
     std::map<std::string, Column> columns;
     std::vector<std::string> column_names;
 };
@@ -234,7 +245,8 @@ struct SampledPropertyExtractNode : public BaseNode {
                                std::make_tuple(OutputIndex{1}, "min", "Minimum"),
                                std::make_tuple(OutputIndex{2}, "avg", "Average"),
                                std::make_tuple(OutputIndex{3}, "stdev", "Standard Deviation"),
-                               std::make_tuple(OutputIndex{4}, "max", "Maximum"));
+                               std::make_tuple(OutputIndex{4}, "max", "Maximum"),
+                               std::make_tuple(OutputIndex{5}, "sample_count", "Sample Count"));
     }
 };
 
@@ -516,17 +528,6 @@ struct EvaluatedNodeGraph {
     }
 
     template <typename T>
-    ErrorOr<T> get_input(const Input<T>& input) {
-        if (std::holds_alternative<T>(input))
-            return std::get<T>(input);
-        auto out = TRY(get_output(std::get<InputPin<T>>(input)));
-        if (!std::holds_alternative<T>(out)) {
-            return ERR("Input has incorrect type");
-        }
-        return std::get<T>(out);
-    }
-
-    template <typename T>
     ErrorOr<T> get_input(const InputPin<T>& input) {
         auto out = TRY(get_output(input));
         if (!std::holds_alternative<T>(out)) {
@@ -535,11 +536,19 @@ struct EvaluatedNodeGraph {
         return std::get<T>(out);
     }
 
+    template <typename T>
+    ErrorOr<T> get_input(const Input<T>& input) {
+        if (std::holds_alternative<T>(input))
+            return std::get<T>(input);
+        return get_input(std::get<InputPin<T>>(input));
+    }
+
     ErrorOr<NodeOutput> get_output(NodeId node_id, OutputIndex output_id);
 
     template <typename T>
     ErrorOr<NodeOutput> get_output(InputPin<T> pin) {
-        // TODO: Check return type?
         return get_output(pin.node, pin.output_index);
     }
+
+    ErrorOr<ColumnNumeric> column_as_numeric(Column column);
 };
