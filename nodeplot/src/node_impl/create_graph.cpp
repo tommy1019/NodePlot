@@ -6,7 +6,7 @@
 #define GET_INPUT_VAR(name, label) auto name = TRY_OR(graph->get_input(node.i_##name), return ERR("Could not get '" #label "' input"));
 
 template <>
-ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const CreateGraphStyleNode& node, OutputId id) {
+ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const CreateGraphStyleNode& node, OutputIndex id) {
     GraphStyle res;
     res.plot_margines = GET_INPUT(plot_margines, Plot Margines);
     res.internal_plot_margines = GET_INPUT(internal_margines, Internal Plot Margines);
@@ -25,7 +25,7 @@ ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const CreateGraphStyl
 }
 
 template <>
-ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const CreateGraphNode& node, OutputId id) {
+ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const CreateGraphNode& node, OutputIndex id) {
     GET_INPUT_VAR(title, Title)
     GET_INPUT_VAR(xlab, X Label)
     GET_INPUT_VAR(ylab, Y Label)

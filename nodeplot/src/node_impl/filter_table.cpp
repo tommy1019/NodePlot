@@ -3,7 +3,7 @@
 #include <vector>
 
 template <>
-ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const FilterTableNode& node, OutputId id) {
+ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const FilterTableNode& node, OutputIndex id) {
     auto table = TRY_OR(graph->get_input(node.i_table), return ERR("Could not get 'Table' input"));
     auto column_name = TRY_OR(graph->get_input(node.i_column_name), return ERR("Could not get 'Column Name' input"));
     auto compare_type = TRY_OR(graph->get_input(node.i_compare_type), return ERR("Could not get 'Compare Type' input"));

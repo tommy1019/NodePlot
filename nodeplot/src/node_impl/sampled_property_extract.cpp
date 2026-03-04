@@ -5,7 +5,7 @@
 #include <vector>
 
 template <>
-ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const SampledPropertyExtractNode& node, OutputId id) {
+ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const SampledPropertyExtractNode& node, OutputIndex id) {
     auto x = TRY_OR(graph->get_input(node.i_x), return ERR("Could not get 'X' input"));
     auto y = TRY_OR(graph->get_input(node.i_y), return ERR("Could not get 'Y' input"));
 

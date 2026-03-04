@@ -11,7 +11,7 @@ MappedFile::~MappedFile() {
     }
 }
 
-ErrorOr<NodeOutput> EvaluatedNodeGraph::get_output(NodeId node_id, OutputId output_id) {
+ErrorOr<NodeOutput> EvaluatedNodeGraph::get_output(NodeId node_id, OutputIndex output_id) {
     auto& loaded_node = loaded_nodes[node_id];
 
     if (auto val = loaded_node.cache.find(output_id); val != loaded_node.cache.end()) {

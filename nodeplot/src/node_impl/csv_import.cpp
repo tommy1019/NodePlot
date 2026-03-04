@@ -8,7 +8,7 @@
 #include <filesystem>
 
 template <>
-ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const CSVImportNode& node, OutputId id) {
+ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const CSVImportNode& node, OutputIndex id) {
     auto source_path = TRY_OR(graph->get_input(node.i_source_path), return ERR("Could not get 'Source Path' input"));
     auto has_headers = TRY_OR(graph->get_input(node.i_has_headers), return ERR("Could not get 'Has Headers' input"));
 

@@ -16,12 +16,12 @@
 #include "utils.h"
 
 using NodeId = int64_t;
-using OutputId = int64_t;
+using OutputIndex = int64_t;
 
 template <typename T>
 struct InputPin {
     NodeId node = -1;
-    OutputId output_index = -1;
+    OutputIndex output_index = -1;
 
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(InputPin, node, output_index);
 };
@@ -158,7 +158,7 @@ struct CSVImportNode : public BaseNode {
     Input<std::filesystem::path> i_source_path;
     Input<bool> i_has_headers = true;
 
-    OutputId output_id;
+    OutputIndex output_id;
 
     static std::string name() { return "CSV Input"; }
     static std::string type() { return "csv_import"; }
@@ -169,7 +169,7 @@ struct CSVImportNode : public BaseNode {
                                std::make_tuple(std::reference_wrapper{i_has_headers}, "has_headers", "Has Headers"));
     }
 
-    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputId{0}, "table_data", "Table Data")); }
+    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputIndex{0}, "table_data", "Table Data")); }
 };
 
 struct FilterTableNode : public BaseNode {
@@ -201,7 +201,7 @@ struct FilterTableNode : public BaseNode {
                                std::make_tuple(std::reference_wrapper{i_numeric_compare}, "numeric_compare", "Numeric Compare"));
     }
 
-    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputId{0}, "table", "Table")); }
+    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputIndex{0}, "table", "Table")); }
 };
 
 struct ColumnSelectNode : public BaseNode {
@@ -216,7 +216,7 @@ struct ColumnSelectNode : public BaseNode {
         return std::make_tuple(std::make_tuple(std::reference_wrapper{i_table}, "table", "Table"), std::make_tuple(std::reference_wrapper{i_column_name}, "column_name", "Column Name"));
     }
 
-    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputId{0}, "column", "Column")); }
+    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputIndex{0}, "column", "Column")); }
 };
 
 struct SampledPropertyExtractNode : public BaseNode {
@@ -230,11 +230,11 @@ struct SampledPropertyExtractNode : public BaseNode {
     constexpr auto inputs() { return std::make_tuple(std::make_tuple(std::reference_wrapper{i_x}, "x", "X"), std::make_tuple(std::reference_wrapper{i_y}, "y", "Y")); }
 
     constexpr auto outputs() {
-        return std::make_tuple(std::make_tuple(OutputId{0}, "x", "X Values"),
-                               std::make_tuple(OutputId{1}, "min", "Minimum"),
-                               std::make_tuple(OutputId{2}, "avg", "Average"),
-                               std::make_tuple(OutputId{3}, "stdev", "Standard Deviation"),
-                               std::make_tuple(OutputId{4}, "max", "Maximum"));
+        return std::make_tuple(std::make_tuple(OutputIndex{0}, "x", "X Values"),
+                               std::make_tuple(OutputIndex{1}, "min", "Minimum"),
+                               std::make_tuple(OutputIndex{2}, "avg", "Average"),
+                               std::make_tuple(OutputIndex{3}, "stdev", "Standard Deviation"),
+                               std::make_tuple(OutputIndex{4}, "max", "Maximum"));
     }
 };
 
@@ -255,7 +255,7 @@ struct ScatterSeriesCreateNode : public BaseNode {
                                std::make_tuple(std::reference_wrapper{i_point_size}, "point_size", "Point Size"));
     }
 
-    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputId{0}, "series", "Series")); }
+    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputIndex{0}, "series", "Series")); }
 };
 
 struct LineSeriesCreateNode : public BaseNode {
@@ -275,7 +275,7 @@ struct LineSeriesCreateNode : public BaseNode {
                                std::make_tuple(std::reference_wrapper{i_stroke_width}, "stroke_width", "Stroke Width"));
     }
 
-    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputId{0}, "series", "Series")); }
+    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputIndex{0}, "series", "Series")); }
 };
 
 struct RibbonSeriesCreateNode : public BaseNode {
@@ -295,7 +295,7 @@ struct RibbonSeriesCreateNode : public BaseNode {
                                std::make_tuple(std::reference_wrapper{i_color}, "color", "Color"));
     }
 
-    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputId{0}, "series", "Series")); }
+    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputIndex{0}, "series", "Series")); }
 };
 
 struct CreateGraphStyleNode : public BaseNode {
@@ -342,7 +342,7 @@ struct CreateGraphStyleNode : public BaseNode {
                                std::make_tuple(std::reference_wrapper{i_title_font_size}, "title_font_size", "Title Font Size"));
     }
 
-    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputId{0}, "graph_style", "Graph Style")); }
+    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputIndex{0}, "graph_style", "Graph Style")); }
 };
 
 struct CreateGraphNode : public BaseNode {
@@ -372,7 +372,7 @@ struct CreateGraphNode : public BaseNode {
                                std::make_tuple(std::reference_wrapper{i_style}, "style", "Style"));
     }
 
-    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputId{0}, "graph", "Graph")); }
+    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputIndex{0}, "graph", "Graph")); }
 };
 
 struct OutputNode : public BaseNode {
@@ -450,13 +450,13 @@ struct NodeGraph {
 
 struct EvaluatedNodeGraph;
 
-ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const auto& node, OutputId id);
+ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const auto& node, OutputIndex id);
 
 struct EvaluatedNodeGraph {
     NodeGraph node_graph;
 
     struct LoadedNode {
-        std::map<OutputId, NodeOutput> cache;
+        std::map<OutputIndex, NodeOutput> cache;
 
         std::optional<std::string> error_message;
     };
@@ -535,7 +535,7 @@ struct EvaluatedNodeGraph {
         return std::get<T>(out);
     }
 
-    ErrorOr<NodeOutput> get_output(NodeId node_id, OutputId output_id);
+    ErrorOr<NodeOutput> get_output(NodeId node_id, OutputIndex output_id);
 
     template <typename T>
     ErrorOr<NodeOutput> get_output(InputPin<T> pin) {

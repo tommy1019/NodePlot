@@ -13,7 +13,7 @@ struct RenderNodeGraph {
     std::shared_ptr<SVGRenderer> svg_renderer;
 
     struct NodeRenderInfo {
-        std::map<OutputId, ImVec2> render_pin_positions;
+        std::map<OutputIndex, ImVec2> render_pin_positions;
     };
     std::map<int64_t, NodeRenderInfo> render_nodes;
 

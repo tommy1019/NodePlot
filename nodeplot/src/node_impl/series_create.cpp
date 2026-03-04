@@ -1,7 +1,7 @@
 #include "nodeplot.h"
 
 template <>
-ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const ScatterSeriesCreateNode& node, OutputId id) {
+ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const ScatterSeriesCreateNode& node, OutputIndex id) {
     auto x = TRY_OR(graph->get_input(node.i_x), return ERR("Could not get 'X' input"));
     auto y = TRY_OR(graph->get_input(node.i_y), return ERR("Could not get 'Y' input"));
     auto color = TRY_OR(graph->get_input(node.i_color), return ERR("Could not get 'Color' input"));
@@ -12,7 +12,7 @@ ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const ScatterSeriesCr
 }
 
 template <>
-ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const LineSeriesCreateNode& node, OutputId id) {
+ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const LineSeriesCreateNode& node, OutputIndex id) {
     auto x = TRY_OR(graph->get_input(node.i_x), return ERR("Could not get 'X' input"));
     auto y = TRY_OR(graph->get_input(node.i_y), return ERR("Could not get 'Y' input"));
     auto color = TRY_OR(graph->get_input(node.i_color), return ERR("Could not get 'Color' input"));
@@ -23,7 +23,7 @@ ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const LineSeriesCreat
 }
 
 template <>
-ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const RibbonSeriesCreateNode& node, OutputId id) {
+ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const RibbonSeriesCreateNode& node, OutputIndex id) {
     auto x = TRY_OR(graph->get_input(node.i_x), return ERR("Could not get 'X' input"));
     auto y_min = TRY_OR(graph->get_input(node.i_y_min), return ERR("Could not get 'Y Min' input"));
     auto y_max = TRY_OR(graph->get_input(node.i_y_max), return ERR("Could not get 'Y Max' input"));

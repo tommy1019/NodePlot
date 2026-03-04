@@ -8,7 +8,7 @@
 #include <vector>
 
 template <>
-ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const OutputNode& node, OutputId id) {
+ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const OutputNode& node, OutputIndex id) {
     return ERR("Trying to get output from an output node");
 }
 
