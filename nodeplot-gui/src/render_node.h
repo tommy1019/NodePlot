@@ -111,7 +111,7 @@ void node_render(RenderNodeGraph* rng, T& node) {
                                     auto& map = std::get<3>(args);
                                     input(storage, std::get<1>(args), std::get<2>(args), [&](RenderNodeGraph* rng, T& node, const char* input_id, auto& storage) {
                                         bool res = false;
-                                        if (ImGui::BeginCombo(input_id,
+                                        if (ImGui::BeginCombo("##",
                                                               [&]() {
                                                                   if (auto v = map.find(storage); v != map.end())
                                                                       return v->second;
