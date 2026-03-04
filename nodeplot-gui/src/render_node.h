@@ -127,12 +127,7 @@ void node_generic_render(RenderNodeGraph* rng, const char* window_title, auto no
                 ImDrawList* draw_list = ImGui::GetForegroundDrawList();
 
                 ImVec2 pos = ImGui::GetCursorScreenPos();
-                render_path(
-                    {
-                        other_pin_pos->second.x - rng->scene_translation.x,
-                        other_pin_pos->second.y - rng->scene_translation.y,
-                    },
-                    ImVec2(pos.x + dd_target_size / 2.0f, pos.y + dd_target_size / 2.0f));
+                render_path(rng->world_to_screen(other_pin_pos->second), ImVec2(pos.x + dd_target_size / 2.0f, pos.y + dd_target_size / 2.0f));
             };
 
             overloaded{
@@ -352,10 +347,7 @@ void node_generic_render(RenderNodeGraph* rng, const char* window_title, auto no
         pin_source.x += dd_target_size / 2.0f;
         pin_source.y += dd_target_size / 2.0f;
 
-        rng->render_nodes[node.id].render_pin_positions[output_id] = {
-            pin_source.x + rng->scene_translation.x,
-            pin_source.y + rng->scene_translation.y,
-        };
+        rng->render_nodes[node.id].render_pin_positions[output_id] = rng->screen_to_world(pin_source);
 
         draw_circle(pin_source, dd_target_size / 2.0f);
         ImGui::InvisibleButton(id, {dd_target_size, dd_target_size});
