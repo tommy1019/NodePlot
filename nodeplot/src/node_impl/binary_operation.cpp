@@ -61,6 +61,11 @@ ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const BinaryOperation
                                   return Column{res};
                               },
                               [&](NumericType auto a, NumericType auto b) -> ErrorOr<NodeOutput> { return TRY(op(a, b)); },
+                              [&](std::string a, std::string b) -> ErrorOr<NodeOutput> { // TODO: Support string operations on columns
+                                  if (operation != "+")
+                                      return ERR("Invalid operation for strings");
+                                  return a + b;
+                              },
                               [](auto a, auto b) -> ErrorOr<NodeOutput> { return ERR("Invalid types for 'A' and 'B'"); },
                           },
                           a_val,
