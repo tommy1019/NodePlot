@@ -189,27 +189,49 @@ void node_generic_render(RenderNodeGraph* rng, const char* window_title, auto& n
 
     auto draw_circle = [&](ImVec2 center, float r, ImVec4 color = ImVec4(0.3f, 0.3f, 0.3f, 1.0f)) { draw_list->AddCircle(center, r, ImGui::GetColorU32(color), 0); };
 
-    auto render_path = [](ImVec2 start, ImVec2 end) {
+    auto render_path = [&](ImVec2 start, ImVec2 end) {
         constexpr ImVec4 color = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);
         const ImU32 color_32 = ImGui::GetColorU32(color);
 
-        ImDrawList* draw_list = ImGui::GetForegroundDrawList();
-        // TODO: Clip Rec
-        //  draw_list->PushClipRect(const ImVec2 &clip_rect_min, const ImVec2 &clip_rect_max)
+        ImDrawList* fg_draw_list = ImGui::GetForegroundDrawList();
+        ImDrawList* bg_draw_list = ImGui::GetBackgroundDrawList();
 
-        // fg_draw_list->AddLine(start, end, color_32);
+        float PATH_X_ESCAPE = 20.0f * rng->scene_scale;
+
+        fg_draw_list->AddLine(start,
+                              {
+                                  start.x + PATH_X_ESCAPE,
+                                  start.y,
+                              },
+                              color_32,
+                              3);
+
+        fg_draw_list->AddLine(end,
+                              {
+                                  end.x - PATH_X_ESCAPE,
+                                  end.y,
+                              },
+                              color_32,
+                              3);
+
+        start = {
+            start.x + PATH_X_ESCAPE,
+            start.y,
+        };
+
+        end = {
+            end.x - PATH_X_ESCAPE,
+            end.y,
+        };
 
         if (end.x < start.x) {
             ImVec2 half = {(start.x + end.x) / 2, (start.y + end.y) / 2};
 
-            // draw_list->AddLine(start, half, color_32);
-            // draw_list->AddLine(half, end, color_32);
-
             float start_end_offset = 50;
             float half_offset = std::clamp(std::abs(start.x - end.x), 50.0f, 200.0f);
 
-            draw_list->AddBezierCubic(start, {start.x + start_end_offset, start.y}, {half.x + half_offset, half.y}, half, color_32, 3);
-            draw_list->AddBezierCubic(half, {half.x - half_offset, half.y}, {end.x - start_end_offset, end.y}, end, color_32, 3);
+            bg_draw_list->AddBezierCubic(start, {start.x + start_end_offset, start.y}, {half.x + half_offset, half.y}, half, color_32, 3);
+            bg_draw_list->AddBezierCubic(half, {half.x - half_offset, half.y}, {end.x - start_end_offset, end.y}, end, color_32, 3);
         } else {
             float diff = std::abs(end.x - start.x);
 
@@ -218,7 +240,7 @@ void node_generic_render(RenderNodeGraph* rng, const char* window_title, auto& n
             ImVec2 s_control = ImVec2(start.x + control_offset, start.y);
             ImVec2 e_control = ImVec2(end.x - control_offset, end.y);
 
-            draw_list->AddBezierCubic(start, s_control, e_control, end, color_32, 3);
+            bg_draw_list->AddBezierCubic(start, s_control, e_control, end, color_32, 3);
         }
     };
 

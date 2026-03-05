@@ -73,5 +73,5 @@ struct Window {
 
     float m_scale;
     bool m_close_requested = false;
-    ImVec4 m_clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    ImVec4 m_clear_color = ImVec4(236.0f / 255.0f, 236.0f / 255.0f, 236.0f / 255.0f, 1.00f);
 };

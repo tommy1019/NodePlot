@@ -605,6 +605,11 @@ struct EvaluatedNodeGraph {
                 return std::get<std::string>(out);
         }
 
+        if constexpr (std::is_same_v<T, ColumnName>) { // TODO: Don't like this manual check and conversion from ColumnName to strings
+            if (std::holds_alternative<std::string>(out))
+                return ColumnName{std::get<std::string>(out)};
+        }
+
         if (!std::holds_alternative<T>(out)) {
             return ERR("Input has incorrect type");
         }

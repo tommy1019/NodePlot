@@ -19,7 +19,7 @@ auto SideBySide = [](auto A_id, auto A, auto B_id, auto B, float inital_seperati
     ImGui::BeginChild(A_id,
                       ImVec2(ImGui::GetContentRegionAvail().x * inital_seperation, 0),
                       ImGuiChildFlags_ResizeX | ImGuiChildFlags_Borders,
-                      ImGuiWindowFlags_None | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+                      ImGuiWindowFlags_None | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoBackground);
     A();
     ImGui::EndChild();
     ImGui::SameLine();
@@ -74,7 +74,8 @@ int main(int argc, char** argv) {
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
         ImGui::Begin("My Fullscreen Window",
                      nullptr,
-                     ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus);
+                     ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus
+                         | ImGuiWindowFlags_NoBackground);
         ImGui::PopStyleVar();
 
         if (ImGui::IsKeyPressed(ImGuiKey_S) && ImGui::GetIO().KeyCtrl) {
@@ -135,7 +136,7 @@ int main(int argc, char** argv) {
                 if (true) {
                     auto color = ImGui::GetColorU32(ImVec4(0.85f, 0.85f, 0.85f, 1.0f));
 
-                    auto render_list = ImGui::GetWindowDrawList();
+                    auto render_list = ImGui::GetBackgroundDrawList();
 
                     ImVec2 grid_size = ImVec2(100, 100);
 
