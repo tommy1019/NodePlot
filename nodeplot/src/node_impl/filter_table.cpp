@@ -73,7 +73,7 @@ ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const FilterTableNode
                 for (size_t i = 0; i < compare_vals.size(); i++)
                     if (compare_vals[i])
                         res.values.push_back(raw_col.values[i]);
-                return Column{raw_col};
+                return Column{res};
             },
             c.second.raw_column);
     }
