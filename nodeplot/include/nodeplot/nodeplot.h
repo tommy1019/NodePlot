@@ -41,11 +41,15 @@ void to_json(nlohmann::json& j, const Input<T>& p) {
 }
 template <typename T>
 void from_json(const nlohmann::json& j, Input<T>& p) {
-    if (j["type"] == "value")
-        j.at("value").get_to(std::get<T>(p));
-    else if (j["type"] == "input")
-        j.at("value").get_to(std::get<InputPin<T>>(p));
-    else
+    if (j["type"] == "value") {
+        T v;
+        j.at("value").get_to(v);
+        p = v;
+    } else if (j["type"] == "input") {
+        InputPin<T> v;
+        j.at("value").get_to(v);
+        p = v;
+    } else
         p = {};
 }
 
