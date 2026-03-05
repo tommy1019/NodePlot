@@ -338,7 +338,7 @@ struct RibbonSeriesCreateNode : public BaseNode {
 };
 
 struct CreateGraphStyleNode : public BaseNode {
-    Input<Margins> i_plot_margines = Margins{.left = 10, .right = 10, .top = 10, .bottom = 10};
+    Input<Margins> i_plot_margines = Margins{.left = 60, .right = 10, .top = 10, .bottom = 50};
     Input<Margins> i_internal_margines = Margins{.left = 0, .right = 0, .top = 0, .bottom = 0};
 
     Input<double> i_x_axis_tick_mark_font_size = 12.0;
@@ -419,8 +419,8 @@ struct OutputNode : public BaseNode {
 
     Input<std::string> i_output_filename;
 
-    Input<double> i_width = 300.0;
-    Input<double> i_height = 300.0;
+    Input<double> i_width = 250.0;
+    Input<double> i_height = 250.0;
 
     Input<int32_t> i_grid_cols = 1;
     Input<int32_t> i_grid_rows = 1;
