@@ -111,13 +111,13 @@ void node_render(RenderNodeGraph* rng, T& node) {
                                     auto& map = std::get<3>(args);
                                     input(storage, std::get<1>(args), std::get<2>(args), [&](RenderNodeGraph* rng, T& node, const char* input_id, auto& storage) {
                                         bool res = false;
-                                        if (ImGui::BeginCombo("##",
-                                                              [&]() {
-                                                                  if (auto v = map.find(storage); v != map.end())
-                                                                      return v->second;
-                                                                  return std::string("ERR");
-                                                              }()
-                                                                  .c_str())) {
+                                        auto preview_value = [&]() {
+                                            if (auto v = map.find(storage); v != map.end())
+                                                return v->second;
+                                            return std::string("ERR");
+                                        }();
+                                        ImGui::SetNextItemWidth(ImGui::CalcTextSize(preview_value.c_str()).x + ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x);
+                                        if (ImGui::BeginCombo("##", preview_value.c_str())) {
 
                                             for (auto e : map) {
                                                 if (ImGui::Selectable(e.second.c_str(), false)) {
@@ -136,10 +136,41 @@ void node_render(RenderNodeGraph* rng, T& node) {
                             };
 
                             overloaded{[&]<typename V>(std::vector<V>& vec) {
-                                           size_t list_index = 0;
-                                           for (auto& e : vec) {
-                                               ImGui::PushID(list_index++);
-                                               insert_input(e);
+                                           ImGui::TableNextRow();
+
+                                           ImGui::TableNextColumn();
+                                           ImGui::TableNextColumn();
+                                           ImGui::TableNextColumn();
+                                           ImGui::TableNextColumn();
+                                           ImGui::TableNextColumn();
+
+                                           if (ImGui::Button("+##add_item")) {
+                                               vec.emplace_back();
+                                           }
+                                           if (ImGui::BeginDragDropTarget()) {
+                                               if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PIN")) {
+                                                   IM_ASSERT(payload->DataSize == sizeof(InputPin<void>));
+                                                   InputPin<void> payload_n = *(const InputPin<void>*)payload->Data;
+
+                                                   // TODO: Check for infinite loops
+
+                                                   overloaded{
+                                                       [&]<typename U>(Input<U> input) { vec.push_back(*(reinterpret_cast<InputPin<U>*>(&payload_n))); },
+                                                       [&]<typename U>(InputPin<U> pin) { vec.push_back(*(reinterpret_cast<InputPin<U>*>(&payload_n))); },
+                                                   }(V{});
+
+                                                   rng->update_target(node.id);
+                                               }
+                                               ImGui::EndDragDropTarget();
+                                           }
+
+                                           for (size_t i = 0; i < vec.size(); i++) {
+                                               ImGui::PushID(i);
+                                               insert_input(vec[i]);
+                                               if (ImGui::Button("-##delete_item")) {
+                                                   vec.erase(vec.begin() + i);
+                                                   i--;
+                                               }
                                                ImGui::PopID();
                                            }
                                        },

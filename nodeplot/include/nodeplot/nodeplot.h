@@ -186,7 +186,7 @@ struct CSVImportNode : public BaseNode {
 struct FilterTableNode : public BaseNode {
     InputPin<Table> i_table;
     Input<ColumnName> i_column_name;
-    Input<std::string> i_compare_type;
+    Input<std::string> i_compare_type = "<";
     Input<std::string> i_compare_value;
     Input<bool> i_numeric_compare;
 
@@ -228,6 +228,33 @@ struct ColumnSelectNode : public BaseNode {
     }
 
     constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputIndex{0}, "column", "Column")); }
+};
+
+struct BinaryOperationNode : public BaseNode {
+    // TODO: Allow the type system to specify these can be columns or values
+    InputPin<Column> i_a;
+    InputPin<Column> i_b;
+    Input<std::string> i_operation = "+";
+
+    static std::string name() { return "Binary Operation"; }
+    static std::string type() { return "binary_operation"; }
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(BinaryOperationNode, id, pos, i_a, i_b, i_operation);
+
+    constexpr auto inputs() {
+        return std::make_tuple(std::make_tuple(std::reference_wrapper{i_a}, "a", "A"),
+                               std::make_tuple(std::reference_wrapper{i_b}, "b", "B"),
+                               std::make_tuple(std::reference_wrapper{i_operation},
+                                               "operation",
+                                               "Operation",
+                                               std::map<std::string, std::string>{
+                                                   {"+", "+ Addition"},
+                                                   {"-", "- Subtraction"},
+                                                   {"*", "* Multiplication"},
+                                                   {"/", "/ Division"},
+                                               }));
+    }
+
+    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputIndex{0}, "result", "Result")); }
 };
 
 struct SampledPropertyExtractNode : public BaseNode {
@@ -419,6 +446,7 @@ struct OutputNode : public BaseNode {
 using Node = std::variant<CSVImportNode,
                           FilterTableNode,
                           ColumnSelectNode,
+                          BinaryOperationNode,
                           SampledPropertyExtractNode,
                           ScatterSeriesCreateNode,
                           LineSeriesCreateNode,

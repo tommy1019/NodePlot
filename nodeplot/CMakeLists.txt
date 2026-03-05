@@ -6,6 +6,7 @@ set(SOURCES
     src/node_impl/csv_import.cpp
     src/node_impl/filter_table.cpp
     src/node_impl/column_select.cpp
+    src/node_impl/binary_operation.cpp
     src/node_impl/sampled_property_extract.cpp
     src/node_impl/series_create.cpp
     src/node_impl/create_graph.cpp

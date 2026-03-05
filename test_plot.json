@@ -52,8 +52,8 @@
         },
         "id": 2,
         "pos": [
-          521.5,
-          219.0
+          517.7235717773438,
+          214.4685821533203
         ],
         "type": "column_select"
       }
@@ -84,8 +84,8 @@
         },
         "id": 3,
         "pos": [
-          924.5,
-          99.0
+          1245.0904541015625,
+          52.98777389526367
         ],
         "type": "scatter_series_create"
       }
@@ -141,8 +141,8 @@
         },
         "id": 5,
         "pos": [
-          784.5,
-          494.0
+          943.5,
+          666.0
         ],
         "type": "create_graph_style"
       }
@@ -153,6 +153,10 @@
         "i_series": [
           {
             "node": 3,
+            "output_index": 0
+          },
+          {
+            "node": 11,
             "output_index": 0
           }
         ],
@@ -182,8 +186,8 @@
         },
         "id": 6,
         "pos": [
-          1324.5,
-          253.0
+          1635.5,
+          178.0
         ],
         "type": "create_graph"
       }
@@ -219,10 +223,84 @@
         },
         "id": 7,
         "pos": [
-          1798.5,
-          346.0
+          2058.5,
+          348.0
         ],
         "type": "output"
+      }
+    ],
+    [
+      8,
+      {
+        "i_column_name": {
+          "type": "value",
+          "value": "trig"
+        },
+        "i_table": {
+          "node": 0,
+          "output_index": 0
+        },
+        "id": 8,
+        "pos": [
+          518.5,
+          323.5
+        ],
+        "type": "column_select"
+      }
+    ],
+    [
+      9,
+      {
+        "i_a": {
+          "node": 2,
+          "output_index": 0
+        },
+        "i_b": {
+          "node": 8,
+          "output_index": 0
+        },
+        "i_operation": {
+          "type": "value",
+          "value": "*"
+        },
+        "id": 9,
+        "pos": [
+          941.4876708984375,
+          317.2030029296875
+        ],
+        "type": "binary_operation"
+      }
+    ],
+    [
+      11,
+      {
+        "i_color": {
+          "type": "value",
+          "value": {
+            "a": 1.0,
+            "b": 1.0,
+            "g": 0.0,
+            "r": 0.0
+          }
+        },
+        "i_stroke_width": {
+          "type": "value",
+          "value": 3.0
+        },
+        "i_x": {
+          "node": 1,
+          "output_index": 0
+        },
+        "i_y": {
+          "node": 9,
+          "output_index": 0
+        },
+        "id": 11,
+        "pos": [
+          1234.7813720703125,
+          256.2415771484375
+        ],
+        "type": "line_series_create"
       }
     ]
   ],
