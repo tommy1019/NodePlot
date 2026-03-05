@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.25)
 set(SOURCES
     src/nodeplot.cpp
 
+    src/node_impl/value.cpp
     src/node_impl/csv_import.cpp
     src/node_impl/filter_table.cpp
     src/node_impl/column_select.cpp

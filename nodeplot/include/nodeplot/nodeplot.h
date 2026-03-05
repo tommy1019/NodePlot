@@ -165,15 +165,49 @@ struct BaseNode {
     std::pair<float, float> pos = {};
 };
 
+struct IntegerValueNode : public BaseNode {
+    Input<int32_t> i_val;
+
+    static std::string name() { return "Integer Value"; }
+    static std::string type() { return "int_value"; }
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(IntegerValueNode, id, pos, i_val);
+
+    constexpr auto inputs() { return std::make_tuple(std::make_tuple(std::reference_wrapper{i_val}, "value", "Value")); }
+
+    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputIndex{0}, "value", "Value")); }
+};
+
+struct NumericValueNode : public BaseNode {
+    Input<double> i_val;
+
+    static std::string name() { return "Numeric Value"; }
+    static std::string type() { return "numeric_value"; }
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(NumericValueNode, id, pos, i_val);
+
+    constexpr auto inputs() { return std::make_tuple(std::make_tuple(std::reference_wrapper{i_val}, "value", "Value")); }
+
+    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputIndex{0}, "value", "Value")); }
+};
+
+struct StringValueNode : public BaseNode {
+    Input<std::string> i_val;
+
+    static std::string name() { return "String Value"; }
+    static std::string type() { return "string_value"; }
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(StringValueNode, id, pos, i_val);
+
+    constexpr auto inputs() { return std::make_tuple(std::make_tuple(std::reference_wrapper{i_val}, "value", "Value")); }
+
+    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputIndex{0}, "value", "Value")); }
+};
+
 struct CSVImportNode : public BaseNode {
     Input<std::filesystem::path> i_source_path;
     Input<bool> i_has_headers = true;
 
-    OutputIndex output_id;
-
     static std::string name() { return "CSV Input"; }
     static std::string type() { return "csv_import"; }
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(CSVImportNode, id, pos, i_source_path, i_has_headers, output_id);
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(CSVImportNode, id, pos, i_source_path, i_has_headers);
 
     constexpr auto inputs() {
         return std::make_tuple(std::make_tuple(std::reference_wrapper{i_source_path}, "source_path", "Source Path"),
@@ -443,7 +477,10 @@ struct OutputNode : public BaseNode {
     ErrorOr<std::string> get_svg(EvaluatedNodeGraph* graph);
 };
 
-using Node = std::variant<CSVImportNode,
+using Node = std::variant<IntegerValueNode,
+                          NumericValueNode,
+                          StringValueNode,
+                          CSVImportNode,
                           FilterTableNode,
                           ColumnSelectNode,
                           BinaryOperationNode,
