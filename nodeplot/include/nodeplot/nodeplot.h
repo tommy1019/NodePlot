@@ -599,6 +599,12 @@ struct EvaluatedNodeGraph {
     template <typename T>
     ErrorOr<T> get_input(const InputPin<T>& input) {
         auto out = TRY(get_output(input));
+
+        if constexpr (std::is_same_v<T, std::filesystem::path>) { // TODO: Don't like this manual check and conversion from paths to strings
+            if (std::holds_alternative<std::string>(out))
+                return std::get<std::string>(out);
+        }
+
         if (!std::holds_alternative<T>(out)) {
             return ERR("Input has incorrect type");
         }
