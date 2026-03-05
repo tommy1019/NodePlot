@@ -103,12 +103,10 @@ int main(int argc, char** argv) {
                     for_each_type<Node>([&]<typename T>() {
                         if (ImGui::MenuItem(T::type().c_str())) {
                             auto win_size = ImGui::GetWindowSize();
+                            auto placement_pos = render_node_graph.screen_to_world(ImVec2(win_size.x, win_size.y));
 
                             T new_node{};
-                            new_node.pos = {
-                                -render_node_graph.scene_translation.x + win_size.x / 2,
-                                -render_node_graph.scene_translation.y + win_size.y / 2,
-                            };
+                            new_node.pos = {placement_pos.x, placement_pos.y};
                             render_node_graph.eval_node_graph.node_graph.add_node(new_node);
                         }
                     });
