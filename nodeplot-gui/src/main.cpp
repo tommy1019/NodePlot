@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
             if (ImGui::BeginMenu("NodeGraph")) {
                 if (ImGui::BeginMenu("Add")) {
                     for_each_type<Node>([&]<typename T>() {
-                        if (ImGui::MenuItem(T::type().c_str())) {
+                        if (ImGui::MenuItem(T::name().c_str())) {
                             auto win_size = ImGui::GetWindowSize();
                             auto placement_pos = render_node_graph.screen_to_world(ImVec2(win_size.x, win_size.y));
 
