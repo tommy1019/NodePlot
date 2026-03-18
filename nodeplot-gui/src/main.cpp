@@ -8,18 +8,20 @@
 #include <nodeplot/error.h>
 #include <nodeplot/nodeplot.h>
 
-#include "imgui_internal.h"
-#include "portable-file-dialogs.h"
+#include <portable-file-dialogs.h>
+
 #include "render_node.h"
 #include "render_node_graph.h"
+#include "style.h"
 #include "svg_renderer.h"
 #include "window.h"
 
 auto SideBySide = [](auto A_id, auto A, auto B_id, auto B, float inital_seperation = 0.5f) {
+    ImGui::SetNextWindowBgAlpha(0.0f);
     ImGui::BeginChild(A_id,
                       ImVec2(ImGui::GetContentRegionAvail().x * inital_seperation, 0),
                       ImGuiChildFlags_ResizeX | ImGuiChildFlags_Borders,
-                      ImGuiWindowFlags_None | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoBackground);
+                      ImGuiWindowFlags_None | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
     A();
     ImGui::EndChild();
     ImGui::SameLine();
@@ -125,16 +127,23 @@ int main(int argc, char** argv) {
                 auto render_node_editor_position = ImGui::GetCursorScreenPos();
                 auto render_node_editor_size = ImGui::GetWindowSize();
 
-                ImGui::GetForegroundDrawList()->PushClipRect(render_node_editor_position,
-                                                             {
-                                                                 render_node_editor_position.x + render_node_editor_size.x - ImGui::GetStyle().WindowPadding.x,
-                                                                 render_node_editor_position.y + render_node_editor_size.y,
-                                                             },
-                                                             true);
+                ImVec2 clip_start = {
+                    render_node_editor_position.x - ImGui::GetStyle().WindowPadding.x,
+                    render_node_editor_position.y - ImGui::GetStyle().WindowPadding.y,
+                };
+
+                ImVec2 clip_end = {
+                    render_node_editor_position.x - ImGui::GetStyle().WindowPadding.x + render_node_editor_size.x,
+                    render_node_editor_position.y - ImGui::GetStyle().WindowPadding.y + render_node_editor_size.y,
+                };
+
+                ImGui::GetForegroundDrawList()->PushClipRect(clip_start, clip_end, true);
+                ImGui::GetBackgroundDrawList()->PushClipRect(clip_start, clip_end, true);
 
                 // Grid Lines
                 if (true) {
-                    auto color = ImGui::GetColorU32(ImVec4(0.85f, 0.85f, 0.85f, 1.0f));
+                    constexpr float GRID_COLOR = 0.85f;
+                    auto color = ImGui::GetColorU32(ImVec4(GRID_COLOR, GRID_COLOR, GRID_COLOR, 1.0f));
 
                     auto render_list = ImGui::GetBackgroundDrawList();
 
@@ -143,7 +152,7 @@ int main(int argc, char** argv) {
                     ImVec2 grid_size_screen = ImVec2(render_node_graph.world_to_screen(grid_size).x - render_node_graph.world_to_screen(ImVec2(0, 0)).x,
                                                      render_node_graph.world_to_screen(grid_size).y - render_node_graph.world_to_screen(ImVec2(0, 0)).y);
 
-                    ImVec2 start = render_node_graph.screen_to_world(ImVec2());
+                    ImVec2 start = render_node_graph.screen_to_world(render_node_editor_position);
                     ImVec2 end = render_node_graph.screen_to_world(render_node_editor_size);
 
                     start.x = std::floor(start.x / 100.0f) * 100.0f;
@@ -164,9 +173,91 @@ int main(int argc, char** argv) {
                     }
                 }
 
+                // Draw node connection lines
+                {
+                    for (auto& id_node : render_node_graph.eval_node_graph.node_graph.nodes()) {
+                        std::visit(
+                            [&](auto& node) {
+                                auto window_pos = render_node_graph.world_to_screen(ImVec2(node.pos.first, node.pos.second));
+
+                                size_t y_pos = 0;
+                                y_pos += NODE_ELEMENT_HEIGHT / 2;
+
+                                auto render_pin = [&]<typename T>(InputPin<T> pin) {
+                                    auto other_node = render_node_graph.eval_node_graph.node_graph.nodes().find(pin.node);
+                                    if (other_node == render_node_graph.eval_node_graph.node_graph.nodes().end())
+                                        return;
+
+                                    auto other_node_pos = render_node_graph.world_to_screen(std::visit([](auto node) { return ImVec2{node.pos.first, node.pos.second}; }, other_node->second));
+
+                                    auto pin_offset = std::visit(
+                                        [&](auto node) {
+                                            size_t height = render_node_graph.get_header_height(node) + render_node_graph.get_input_height(node);
+                                            bool found = false;
+                                            for_each_tuple(
+                                                [&](auto output) {
+                                                    if (!found)
+                                                        height += NODE_ELEMENT_HEIGHT;
+                                                    if (std::get<0>(output) == pin.output_index) {
+                                                        found = true;
+                                                    }
+                                                },
+                                                node.outputs());
+                                            return height;
+                                        },
+                                        other_node->second);
+
+                                    render_node_graph.draw_node_path(
+                                        {
+                                            other_node_pos.x + (NODE_WIDTH - NODE_LEFT_PADDING) * render_node_graph.scene_scale,
+                                            other_node_pos.y + (pin_offset + NODE_IO_CIRCLE_RADIUS) * render_node_graph.scene_scale,
+                                        },
+                                        {
+                                            window_pos.x + (NODE_LEFT_PADDING + NODE_IO_CIRCLE_RADIUS) * render_node_graph.scene_scale,
+                                            window_pos.y + (y_pos + NODE_IO_CIRCLE_RADIUS) * render_node_graph.scene_scale,
+                                        });
+                                };
+
+                                for_each_tuple(
+                                    [&](auto input_tuple) {
+                                        overloaded{
+                                            [&]<typename T>(std::vector<Input<T>>& v) {
+                                                y_pos += NODE_ELEMENT_HEIGHT;
+                                                for (auto& a : v) {
+                                                    y_pos += NODE_ELEMENT_HEIGHT;
+                                                    if (std::holds_alternative<InputPin<T>>(a))
+                                                        render_pin(std::get<InputPin<T>>(a));
+                                                }
+                                            },
+                                            [&]<typename T>(std::vector<InputPin<T>>& v) {
+                                                y_pos += NODE_ELEMENT_HEIGHT;
+                                                for (auto& a : v) {
+                                                    y_pos += NODE_ELEMENT_HEIGHT;
+                                                    render_pin(a);
+                                                }
+                                            },
+                                            [&]<typename T>(Input<T>& v) {
+                                                y_pos += NODE_ELEMENT_HEIGHT;
+                                                if (std::holds_alternative<InputPin<T>>(v))
+                                                    render_pin(std::get<InputPin<T>>(v));
+                                            },
+                                            [&]<typename T>(InputPin<T>& v) {
+                                                y_pos += NODE_ELEMENT_HEIGHT;
+                                                render_pin(v);
+                                            },
+                                            [&](auto&) { y_pos += NODE_ELEMENT_HEIGHT; },
+                                        }(std::get<0>(input_tuple));
+                                    },
+                                    node.inputs());
+                            },
+                            id_node.second);
+                    }
+                }
+
                 auto old_style = ImGui::GetStyle();
                 ImGui::GetStyle().ScaleAllSizes(render_node_graph.scene_scale);
                 ImGui::PushFont(NULL, render_node_graph.scene_scale * 13);
+                ImGui::GetStyle().SeparatorSize = 1.0f;
 
                 std::set<NodeId> nodes_to_delete;
 
@@ -181,8 +272,26 @@ int main(int argc, char** argv) {
                                 ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(1.0f, 0.7f, 0.7f, 1.0f));
 
                             ImGui::SetNextWindowPos(render_node_graph.world_to_screen(ImVec2(node.pos.first, node.pos.second)), ImGuiCond_Always);
-                            if (ImGui::BeginChild(
-                                    std::to_string(node.id).c_str(), {0, 0}, ImGuiChildFlags_FrameStyle | ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None)) {
+
+                            size_t node_height = 0;
+                            {
+                                node_height += render_node_graph.get_header_height(node);
+                                node_height += render_node_graph.get_input_height(node);
+                                node_height += render_node_graph.get_output_height(node);
+                                if (node_error.has_value()) {
+                                    node_height += NODE_ELEMENT_HEIGHT;
+                                    node_height += NODE_ELEMENT_HEIGHT / 2;
+                                }
+                                node_height += NODE_ELEMENT_HEIGHT;
+                            }
+
+                            ImGui::SetNextWindowSize({NODE_WIDTH * render_node_graph.scene_scale, node_height * render_node_graph.scene_scale});
+                            if (ImGui::BeginChild(std::to_string(node.id).c_str(),
+                                                  {0, 0},
+                                                  ImGuiChildFlags_FrameStyle | ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY,
+                                                  ImGuiWindowFlags_None | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
+
+                                ImGui::Dummy({300 * render_node_graph.scene_scale, node_height * render_node_graph.scene_scale});
 
                                 if (ImGui::IsWindowHovered()) {
                                     if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
@@ -194,7 +303,10 @@ int main(int argc, char** argv) {
                                 node_render(&render_node_graph, node);
 
                                 if (node_error.has_value()) {
+                                    ImGui::SetCursorPos(
+                                        {NODE_LEFT_PADDING * render_node_graph.scene_scale, (node_height - NODE_ELEMENT_HEIGHT - NODE_ELEMENT_HEIGHT / 2) * render_node_graph.scene_scale});
                                     ImGui::Separator();
+                                    ImGui::SetCursorPos({NODE_LEFT_PADDING * render_node_graph.scene_scale, (node_height - NODE_ELEMENT_HEIGHT) * render_node_graph.scene_scale});
                                     ImGui::Text("%s", node_error.value().c_str());
                                 }
 
@@ -257,6 +369,7 @@ int main(int argc, char** argv) {
                 }
 
                 ImGui::GetForegroundDrawList()->PopClipRect();
+                ImGui::GetBackgroundDrawList()->PopClipRect();
             },
             "PlotViewer",
             [&]() {

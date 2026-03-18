@@ -16,12 +16,12 @@
 #include "utils.h"
 
 using NodeId = int64_t;
-using OutputIndex = int64_t;
+using OutputIndex = std::string;
 
 template <typename T>
 struct InputPin {
     NodeId node = -1;
-    OutputIndex output_index = -1;
+    OutputIndex output_index = "";
 
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(InputPin, node, output_index);
 };
@@ -178,7 +178,7 @@ struct IntegerValueNode : public BaseNode {
 
     constexpr auto inputs() { return std::make_tuple(std::make_tuple(std::reference_wrapper{i_val}, "value", "Value")); }
 
-    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputIndex{0}, "value", "Value")); }
+    constexpr auto outputs() { return std::make_tuple(std::make_tuple("value", "Value")); }
 };
 
 struct NumericValueNode : public BaseNode {
@@ -190,7 +190,7 @@ struct NumericValueNode : public BaseNode {
 
     constexpr auto inputs() { return std::make_tuple(std::make_tuple(std::reference_wrapper{i_val}, "value", "Value")); }
 
-    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputIndex{0}, "value", "Value")); }
+    constexpr auto outputs() { return std::make_tuple(std::make_tuple("value", "Value")); }
 };
 
 struct StringValueNode : public BaseNode {
@@ -202,7 +202,7 @@ struct StringValueNode : public BaseNode {
 
     constexpr auto inputs() { return std::make_tuple(std::make_tuple(std::reference_wrapper{i_val}, "value", "Value")); }
 
-    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputIndex{0}, "value", "Value")); }
+    constexpr auto outputs() { return std::make_tuple(std::make_tuple("value", "Value")); }
 };
 
 struct CSVImportNode : public BaseNode {
@@ -218,7 +218,7 @@ struct CSVImportNode : public BaseNode {
                                std::make_tuple(std::reference_wrapper{i_has_headers}, "has_headers", "Has Headers"));
     }
 
-    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputIndex{0}, "table_data", "Table Data")); }
+    constexpr auto outputs() { return std::make_tuple(std::make_tuple("table_data", "Table Data")); }
 };
 
 struct FilterTableNode : public BaseNode {
@@ -250,7 +250,7 @@ struct FilterTableNode : public BaseNode {
                                std::make_tuple(std::reference_wrapper{i_numeric_compare}, "numeric_compare", "Numeric Compare"));
     }
 
-    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputIndex{0}, "table", "Table")); }
+    constexpr auto outputs() { return std::make_tuple(std::make_tuple("table", "Table")); }
 };
 
 struct ColumnSelectNode : public BaseNode {
@@ -265,7 +265,7 @@ struct ColumnSelectNode : public BaseNode {
         return std::make_tuple(std::make_tuple(std::reference_wrapper{i_table}, "table", "Table"), std::make_tuple(std::reference_wrapper{i_column_name}, "column_name", "Column Name"));
     }
 
-    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputIndex{0}, "column", "Column")); }
+    constexpr auto outputs() { return std::make_tuple(std::make_tuple("column", "Column")); }
 };
 
 struct BinaryOperationNode : public BaseNode {
@@ -292,7 +292,7 @@ struct BinaryOperationNode : public BaseNode {
                                                }));
     }
 
-    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputIndex{0}, "result", "Result")); }
+    constexpr auto outputs() { return std::make_tuple(std::make_tuple("result", "Result")); }
 };
 
 struct SampledPropertyExtractNode : public BaseNode {
@@ -306,12 +306,12 @@ struct SampledPropertyExtractNode : public BaseNode {
     constexpr auto inputs() { return std::make_tuple(std::make_tuple(std::reference_wrapper{i_x}, "x", "X"), std::make_tuple(std::reference_wrapper{i_y}, "y", "Y")); }
 
     constexpr auto outputs() {
-        return std::make_tuple(std::make_tuple(OutputIndex{0}, "x", "X Values"),
-                               std::make_tuple(OutputIndex{1}, "min", "Minimum"),
-                               std::make_tuple(OutputIndex{2}, "avg", "Average"),
-                               std::make_tuple(OutputIndex{3}, "stdev", "Standard Deviation"),
-                               std::make_tuple(OutputIndex{4}, "max", "Maximum"),
-                               std::make_tuple(OutputIndex{5}, "sample_count", "Sample Count"));
+        return std::make_tuple(std::make_tuple("x", "X Values"),
+                               std::make_tuple("min", "Minimum"),
+                               std::make_tuple("avg", "Average"),
+                               std::make_tuple("stdev", "Standard Deviation"),
+                               std::make_tuple("max", "Maximum"),
+                               std::make_tuple("sample_count", "Sample Count"));
     }
 };
 
@@ -332,7 +332,7 @@ struct ScatterSeriesCreateNode : public BaseNode {
                                std::make_tuple(std::reference_wrapper{i_point_size}, "point_size", "Point Size"));
     }
 
-    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputIndex{0}, "series", "Series")); }
+    constexpr auto outputs() { return std::make_tuple(std::make_tuple("series", "Series")); }
 };
 
 struct LineSeriesCreateNode : public BaseNode {
@@ -352,7 +352,7 @@ struct LineSeriesCreateNode : public BaseNode {
                                std::make_tuple(std::reference_wrapper{i_stroke_width}, "stroke_width", "Stroke Width"));
     }
 
-    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputIndex{0}, "series", "Series")); }
+    constexpr auto outputs() { return std::make_tuple(std::make_tuple("series", "Series")); }
 };
 
 struct RibbonSeriesCreateNode : public BaseNode {
@@ -372,7 +372,7 @@ struct RibbonSeriesCreateNode : public BaseNode {
                                std::make_tuple(std::reference_wrapper{i_color}, "color", "Color"));
     }
 
-    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputIndex{0}, "series", "Series")); }
+    constexpr auto outputs() { return std::make_tuple(std::make_tuple("series", "Series")); }
 };
 
 struct CreateGraphStyleNode : public BaseNode {
@@ -419,7 +419,7 @@ struct CreateGraphStyleNode : public BaseNode {
                                std::make_tuple(std::reference_wrapper{i_title_font_size}, "title_font_size", "Title Font Size"));
     }
 
-    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputIndex{0}, "graph_style", "Graph Style")); }
+    constexpr auto outputs() { return std::make_tuple(std::make_tuple("graph_style", "Graph Style")); }
 };
 
 struct CreateGraphNode : public BaseNode {
@@ -443,13 +443,13 @@ struct CreateGraphNode : public BaseNode {
         return std::make_tuple(std::make_tuple(std::reference_wrapper{i_series}, "series", "Series"),
                                std::make_tuple(std::reference_wrapper{i_title}, "title", "Title"),
                                std::make_tuple(std::reference_wrapper{i_xlab}, "xlab", "X Label"),
-                               std::make_tuple(std::reference_wrapper{i_ylab}, "ylab", "X Label"),
+                               std::make_tuple(std::reference_wrapper{i_ylab}, "ylab", "Y Label"),
                                std::make_tuple(std::reference_wrapper{i_x_axis_log_scale}, "x_axis_log_scale", "X Axis Log Scale"),
                                std::make_tuple(std::reference_wrapper{i_y_axis_log_scale}, "y_axis_log_scale", "Y Axis Log Scale"),
                                std::make_tuple(std::reference_wrapper{i_style}, "style", "Style"));
     }
 
-    constexpr auto outputs() { return std::make_tuple(std::make_tuple(OutputIndex{0}, "graph", "Graph")); }
+    constexpr auto outputs() { return std::make_tuple(std::make_tuple("graph", "Graph")); }
 };
 
 struct OutputNode : public BaseNode {
@@ -460,8 +460,8 @@ struct OutputNode : public BaseNode {
     Input<double> i_width = 250.0;
     Input<double> i_height = 250.0;
 
-    Input<int32_t> i_grid_cols = 1;
-    Input<int32_t> i_grid_rows = 1;
+    int32_t i_grid_cols = 1;
+    int32_t i_grid_rows = 1;
 
     static std::string name() { return "Output"; }
     static std::string type() { return "output"; }
@@ -538,7 +538,6 @@ struct EvaluatedNodeGraph {
 
     struct LoadedNode {
         std::map<OutputIndex, NodeOutput> cache;
-
         std::optional<std::string> error_message;
     };
 
@@ -584,6 +583,7 @@ struct EvaluatedNodeGraph {
                                  if (pin.node >= 0)
                                      res.push_back(pin.node);
                              },
+                             [&]<typename T>(T input) {},
                          }(std::get<0>(args))
 
                              ,

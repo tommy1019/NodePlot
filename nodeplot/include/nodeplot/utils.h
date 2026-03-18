@@ -1,3 +1,4 @@
+#include <tuple>
 #include <variant>
 
 template <typename Variant, typename Func, std::size_t I = 0>
@@ -7,6 +8,10 @@ void for_each_type(Func&& func) {
         func.template operator()<T>();
         for_each_type<Variant, Func, I + 1>(std::forward<Func>(func));
     }
+};
+
+auto for_each_tuple(auto func, auto tuple) {
+    std::apply([&](auto&&... args) { ([&]() { func(args); }(), ...); }, tuple);
 };
 
 template <class... Ts>

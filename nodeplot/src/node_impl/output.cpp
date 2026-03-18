@@ -21,9 +21,6 @@ ErrorOr<std::string> OutputNode::get_svg(EvaluatedNodeGraph* lng) {
     auto width = TRY(lng->get_input(i_width));
     auto height = TRY(lng->get_input(i_height));
 
-    auto grid_cols = TRY(lng->get_input(i_grid_cols));
-    auto grid_rows = TRY(lng->get_input(i_grid_rows));
-
     auto get_internal_svg = [](Graph graph, double width, double height, double x_offset, double y_offset) -> ErrorOr<std::string> {
         std::pair<double, double> x_lims = {std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity()};
         std::pair<double, double> y_lims = {std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity()};
@@ -270,12 +267,12 @@ ErrorOr<std::string> OutputNode::get_svg(EvaluatedNodeGraph* lng) {
     std::stringstream ss;
     ss << "<svg width=\"" << width << "\" height=\"" << height << "\" xmlns=\"http://www.w3.org/2000/svg\">\n";
 
-    double width_per_col = width / grid_cols;
-    double height_per_row = height / grid_rows;
+    double width_per_col = width / i_grid_cols;
+    double height_per_row = height / i_grid_rows;
 
-    for (size_t r = 0; r < grid_rows; r++) {
-        for (size_t c = 0; c < grid_cols; c++) {
-            ss << TRY(get_internal_svg(graphs[c + r * grid_cols], width_per_col, height_per_row, c * width_per_col, r * height_per_row));
+    for (size_t r = 0; r < i_grid_rows; r++) {
+        for (size_t c = 0; c < i_grid_cols; c++) {
+            ss << TRY(get_internal_svg(graphs[c + r * i_grid_cols], width_per_col, height_per_row, c * width_per_col, r * height_per_row));
         }
     }
 

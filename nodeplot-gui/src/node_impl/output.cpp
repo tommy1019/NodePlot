@@ -11,12 +11,9 @@ void node_render(RenderNodeGraph* rng, OutputNode& node) {
         node.name().c_str(),
         node,
         [&](auto input) {
-            int32_t rows = std::get<int32_t>(node.i_grid_rows);
-            int32_t cols = std::get<int32_t>(node.i_grid_cols);
-
             for (size_t i = 0; i < node.i_graphs.size(); i++) {
                 ImGui::PushID(i);
-                input(node.i_graphs[i], "graph", std::format("Graph ({}, {})", (i % cols) + 1, (i / cols) + 1).c_str(), default_input_element);
+                input(node.i_graphs[i], "graph", std::format("Graph ({}, {})", (i % node.i_grid_cols) + 1, (i / node.i_grid_cols) + 1).c_str(), default_input_element);
                 ImGui::PopID();
             }
 
@@ -26,7 +23,7 @@ void node_render(RenderNodeGraph* rng, OutputNode& node) {
             input(node.i_grid_cols, "grid_cols", "Grid Cols", [&](RenderNodeGraph* rng, OutputNode& node, const char* input_id, int32_t& input) {
                 ImGui::SetNextItemWidth(200 * rng->scene_scale);
                 if (ImGui::InputInt("##", &input)) {
-                    node.i_graphs.resize(std::get<int32_t>(node.i_grid_cols) * std::get<int32_t>(node.i_grid_rows));
+                    node.i_graphs.resize(node.i_grid_cols * node.i_grid_rows);
                     return true;
                 }
                 return false;
@@ -34,7 +31,7 @@ void node_render(RenderNodeGraph* rng, OutputNode& node) {
             input(node.i_grid_rows, "grid_rows", "Grid Rows", [&](RenderNodeGraph* rng, OutputNode& node, const char* input_id, int32_t& input) {
                 ImGui::SetNextItemWidth(200 * rng->scene_scale);
                 if (ImGui::InputInt("##", &input)) {
-                    node.i_graphs.resize(std::get<int32_t>(node.i_grid_cols) * std::get<int32_t>(node.i_grid_rows));
+                    node.i_graphs.resize(node.i_grid_cols * node.i_grid_rows);
                     return true;
                 }
                 return false;

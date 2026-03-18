@@ -1,27 +1,25 @@
 #pragma once
 
-#include <concepts>
 #include <filesystem>
-#include <imgui.h>
-#include <misc/cpp/imgui_stdlib.h>
-
-#include <portable-file-dialogs.h>
+#include <optional>
 #include <tuple>
 #include <type_traits>
 #include <vector>
 
+#include <imgui.h>
+#include <misc/cpp/imgui_stdlib.h>
+
+#include <portable-file-dialogs.h>
+
 #include "nodeplot/nodeplot.h"
 #include "render_node_graph.h"
+#include "style.h"
 
 auto default_input_element = overloaded{
-    [](RenderNodeGraph* rng, auto& node, const char* id, std::string& storage) {
-        ImGui::SetNextItemWidth(200 * rng->scene_scale);
-        return ImGui::InputText("##", &storage, ImGuiInputTextFlags_None);
-    },
+    [](RenderNodeGraph* rng, auto& node, const char* id, std::string& storage) { return ImGui::InputText("##", &storage, ImGuiInputTextFlags_None); },
     [](RenderNodeGraph* rng, auto& node, const char* id, ColumnName& storage) {
-        ImGui::SetNextItemWidth(200 * rng->scene_scale);
         bool res = false;
-        res |= ImGui::InputText("##", &storage.name, ImGuiInputTextFlags_None);
+        bool has_auto_fill = false;
 
         std::apply(
             [&](auto&&... args) {
@@ -34,6 +32,7 @@ auto default_input_element = overloaded{
                                     if (auto v = rng->eval_node_graph.get_output(pin.node, pin.output_index); v.has_value()) {
                                         std::visit(overloaded{
                                                        [&](Table t) {
+                                                           has_auto_fill = true;
                                                            ImGui::SameLine();
                                                            ImGui::SetNextItemWidth(ImGui::GetFrameHeight());
                                                            if (ImGui::BeginCombo("##choose_column", "")) {
@@ -61,38 +60,36 @@ auto default_input_element = overloaded{
             },
             node.inputs());
 
+        if (has_auto_fill)
+            ImGui::SameLine();
+        res |= ImGui::InputText("##", &storage.name, ImGuiInputTextFlags_None);
+
         return res;
     },
     [](RenderNodeGraph* rng, auto& node, const char* id, std::filesystem::path& storage) {
-        ImGui::SetNextItemWidth(200 * rng->scene_scale);
-        bool text_input = ImGui::InputText("##", const_cast<std::string*>(&storage.native()), ImGuiInputTextFlags_None);
+        bool res = false;
+
         if (ImGui::Button("File Select")) {
             auto selection = pfd::open_file("Choose CSV File", storage.remove_filename(), {"CSV Files", "*.csv", "All Files", "*"}, pfd::opt::none).result();
             if (!selection.empty()) {
                 storage = std::filesystem::relative(std::filesystem::path(selection.front()), rng->eval_node_graph.node_graph.file_path().parent_path());
                 rng->update_target(node.id);
-                return true;
+                res = true;
             }
         }
-        return text_input;
+
+        ImGui::SameLine();
+
+        res |= ImGui::InputText("##", const_cast<std::string*>(&storage.native()), ImGuiInputTextFlags_None);
+
+        return res;
     },
     [](RenderNodeGraph* rng, auto& node, const char* id, bool& storage) { return ImGui::Checkbox("##", &storage); },
-    [](RenderNodeGraph* rng, auto& node, const char* id, double& storage) {
-        ImGui::SetNextItemWidth(200 * rng->scene_scale);
-        return ImGui::InputDouble("##", &storage);
-    },
-    [](RenderNodeGraph* rng, auto& node, const char* id, int32_t& storage) {
-        ImGui::SetNextItemWidth(200 * rng->scene_scale);
-        return ImGui::InputInt("##", &storage);
-    },
-    [](RenderNodeGraph* rng, auto& node, const char* id, Color& storage) {
-        ImGui::SetNextItemWidth(200 * rng->scene_scale);
-        return ImGui::ColorEdit4("##", (float*)&storage);
-    },
-    [](RenderNodeGraph* rng, auto& node, const char* id, Margins& storage) {
-        ImGui::SetNextItemWidth(200 * rng->scene_scale);
-        return ImGui::InputFloat4("##", (float*)&storage);
-    },
+    [](RenderNodeGraph* rng, auto& node, const char* id, double& storage) { return ImGui::InputDouble("##", &storage); },
+    [](RenderNodeGraph* rng, auto& node, const char* id, int32_t& storage) { return ImGui::InputInt("##", &storage); },
+    [](RenderNodeGraph* rng, auto& node, const char* id, Color& storage) { return ImGui::ColorEdit4("##", (float*)&storage); },
+    [](RenderNodeGraph* rng, auto& node, const char* id, Margins& storage) { return ImGui::InputFloat4("##", (float*)&storage); },
+    [](RenderNodeGraph* rng, auto& node, const char* id, void*& storage) {},
 };
 
 template <typename T>
@@ -136,33 +133,35 @@ void node_render(RenderNodeGraph* rng, T& node) {
                             };
 
                             overloaded{[&]<typename V>(std::vector<V>& vec) {
-                                           ImGui::TableNextRow();
+                                           void* empty = nullptr;
+                                           input(empty, std::get<1>(args), std::get<2>(args), [&](RenderNodeGraph* rng, T& node, const char* input_id, auto& storage) {
+                                               bool res = false;
 
-                                           ImGui::TableNextColumn();
-                                           ImGui::TableNextColumn();
-                                           ImGui::TableNextColumn();
-                                           ImGui::TableNextColumn();
-                                           ImGui::TableNextColumn();
-
-                                           if (ImGui::Button("+##add_item")) {
-                                               vec.emplace_back();
-                                           }
-                                           if (ImGui::BeginDragDropTarget()) {
-                                               if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PIN")) {
-                                                   IM_ASSERT(payload->DataSize == sizeof(InputPin<void>));
-                                                   InputPin<void> payload_n = *(const InputPin<void>*)payload->Data;
-
-                                                   // TODO: Check for infinite loops
-
-                                                   overloaded{
-                                                       [&]<typename U>(Input<U> input) { vec.push_back(*(reinterpret_cast<InputPin<U>*>(&payload_n))); },
-                                                       [&]<typename U>(InputPin<U> pin) { vec.push_back(*(reinterpret_cast<InputPin<U>*>(&payload_n))); },
-                                                   }(V{});
-
-                                                   rng->update_target(node.id);
+                                               if (ImGui::Button("+##add_item")) {
+                                                   vec.emplace_back();
+                                                   res = true;
                                                }
-                                               ImGui::EndDragDropTarget();
-                                           }
+
+                                               if (ImGui::BeginDragDropTarget()) {
+                                                   if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PIN")) {
+                                                       IM_ASSERT(payload->DataSize == sizeof(InputPin<void>));
+                                                       InputPin<void> payload_n = *(const InputPin<void>*)payload->Data;
+
+                                                       // TODO: Check for infinite loops
+
+                                                       overloaded{
+                                                           [&]<typename U>(Input<U> input) { vec.push_back(*(reinterpret_cast<InputPin<U>*>(&payload_n))); },
+                                                           [&]<typename U>(InputPin<U> pin) { vec.push_back(*(reinterpret_cast<InputPin<U>*>(&payload_n))); },
+                                                       }(V{});
+
+                                                       rng->update_target(node.id);
+                                                       res = true;
+                                                   }
+                                                   ImGui::EndDragDropTarget();
+                                               }
+
+                                               return res;
+                                           });
 
                                            for (size_t i = 0; i < vec.size(); i++) {
                                                ImGui::PushID(i);
@@ -180,7 +179,7 @@ void node_render(RenderNodeGraph* rng, T& node) {
                 },
                 node.inputs());
         },
-        [&](auto output) { std::apply([&](auto&&... args) { ((output(std::get<0>(args), std::get<1>(args), std::get<2>(args))), ...); }, node.outputs()); });
+        [&](auto output) { std::apply([&](auto&&... args) { ((output(std::get<0>(args), std::get<1>(args))), ...); }, node.outputs()); });
 }
 
 void node_generic_render(RenderNodeGraph* rng, const char* window_title, auto& node, auto get_inputs, auto get_outputs) {
@@ -189,113 +188,20 @@ void node_generic_render(RenderNodeGraph* rng, const char* window_title, auto& n
 
     auto draw_circle = [&](ImVec2 center, float r, ImVec4 color = ImVec4(0.3f, 0.3f, 0.3f, 1.0f)) { draw_list->AddCircle(center, r, ImGui::GetColorU32(color), 0); };
 
-    auto render_path = [&](ImVec2 start, ImVec2 end) {
-        constexpr ImVec4 color = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);
-        const ImU32 color_32 = ImGui::GetColorU32(color);
-
-        ImDrawList* fg_draw_list = ImGui::GetForegroundDrawList();
-        ImDrawList* bg_draw_list = ImGui::GetBackgroundDrawList();
-
-        float PATH_X_ESCAPE = 20.0f * rng->scene_scale;
-
-        fg_draw_list->AddLine(start,
-                              {
-                                  start.x + PATH_X_ESCAPE,
-                                  start.y,
-                              },
-                              color_32,
-                              3);
-
-        fg_draw_list->AddLine(end,
-                              {
-                                  end.x - PATH_X_ESCAPE,
-                                  end.y,
-                              },
-                              color_32,
-                              3);
-
-        start = {
-            start.x + PATH_X_ESCAPE,
-            start.y,
-        };
-
-        end = {
-            end.x - PATH_X_ESCAPE,
-            end.y,
-        };
-
-        if (end.x < start.x) {
-            ImVec2 half = {(start.x + end.x) / 2, (start.y + end.y) / 2};
-
-            float start_end_offset = 50;
-            float half_offset = std::clamp(std::abs(start.x - end.x), 50.0f, 200.0f);
-
-            bg_draw_list->AddBezierCubic(start, {start.x + start_end_offset, start.y}, {half.x + half_offset, half.y}, half, color_32, 3);
-            bg_draw_list->AddBezierCubic(half, {half.x - half_offset, half.y}, {end.x - start_end_offset, end.y}, end, color_32, 3);
-        } else {
-            float diff = std::abs(end.x - start.x);
-
-            float control_offset = std::min(200.0f, diff);
-
-            ImVec2 s_control = ImVec2(start.x + control_offset, start.y);
-            ImVec2 e_control = ImVec2(end.x - control_offset, end.y);
-
-            bg_draw_list->AddBezierCubic(start, s_control, e_control, end, color_32, 3);
-        }
-    };
-
+    size_t y_pos = NODE_ELEMENT_HEIGHT / 2.0f;
+    ImGui::SetCursorPos({NODE_LEFT_PADDING * rng->scene_scale, y_pos * rng->scene_scale});
     ImGui::Text("%s", window_title);
 
-    // Inputs
-    if (ImGui::BeginTable("input_layout", 5)) {
+    size_t imgui_index = 0;
 
-        size_t imgui_index = 0;
+    get_inputs([&](auto& storage, const char* id, const char* input_label, auto gui_element) {
+        ImGui::PushID(imgui_index++);
 
-        get_inputs([&](auto& storage, const char* id, const char* input_label, auto gui_element) {
-            ImGui::PushID(imgui_index++);
+        y_pos += NODE_ELEMENT_HEIGHT;
 
-            ImGui::TableNextRow();
+        ImGui::SetCursorPos({NODE_LEFT_PADDING * rng->scene_scale, y_pos * rng->scene_scale});
 
-            ImGui::TableNextColumn();
-            ImGui::TableNextColumn();
-
-            float dd_target_size = 10.0f * rng->scene_scale;
-
-            auto render_pin = [&]<typename T>(InputPin<T> pin, ImVec4 color = ImVec4(0.7f, 0.7f, 0.7f, 1.0f)) {
-                auto other_node = rng->render_nodes.find(pin.node);
-                if (other_node == rng->render_nodes.end())
-                    return;
-
-                auto other_pin_pos = other_node->second.render_pin_positions.find(pin.output_index);
-                if (other_pin_pos == other_node->second.render_pin_positions.end())
-                    return;
-
-                ImDrawList* draw_list = ImGui::GetForegroundDrawList();
-
-                ImVec2 pos = ImGui::GetCursorScreenPos();
-                render_path(rng->world_to_screen(other_pin_pos->second), ImVec2(pos.x + dd_target_size / 2.0f, pos.y + dd_target_size / 2.0f));
-            };
-
-            overloaded{
-                [&]<typename T>(Input<T>& input) {
-                    if (std::holds_alternative<InputPin<T>>(input))
-                        render_pin(std::get<InputPin<T>>(input));
-                },
-                [&]<typename T>(InputPin<T>& pin) { render_pin(pin); },
-            }(storage);
-
-            ImVec2 pin_source = ImGui::GetCursorScreenPos();
-            pin_source.x += dd_target_size / 2.0f;
-            pin_source.y += dd_target_size / 2.0f;
-
-            draw_circle(pin_source, dd_target_size / 2.0f);
-            if (ImGui::InvisibleButton(id, {dd_target_size, dd_target_size})) {
-                overloaded{
-                    [&]<typename T>(Input<T>& input) { input = T{}; },
-                    [&]<typename T>(InputPin<T>& pin) { pin = InputPin<T>{.node = -1, .output_index = -1}; },
-                }(storage);
-                rng->update_target(node.id);
-            }
+        auto drop_target = [&]() {
             if (ImGui::BeginDragDropTarget()) {
                 if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PIN")) {
                     IM_ASSERT(payload->DataSize == sizeof(InputPin<void>));
@@ -306,6 +212,7 @@ void node_generic_render(RenderNodeGraph* rng, const char* window_title, auto& n
                     overloaded{
                         [&]<typename T>(Input<T>& input) { input = *(reinterpret_cast<InputPin<T>*>(&payload_n)); },
                         [&]<typename T>(InputPin<T>& pin) { pin = *(reinterpret_cast<InputPin<T>*>(&payload_n)); },
+                        [&]<typename T>(T& input) {},
                     }(storage);
 
                     rng->update_target(node.id);
@@ -313,59 +220,89 @@ void node_generic_render(RenderNodeGraph* rng, const char* window_title, auto& n
 
                 ImGui::EndDragDropTarget();
             }
+        };
 
-            ImGui::TableNextColumn();
-            ImGui::Text("%s", input_label);
-            ImGui::TableNextColumn();
+        overloaded{
+            [&]<typename T>(Input<T>& input) {
+                draw_circle(
+                    ImVec2{
+                        ImGui::GetCursorScreenPos().x + NODE_IO_CIRCLE_RADIUS * rng->scene_scale,
+                        ImGui::GetCursorScreenPos().y + NODE_IO_CIRCLE_RADIUS * rng->scene_scale,
+                    },
+                    NODE_IO_CIRCLE_RADIUS * rng->scene_scale);
+                if (ImGui::InvisibleButton(id, {NODE_IO_CIRCLE_RADIUS * 2.0f * rng->scene_scale, NODE_IO_CIRCLE_RADIUS * 2.0f * rng->scene_scale})) {
+                    input = T{};
+                    rng->update_target(node.id);
+                }
+                drop_target();
+            },
+            [&]<typename T>(InputPin<T>& pin) {
+                draw_circle(
+                    ImVec2{
+                        ImGui::GetCursorScreenPos().x + NODE_IO_CIRCLE_RADIUS * rng->scene_scale,
+                        ImGui::GetCursorScreenPos().y + NODE_IO_CIRCLE_RADIUS * rng->scene_scale,
+                    },
+                    NODE_IO_CIRCLE_RADIUS * rng->scene_scale);
+                if (ImGui::InvisibleButton(id, {NODE_IO_CIRCLE_RADIUS * 2.0f * rng->scene_scale, NODE_IO_CIRCLE_RADIUS * 2.0f * rng->scene_scale})) {
+                    pin = InputPin<T>{.node = -1, .output_index = ""};
+                    rng->update_target(node.id);
+                }
+                drop_target();
+            },
+            [&]<typename T>(T& input) {},
+        }(storage);
 
-            overloaded{
-                [&]<typename T>(InputPin<T>&) {},
-                [&]<typename T>(Input<T>& i) {
-                    if (std::holds_alternative<T>(i)) {
-                        if (gui_element(rng, node, id, std::get<T>(i))) {
-                            rng->update_target(node.id);
-                        }
+        ImGui::SetCursorPos({(NODE_IO_CIRCLE_RADIUS * 2 + 4.0f) * rng->scene_scale + NODE_IO_CIRCLE_RADIUS * 2.0f * rng->scene_scale, y_pos * rng->scene_scale});
+        ImGui::Text("%s", input_label);
+        ImGui::SameLine();
+
+        overloaded{
+            [&]<typename T>(InputPin<T>&) {},
+            [&]<typename T>(Input<T>& i) {
+                if (std::holds_alternative<T>(i)) {
+                    if (gui_element(rng, node, id, std::get<T>(i))) {
+                        rng->update_target(node.id);
                     }
-                },
-            }(storage);
+                }
+            },
+            [&]<typename T>(T& i) {
+                if (gui_element(rng, node, id, i)) {
+                    rng->update_target(node.id);
+                }
+            },
+        }(storage);
 
-            ImGui::TableNextColumn();
-            ImGui::PopID();
-        });
+        ImGui::PopID();
+    });
 
-        ImGui::EndTable();
-    }
+    y_pos += NODE_ELEMENT_HEIGHT;
+    ImGui::SetCursorPos({NODE_LEFT_PADDING * rng->scene_scale, (y_pos + 11) * rng->scene_scale});
+    ImGui::Separator();
 
-    bool first_output = true;
-
-    get_outputs([&](OutputIndex index, const char* id, const char* label) {
-        if (first_output) {
-            first_output = false;
-            ImGui::Separator();
-        }
+    get_outputs([&](const char* id, const char* label) {
+        y_pos += NODE_ELEMENT_HEIGHT;
+        ImGui::SetCursorPos({NODE_LEFT_PADDING * rng->scene_scale, y_pos * rng->scene_scale});
 
         ImGui::Text("%s", label);
-        ImGui::SameLine(ImGui::GetColumnWidth() - 10 * rng->scene_scale);
 
-        float dd_target_size = 10.0f * rng->scene_scale;
+        ImGui::SetCursorPos({ImGui::GetWindowWidth() - (NODE_LEFT_PADDING + NODE_IO_CIRCLE_RADIUS) * rng->scene_scale, y_pos * rng->scene_scale});
 
-        ImVec2 pin_source = ImGui::GetCursorScreenPos();
-        pin_source.x += dd_target_size / 2.0f;
-        pin_source.y += dd_target_size / 2.0f;
+        ImVec2 circle_center = ImVec2{
+            ImGui::GetCursorScreenPos().x + NODE_IO_CIRCLE_RADIUS * rng->scene_scale,
+            ImGui::GetCursorScreenPos().y + NODE_IO_CIRCLE_RADIUS * rng->scene_scale,
+        };
 
-        rng->render_nodes[node.id].render_pin_positions[index] = rng->screen_to_world(pin_source);
+        draw_circle(circle_center, NODE_IO_CIRCLE_RADIUS * rng->scene_scale);
 
-        draw_circle(pin_source, dd_target_size / 2.0f);
-        ImGui::InvisibleButton(id, {dd_target_size, dd_target_size});
+        ImGui::InvisibleButton(id, {NODE_IO_CIRCLE_RADIUS * 2.0f, NODE_IO_CIRCLE_RADIUS * 2.0f});
         if (ImGui::BeginDragDropSource()) {
             InputPin<void> payload;
             payload.node = node.id;
-            payload.output_index = index;
+            payload.output_index = id;
             ImGui::SetDragDropPayload("PIN", &payload, sizeof(payload));
-
-            render_path(pin_source, ImGui::GetIO().MousePos);
-
             ImGui::EndDragDropSource();
+
+            rng->draw_node_path(circle_center, ImGui::GetIO().MousePos);
         }
     });
 }

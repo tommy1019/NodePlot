@@ -67,26 +67,25 @@ ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const SampledProperty
         col_sample_count.values.push_back(bucket.vals.size());
     }
 
-    graph->loaded_nodes[node.id].cache[0] = Column{col_new_x};
-    graph->loaded_nodes[node.id].cache[1] = Column{col_min};
-    graph->loaded_nodes[node.id].cache[2] = Column{col_avg};
-    graph->loaded_nodes[node.id].cache[3] = Column{col_stdev};
-    graph->loaded_nodes[node.id].cache[4] = Column{col_max};
-    graph->loaded_nodes[node.id].cache[5] = Column{col_sample_count};
+    graph->loaded_nodes[node.id].cache["x"] = Column{col_new_x};
+    graph->loaded_nodes[node.id].cache["min"] = Column{col_min};
+    graph->loaded_nodes[node.id].cache["avg"] = Column{col_avg};
+    graph->loaded_nodes[node.id].cache["stdev"] = Column{col_stdev};
+    graph->loaded_nodes[node.id].cache["max"] = Column{col_max};
+    graph->loaded_nodes[node.id].cache["sample_count"] = Column{col_sample_count};
 
-    switch (id) {
-    default:
-    case 0:
+    if (id == "x")
         return Column{col_new_x};
-    case 1:
+    if (id == "min")
         return Column{col_min};
-    case 2:
+    if (id == "avg")
         return Column{col_avg};
-    case 3:
+    if (id == "stdev")
         return Column{col_stdev};
-    case 4:
+    if (id == "max")
         return Column{col_max};
-    case 5:
+    if (id == "sample_count")
         return Column{col_sample_count};
-    }
+
+    return ERR("Unknown output requested");
 }
