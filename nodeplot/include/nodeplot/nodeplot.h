@@ -163,6 +163,14 @@ struct EvaluatedNodeGraph;
 
 using NodeOutput = std::variant<Table, ColumnName, Column, Series, GraphStyle, Graph, std::string, std::filesystem::path, Margins, Color, bool, double, int32_t>;
 
+constexpr size_t NODE_INPUT_INDEX_STORAGE = 0;
+constexpr size_t NODE_INPUT_INDEX_ID = 1;
+constexpr size_t NODE_INPUT_INDEX_NAME = 2;
+constexpr size_t NODE_INPUT_INDEX_ENUM_OPTIONS = 3;
+
+constexpr size_t NODE_OUTPUT_INDEX_ID = 0;
+constexpr size_t NODE_OUTPUT_INDEX_NAME = 1;
+
 struct BaseNode {
     NodeId id;
 
@@ -584,7 +592,7 @@ struct EvaluatedNodeGraph {
                                      res.push_back(pin.node);
                              },
                              [&]<typename T>(T input) {},
-                         }(std::get<0>(args))
+                         }(std::get<NODE_INPUT_INDEX_STORAGE>(args))
 
                              ,
                          ...);

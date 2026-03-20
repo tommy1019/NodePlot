@@ -97,7 +97,7 @@ struct RenderNodeGraph {
                         height += NODE_ELEMENT_HEIGHT;
                     },
                     [&](auto&) { height += NODE_ELEMENT_HEIGHT; },
-                }(std::get<0>(tup));
+                }(std::get<NODE_INPUT_INDEX_STORAGE>(tup));
             },
             node.inputs());
         return height;

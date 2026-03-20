@@ -26,7 +26,7 @@ auto default_input_element = overloaded{
                 (
                     // TODO: Should probabaly check for something other than table
                     [&]() {
-                        if (std::get<1>(args) == "table") {
+                        if (std::get<NODE_INPUT_INDEX_ID>(args) == "table") {
                             overloaded{
                                 [&]<typename T>(InputPin<T> pin) {
                                     if (auto v = rng->eval_node_graph.get_output(pin.node, pin.output_index); v.has_value()) {
@@ -53,7 +53,7 @@ auto default_input_element = overloaded{
                                     }
                                 },
                                 [](auto) {},
-                            }(std::get<0>(args));
+                            }(std::get<NODE_INPUT_INDEX_STORAGE>(args));
                         };
                     }(),
                     ...);
@@ -105,8 +105,8 @@ void node_render(RenderNodeGraph* rng, T& node) {
                         [&]() {
                             auto insert_input = [&](auto& storage) {
                                 if constexpr (std::tuple_size_v<std::remove_reference_t<decltype(args)>> == 4) {
-                                    auto& map = std::get<3>(args);
-                                    input(storage, std::get<1>(args), std::get<2>(args), [&](RenderNodeGraph* rng, T& node, const char* input_id, auto& storage) {
+                                    auto& map = std::get<NODE_INPUT_INDEX_ENUM_OPTIONS>(args);
+                                    input(storage, std::get<NODE_INPUT_INDEX_ID>(args), std::get<NODE_INPUT_INDEX_NAME>(args), [&](RenderNodeGraph* rng, T& node, const char* input_id, auto& storage) {
                                         bool res = false;
                                         auto preview_value = [&]() {
                                             if (auto v = map.find(storage); v != map.end())
@@ -128,58 +128,59 @@ void node_render(RenderNodeGraph* rng, T& node) {
                                         return res;
                                     });
                                 } else {
-                                    input(storage, std::get<1>(args), std::get<2>(args), default_input_element);
+                                    input(storage, std::get<NODE_INPUT_INDEX_ID>(args), std::get<NODE_INPUT_INDEX_NAME>(args), default_input_element);
                                 }
                             };
 
-                            overloaded{[&]<typename V>(std::vector<V>& vec) {
-                                           void* empty = nullptr;
-                                           input(empty, std::get<1>(args), std::get<2>(args), [&](RenderNodeGraph* rng, T& node, const char* input_id, auto& storage) {
-                                               bool res = false;
+                            overloaded{
+                                [&]<typename V>(std::vector<V>& vec) {
+                                    void* empty = nullptr;
+                                    input(empty, std::get<NODE_INPUT_INDEX_ID>(args), std::get<NODE_INPUT_INDEX_NAME>(args), [&](RenderNodeGraph* rng, T& node, const char* input_id, auto& storage) {
+                                        bool res = false;
 
-                                               if (ImGui::Button("+##add_item")) {
-                                                   vec.emplace_back();
-                                                   res = true;
-                                               }
+                                        if (ImGui::Button("+##add_item")) {
+                                            vec.emplace_back();
+                                            res = true;
+                                        }
 
-                                               if (ImGui::BeginDragDropTarget()) {
-                                                   if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PIN")) {
-                                                       IM_ASSERT(payload->DataSize == sizeof(InputPin<void>));
-                                                       InputPin<void> payload_n = *(const InputPin<void>*)payload->Data;
+                                        if (ImGui::BeginDragDropTarget()) {
+                                            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PIN")) {
+                                                IM_ASSERT(payload->DataSize == sizeof(InputPin<void>));
+                                                InputPin<void> payload_n = *(const InputPin<void>*)payload->Data;
 
-                                                       // TODO: Check for infinite loops
+                                                // TODO: Check for infinite loops
 
-                                                       overloaded{
-                                                           [&]<typename U>(Input<U> input) { vec.push_back(*(reinterpret_cast<InputPin<U>*>(&payload_n))); },
-                                                           [&]<typename U>(InputPin<U> pin) { vec.push_back(*(reinterpret_cast<InputPin<U>*>(&payload_n))); },
-                                                       }(V{});
+                                                overloaded{
+                                                    [&]<typename U>(Input<U> input) { vec.push_back(*(reinterpret_cast<InputPin<U>*>(&payload_n))); },
+                                                    [&]<typename U>(InputPin<U> pin) { vec.push_back(*(reinterpret_cast<InputPin<U>*>(&payload_n))); },
+                                                }(V{});
 
-                                                       rng->update_target(node.id);
-                                                       res = true;
-                                                   }
-                                                   ImGui::EndDragDropTarget();
-                                               }
+                                                rng->update_target(node.id);
+                                                res = true;
+                                            }
+                                            ImGui::EndDragDropTarget();
+                                        }
 
-                                               return res;
-                                           });
+                                        return res;
+                                    });
 
-                                           for (size_t i = 0; i < vec.size(); i++) {
-                                               ImGui::PushID(i);
-                                               insert_input(vec[i]);
-                                               if (ImGui::Button("-##delete_item")) {
-                                                   vec.erase(vec.begin() + i);
-                                                   i--;
-                                               }
-                                               ImGui::PopID();
-                                           }
-                                       },
-                                       [&](auto& v) { insert_input(v); }}(std::get<0>(args));
+                                    for (size_t i = 0; i < vec.size(); i++) {
+                                        ImGui::PushID(i);
+                                        insert_input(vec[i]);
+                                        if (ImGui::Button("-##delete_item")) {
+                                            vec.erase(vec.begin() + i);
+                                            i--;
+                                        }
+                                        ImGui::PopID();
+                                    }
+                                },
+                                [&](auto& v) { insert_input(v); }}(std::get<NODE_INPUT_INDEX_STORAGE>(args));
                         }(),
                         ...);
                 },
                 node.inputs());
         },
-        [&](auto output) { std::apply([&](auto&&... args) { ((output(std::get<0>(args), std::get<1>(args))), ...); }, node.outputs()); });
+        [&](auto output) { std::apply([&](auto&&... args) { ((output(std::get<NODE_OUTPUT_INDEX_ID>(args), std::get<NODE_OUTPUT_INDEX_NAME>(args))), ...); }, node.outputs()); });
 }
 
 void node_generic_render(RenderNodeGraph* rng, const char* window_title, auto& node, auto get_inputs, auto get_outputs) {

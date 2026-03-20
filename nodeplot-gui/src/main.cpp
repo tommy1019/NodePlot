@@ -198,7 +198,7 @@ int main(int argc, char** argv) {
                                                 [&](auto output) {
                                                     if (!found)
                                                         height += NODE_ELEMENT_HEIGHT;
-                                                    if (std::get<0>(output) == pin.output_index) {
+                                                    if (std::get<NODE_OUTPUT_INDEX_ID>(output) == pin.output_index) {
                                                         found = true;
                                                     }
                                                 },
@@ -246,7 +246,7 @@ int main(int argc, char** argv) {
                                                 render_pin(v);
                                             },
                                             [&](auto&) { y_pos += NODE_ELEMENT_HEIGHT; },
-                                        }(std::get<0>(input_tuple));
+                                        }(std::get<NODE_INPUT_INDEX_STORAGE>(input_tuple));
                                     },
                                     node.inputs());
                             },
