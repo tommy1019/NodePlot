@@ -36,6 +36,13 @@ int main(int argc, char** argv) {
 
     RenderNodeGraph render_node_graph = [&]() {
         if (argc == 2) {
+            if (strcmp("--new", argv[1]) == 0) {
+                return RenderNodeGraph {
+                .eval_node_graph = EvaluatedNodeGraph{
+                    .node_graph = MUST(NodeGraph::create(argv[1])),
+                },
+            };
+            }
             return RenderNodeGraph {
                 .eval_node_graph = EvaluatedNodeGraph{
                     .node_graph = MUST(NodeGraph::read(argv[1])),
