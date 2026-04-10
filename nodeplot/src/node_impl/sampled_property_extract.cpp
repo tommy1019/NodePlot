@@ -5,9 +5,9 @@
 #include <vector>
 
 template <>
-ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const SampledPropertyExtractNode& node, OutputIndex id) {
-    auto x = TRY_OR(graph->column_as_numeric(TRY_OR(graph->get_input(node.i_x), return ERR("Could not get 'X' input"))), return ERR("'X' Column is not numeric"));
-    auto y = TRY_OR(graph->column_as_numeric(TRY_OR(graph->get_input(node.i_y), return ERR("Could not get 'Y' input"))), return ERR("'Y' Column is not numeric"));
+ErrorOr<std::map<OutputIndex, NodeOutput>> node_output(EvaluatedNodeGraph* graph, GlobalNodeId id, const SampledPropertyExtractNode& node) {
+    auto x = TRY_OR(graph->column_as_numeric(TRY_OR(graph->get_input(id.graph_name, node.i_x), return ERR("Could not get 'X' input"))), return ERR("'X' Column is not numeric"));
+    auto y = TRY_OR(graph->column_as_numeric(TRY_OR(graph->get_input(id.graph_name, node.i_y), return ERR("Could not get 'Y' input"))), return ERR("'Y' Column is not numeric"));
 
     struct Bucket {
         std::vector<double> vals;
@@ -67,25 +67,12 @@ ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const SampledProperty
         col_sample_count.values.push_back(bucket.vals.size());
     }
 
-    graph->loaded_nodes[node.id].cache["x"] = Column{col_new_x};
-    graph->loaded_nodes[node.id].cache["min"] = Column{col_min};
-    graph->loaded_nodes[node.id].cache["avg"] = Column{col_avg};
-    graph->loaded_nodes[node.id].cache["stdev"] = Column{col_stdev};
-    graph->loaded_nodes[node.id].cache["max"] = Column{col_max};
-    graph->loaded_nodes[node.id].cache["sample_count"] = Column{col_sample_count};
-
-    if (id == "x")
-        return Column{col_new_x};
-    if (id == "min")
-        return Column{col_min};
-    if (id == "avg")
-        return Column{col_avg};
-    if (id == "stdev")
-        return Column{col_stdev};
-    if (id == "max")
-        return Column{col_max};
-    if (id == "sample_count")
-        return Column{col_sample_count};
-
-    return ERR("Unknown output requested");
+    return std::map<OutputIndex, NodeOutput>{
+        {"x", Column{col_new_x}},
+        {"min", Column{col_min}},
+        {"avg", Column{col_avg}},
+        {"stdev", Column{col_stdev}},
+        {"max", Column{col_max}},
+        {"sample_count", Column{col_sample_count}},
+    };
 }

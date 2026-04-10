@@ -1,12 +1,12 @@
 #include "nodeplot.h"
 #include <vector>
 
-#define GET_INPUT(name, label) TRY_OR(graph->get_input(node.i_##name), return ERR("Could not get '" #label "' input"))
+#define GET_INPUT(name, label) TRY_OR(graph->get_input(id.graph_name, node.i_##name), return ERR("Could not get '" #label "' input"))
 
-#define GET_INPUT_VAR(name, label) auto name = TRY_OR(graph->get_input(node.i_##name), return ERR("Could not get '" #label "' input"));
+#define GET_INPUT_VAR(name, label) auto name = TRY_OR(graph->get_input(id.graph_name, node.i_##name), return ERR("Could not get '" #label "' input"));
 
 template <>
-ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const CreateGraphStyleNode& node, OutputIndex id) {
+ErrorOr<std::map<OutputIndex, NodeOutput>> node_output(EvaluatedNodeGraph* graph, GlobalNodeId id, const CreateGraphStyleNode& node) {
     GraphStyle res;
     res.plot_margines = GET_INPUT(plot_margines, Plot Margines);
     res.internal_plot_margines = GET_INPUT(internal_margines, Internal Plot Margines);
@@ -21,11 +21,11 @@ ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const CreateGraphStyl
 
     res.title_font_size = GET_INPUT(title_font_size, Title Font Size);
 
-    return res;
+    return std::map<OutputIndex, NodeOutput>{{"graph_style", res}};
 }
 
 template <>
-ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const CreateGraphNode& node, OutputIndex id) {
+ErrorOr<std::map<OutputIndex, NodeOutput>> node_output(EvaluatedNodeGraph* graph, GlobalNodeId id, const CreateGraphNode& node) {
     GET_INPUT_VAR(title, Title)
     GET_INPUT_VAR(xlab, X Label)
     GET_INPUT_VAR(ylab, Y Label)
@@ -35,7 +35,7 @@ ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const CreateGraphNode
 
     std::vector<Series> series;
     for (auto& p : node.i_series) {
-        auto series_or_error = graph->get_input(p);
+        auto series_or_error = graph->get_input(id.graph_name, p);
         if (series_or_error.has_value())
             series.push_back(*series_or_error);
     }
@@ -53,5 +53,5 @@ ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const CreateGraphNode
     res.y_log = y_axis_log_scale;
     res.style = style;
 
-    return res;
+    return std::map<OutputIndex, NodeOutput>{{"graph", res}};
 }

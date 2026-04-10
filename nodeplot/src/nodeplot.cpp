@@ -1,4 +1,5 @@
 #include "nodeplot.h"
+#include "nlohmann/json_fwd.hpp"
 
 #include <limits>
 #include <sys/mman.h>
@@ -13,68 +14,50 @@ MappedFile::~MappedFile() {
     }
 }
 
-ErrorOr<NodeOutput> EvaluatedNodeGraph::get_output(NodeId node_id, OutputIndex output_id) {
-    auto& loaded_node = loaded_nodes[node_id];
+ErrorOr<NodeOutput> EvaluatedNodeGraph::get_output(GlobalNodeId id, OutputIndex output_id) {
+    auto& loaded_node = loaded_nodes[id];
 
     if (auto val = loaded_node.cache.find(output_id); val != loaded_node.cache.end()) {
         return val->second;
     }
 
-    auto node_or_error = node_graph.nodes().find(node_id);
-    if (node_or_error == node_graph.nodes().end()) {
+    auto node_or_error = node_file.node_graph(id.graph_name).nodes.find(id.id);
+    if (node_or_error == node_file.node_graph(id.graph_name).nodes.end()) {
         return ERR("Trying to get output from non-existent node");
     }
 
-    // TODO: Make this function not take the output id and just have the node generate all outputs then just take from the cache
-    auto node_result = std::visit([&](const auto& node) { return node_output(this, node, output_id); }, node_or_error->second);
-
-    if (node_result.has_value()) {
-        loaded_node.cache[output_id] = *node_result;
-        return loaded_node.cache[output_id];
+    auto new_cache_or_error = std::visit([&](const auto& node) { return node_output(this, id, node); }, node_or_error->second);
+    if (!new_cache_or_error.has_value()) {
+        loaded_node.error_message = new_cache_or_error.error();
     } else {
-        loaded_node.error_message = node_result.error();
-        return node_result;
+        loaded_node.cache = new_cache_or_error.value();
     }
+
+    if (auto val = loaded_node.cache.find(output_id); val != loaded_node.cache.end()) {
+        return val->second;
+    }
+
+    return ERR("Requested output is not exported by the node");
 }
 
-ErrorOr<NodeGraph> NodeGraph::read_from_json(const nlohmann::json& json) {
-    NodeGraph res;
-
-    for (auto& node_pair : json["nodes"]) {
-        NodeId id = node_pair[0];
-        res.m_next_node_id = std::max(id + 1, res.m_next_node_id);
-        auto& node_json = node_pair[1];
-
-        auto& type = node_json["type"];
-
-        std::optional<Node> parsed_node;
-
-        for_each_type<Node>([&]<typename T>() {
-            if (type == T::type()) {
-                if (parsed_node.has_value())
-                    REQUIRE_NOT_REACHED("Error while parsing json. Node matched two types");
-                T typed_node = node_json;
-                parsed_node = typed_node;
-            }
-        });
-
-        if (!parsed_node.has_value())
-            return ERR("Failed to parse node: unknown type");
-
-        res.m_nodes[id] = *parsed_node;
+ErrorOr<NodePlotFile> NodePlotFile::read_from_json(const nlohmann::json& json) {
+    NodePlotFile res;
+    for (auto it = json["node_graphs"].begin(); it != json["node_graphs"].end(); ++it) {
+        std::string name = it.key();
+        NodeGraph ng = it.value();
+        res.m_node_graphs[it.key()] = it.value();
     }
-
-    res.m_visualize_node = json["visualize_node"];
-
     return res;
 }
 
-ErrorOr<void> NodeGraph::save(std::filesystem::path path) {
+ErrorOr<void> NodePlotFile::save(std::filesystem::path path) {
     std::ofstream out(path);
     if (!out)
         return ERR("Could not open file for writing");
 
-    out << TRY(json_string());
+    nlohmann::json json = *this;
+
+    out << json.dump(2);
     out.close();
 
     m_file_path = path;
@@ -82,39 +65,17 @@ ErrorOr<void> NodeGraph::save(std::filesystem::path path) {
     return {};
 }
 
-ErrorOr<std::string> NodeGraph::json_string() {
-    nlohmann::json json;
-
-    std::map<NodeId, nlohmann::json> node_jsons;
-    for (auto n : m_nodes) {
-        node_jsons[n.first] = std::visit(
-            [](auto& n) -> nlohmann::json {
-                nlohmann::json res = n;
-
-                res["type"] = std::remove_reference_t<decltype(n)>::type();
-
-                return res;
-            },
-            n.second);
-    }
-
-    json["nodes"] = node_jsons;
-    json["visualize_node"] = m_visualize_node;
-
-    return json.dump(2);
-}
-
-ErrorOr<void> NodeGraph::add_node(Node node) {
+ErrorOr<void> NodePlotFile::add_node(std::string graph_name, Node node) {
     std::visit(
         [&](auto& node) {
-            node.id = m_next_node_id++;
-            m_nodes.insert({node.id, node});
+            node.id = m_node_graphs[graph_name].next_node_id++;
+            m_node_graphs[graph_name].nodes.insert({node.id, node});
         },
         node);
     return {};
 }
 
-ErrorOr<NodeGraph> NodeGraph::read(std::filesystem::path path) {
+ErrorOr<NodePlotFile> NodePlotFile::read(std::filesystem::path path) {
     std::ifstream f(path);
     if (!f)
         return ERR("Could not open input json file");
@@ -127,10 +88,11 @@ ErrorOr<NodeGraph> NodeGraph::read(std::filesystem::path path) {
     return res;
 }
 
-ErrorOr<NodeGraph> NodeGraph::create(std::filesystem::path path) {
-    NodeGraph res;
+ErrorOr<NodePlotFile> NodePlotFile::create(std::filesystem::path path) {
+    NodePlotFile res;
     res.m_file_path = std::filesystem::path(path);
-
+    res.m_node_graphs = {};
+    res.m_node_graphs.insert({MAIN_GRAPH_INDEX, NodeGraph{}});
     return res;
 };
 
@@ -160,4 +122,70 @@ ErrorOr<ColumnNumeric> EvaluatedNodeGraph::column_as_numeric(Column column) {
                           },
                       },
                       column.raw_column);
+}
+
+ErrorOr<std::vector<GlobalNodeId>> EvaluatedNodeGraph::dependent_nodes(GlobalNodeId gid) {
+
+    auto n = node_file.node_graph(gid.graph_name).nodes.find(gid.id);
+    if (n == node_file.node_graph(gid.graph_name).nodes.end())
+        return ERR("Invalid Node ID");
+
+    std::vector<GlobalNodeId> res;
+
+    std::visit(
+        [&](auto node) {
+            std::apply(
+                [&](auto&&... args) {
+                    (overloaded{
+                         [&]<typename T>(std::vector<T> list) {
+                             for (auto& e : list) {
+                                 overloaded{
+                                     [&]<typename V>(Input<V> input) {
+                                         if (std::holds_alternative<InputPin<V>>(input)) {
+                                             LocalNodeId id = std::get<InputPin<V>>(input).node;
+                                             if (id >= 0)
+                                                 res.push_back(GlobalNodeId{
+                                                     .id = id,
+                                                     .graph_name = gid.graph_name,
+                                                 });
+                                         }
+                                     },
+                                     [&]<typename V>(InputPin<V> pin) {
+                                         if (pin.node >= 0)
+                                             res.push_back(GlobalNodeId{
+                                                 pin.node,
+                                                 gid.graph_name,
+                                             });
+                                     },
+                                 }(e);
+                             }
+                         },
+                         [&]<typename T>(Input<T> input) {
+                             if (std::holds_alternative<InputPin<T>>(input)) {
+                                 LocalNodeId id = std::get<InputPin<T>>(input).node;
+                                 if (id >= 0)
+                                     res.push_back(GlobalNodeId{
+                                         .id = id,
+                                         .graph_name = gid.graph_name,
+                                     });
+                             }
+                         },
+                         [&]<typename T>(InputPin<T> pin) {
+                             if (pin.node >= 0)
+                                 res.push_back(GlobalNodeId{
+                                     pin.node,
+                                     gid.graph_name,
+                                 });
+                         },
+                         [&]<typename T>(T input) {},
+                     }(std::get<NODE_INPUT_INDEX_STORAGE>(args))
+
+                         ,
+                     ...);
+                },
+                node.inputs());
+        },
+        n->second);
+
+    return res;
 }

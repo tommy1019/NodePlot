@@ -8,11 +8,11 @@
 #include <filesystem>
 
 template <>
-ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const CSVImportNode& node, OutputIndex id) {
-    auto source_path = TRY_OR(graph->get_input(node.i_source_path), return ERR("Could not get 'Source Path' input"));
-    auto has_headers = TRY_OR(graph->get_input(node.i_has_headers), return ERR("Could not get 'Has Headers' input"));
+ErrorOr<std::map<OutputIndex, NodeOutput>> node_output(EvaluatedNodeGraph* graph, GlobalNodeId id, const CSVImportNode& node) {
+    auto source_path = TRY_OR(graph->get_input(id.graph_name, node.i_source_path), return ERR("Could not get 'Source Path' input"));
+    auto has_headers = TRY_OR(graph->get_input(id.graph_name, node.i_has_headers), return ERR("Could not get 'Has Headers' input"));
 
-    source_path = graph->node_graph.file_path().parent_path() / source_path;
+    source_path = graph->node_file.file_path().parent_path() / source_path;
 
     std::print("Loading: {}\n", source_path.string());
 
@@ -116,11 +116,11 @@ ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const CSVImportNode& 
     for (size_t i = 0; i < res.column_names.size(); i++)
         res.columns.emplace(res.column_names[i],
                             Column{ColumnCSVImported{
-                                .values = std::move(extracted_values[i]),
                                 .mapped_file = mapped_file,
+                                .values = std::move(extracted_values[i]),
                             }});
 
     printf("Loaded CSV file with %zu columns and %zu rows\n", res.columns.size(), rows_loaded);
 
-    return res;
+    return std::map<OutputIndex, NodeOutput>{{"table_data", res}};
 }

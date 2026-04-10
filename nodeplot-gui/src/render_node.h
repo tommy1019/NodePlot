@@ -1,7 +1,6 @@
 #pragma once
 
 #include <filesystem>
-#include <optional>
 #include <tuple>
 #include <type_traits>
 #include <vector>
@@ -29,14 +28,13 @@ auto default_input_element = overloaded{
                         if (std::get<NODE_INPUT_INDEX_ID>(args) == "table") {
                             overloaded{
                                 [&]<typename T>(InputPin<T> pin) {
-                                    if (auto v = rng->eval_node_graph.get_output(pin.node, pin.output_index); v.has_value()) {
+                                    if (auto v = rng->eval_node_graph.get_output(GlobalNodeId{.id = pin.node, .graph_name = rng->current_graph_index}, pin.output_index); v.has_value()) {
                                         std::visit(overloaded{
                                                        [&](Table t) {
                                                            has_auto_fill = true;
                                                            ImGui::SameLine();
                                                            ImGui::SetNextItemWidth(ImGui::GetFrameHeight());
                                                            if (ImGui::BeginCombo("##choose_column", "")) {
-
                                                                for (auto n : t.column_names) {
                                                                    if (ImGui::Selectable(n.c_str(), false)) {
                                                                        storage.name = n;
@@ -72,8 +70,7 @@ auto default_input_element = overloaded{
         if (ImGui::Button("File Select")) {
             auto selection = pfd::open_file("Choose CSV File", storage.remove_filename(), {"CSV Files", "*.csv", "All Files", "*"}, pfd::opt::none).result();
             if (!selection.empty()) {
-                storage = std::filesystem::relative(std::filesystem::path(selection.front()), rng->eval_node_graph.node_graph.file_path().parent_path());
-                rng->update_target(node.id);
+                storage = std::filesystem::relative(std::filesystem::path(selection.front()), rng->eval_node_graph.node_file.file_path().parent_path());
                 res = true;
             }
         }
@@ -155,7 +152,7 @@ void node_render(RenderNodeGraph* rng, T& node) {
                                                     [&]<typename U>(InputPin<U> pin) { vec.push_back(*(reinterpret_cast<InputPin<U>*>(&payload_n))); },
                                                 }(V{});
 
-                                                rng->update_target(node.id);
+                                                rng->update_target(GlobalNodeId{.id = node.id, .graph_name = rng->current_graph_index});
                                                 res = true;
                                             }
                                             ImGui::EndDragDropTarget();
@@ -216,7 +213,7 @@ void node_generic_render(RenderNodeGraph* rng, const char* window_title, auto& n
                         [&]<typename T>(T& input) {},
                     }(storage);
 
-                    rng->update_target(node.id);
+                    rng->update_target(GlobalNodeId{.id = node.id, .graph_name = rng->current_graph_index});
                 }
 
                 ImGui::EndDragDropTarget();
@@ -233,7 +230,7 @@ void node_generic_render(RenderNodeGraph* rng, const char* window_title, auto& n
                     NODE_IO_CIRCLE_RADIUS * rng->scene_scale);
                 if (ImGui::InvisibleButton(id, {NODE_IO_CIRCLE_RADIUS * 2.0f * rng->scene_scale, NODE_IO_CIRCLE_RADIUS * 2.0f * rng->scene_scale})) {
                     input = T{};
-                    rng->update_target(node.id);
+                    rng->update_target(GlobalNodeId{.id = node.id, .graph_name = rng->current_graph_index});
                 }
                 drop_target();
             },
@@ -246,7 +243,7 @@ void node_generic_render(RenderNodeGraph* rng, const char* window_title, auto& n
                     NODE_IO_CIRCLE_RADIUS * rng->scene_scale);
                 if (ImGui::InvisibleButton(id, {NODE_IO_CIRCLE_RADIUS * 2.0f * rng->scene_scale, NODE_IO_CIRCLE_RADIUS * 2.0f * rng->scene_scale})) {
                     pin = InputPin<T>{.node = -1, .output_index = ""};
-                    rng->update_target(node.id);
+                    rng->update_target(GlobalNodeId{.id = node.id, .graph_name = rng->current_graph_index});
                 }
                 drop_target();
             },
@@ -262,13 +259,13 @@ void node_generic_render(RenderNodeGraph* rng, const char* window_title, auto& n
             [&]<typename T>(Input<T>& i) {
                 if (std::holds_alternative<T>(i)) {
                     if (gui_element(rng, node, id, std::get<T>(i))) {
-                        rng->update_target(node.id);
+                        rng->update_target(GlobalNodeId{.id = node.id, .graph_name = rng->current_graph_index});
                     }
                 }
             },
             [&]<typename T>(T& i) {
                 if (gui_element(rng, node, id, i)) {
-                    rng->update_target(node.id);
+                    rng->update_target(GlobalNodeId{.id = node.id, .graph_name = rng->current_graph_index});
                 }
             },
         }(storage);

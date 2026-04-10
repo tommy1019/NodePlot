@@ -8,7 +8,7 @@
 #include <vector>
 
 template <>
-ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const OutputNode& node, OutputIndex id) {
+ErrorOr<std::map<OutputIndex, NodeOutput>> node_output(EvaluatedNodeGraph* graph, GlobalNodeId id, const OutputNode& node) {
     return ERR("Trying to get output from an output node");
 }
 
@@ -16,10 +16,10 @@ ErrorOr<std::string> OutputNode::get_svg(EvaluatedNodeGraph* lng) {
 
     std::vector<Graph> graphs;
     for (auto& i_graph : i_graphs)
-        graphs.push_back(TRY(lng->get_input(i_graph)));
+        graphs.push_back(TRY(lng->get_input("main", i_graph)));
 
-    auto width = TRY(lng->get_input(i_width));
-    auto height = TRY(lng->get_input(i_height));
+    auto width = TRY(lng->get_input("main", i_width));
+    auto height = TRY(lng->get_input("main", i_height));
 
     auto get_internal_svg = [](Graph graph, double width, double height, double x_offset, double y_offset) -> ErrorOr<std::string> {
         std::pair<double, double> x_lims = {std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity()};

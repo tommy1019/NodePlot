@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.25)
 set(SOURCES
     src/nodeplot.cpp
 
+    src/node_impl/input.cpp
+    src/node_impl/output.cpp
     src/node_impl/value.cpp
     src/node_impl/csv_import.cpp
     src/node_impl/filter_table.cpp
@@ -11,7 +13,6 @@ set(SOURCES
     src/node_impl/sampled_property_extract.cpp
     src/node_impl/series_create.cpp
     src/node_impl/create_graph.cpp
-    src/node_impl/output.cpp
 )
 
 add_library(nodeplot ${SOURCES})

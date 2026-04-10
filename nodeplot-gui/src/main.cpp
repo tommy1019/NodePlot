@@ -1,4 +1,3 @@
-#include <fstream>
 #include <memory>
 #include <string>
 #include <variant>
@@ -35,26 +34,25 @@ int main(int argc, char** argv) {
     // TODO: Check for infinite loops
 
     RenderNodeGraph render_node_graph = [&]() {
-        if (argc == 2) {
+        if (argc == 3) {
             if (strcmp("--new", argv[1]) == 0) {
                 return RenderNodeGraph {
-                .eval_node_graph = EvaluatedNodeGraph{
-                    .node_graph = MUST(NodeGraph::create(argv[1])),
-                },
-            };
+                    .eval_node_graph = EvaluatedNodeGraph{
+                        .node_file = MUST(NodePlotFile::create(argv[2])),
+                    },
+                };
+            } else {
+                REQUIRE_NOT_REACHED("Too many arguments");
             }
+        } else if (argc == 2) {
             return RenderNodeGraph {
                 .eval_node_graph = EvaluatedNodeGraph{
-                    .node_graph = MUST(NodeGraph::read(argv[1])),
+                    .node_file = MUST(NodePlotFile::read(argv[1])),
                 },
             };
+        } else {
+            REQUIRE_NOT_REACHED("Too few arguments");
         }
-
-        return RenderNodeGraph{
-            .eval_node_graph = EvaluatedNodeGraph{
-                .node_graph = MUST(NodeGraph::create("nodeplot.json")),
-            },
-        };
     }();
 
     MUST_DETAILED(Window::global_init());
@@ -88,13 +86,13 @@ int main(int argc, char** argv) {
         ImGui::PopStyleVar();
 
         if (ImGui::IsKeyPressed(ImGuiKey_S) && ImGui::GetIO().KeyCtrl) {
-            render_node_graph.eval_node_graph.node_graph.save();
+            render_node_graph.eval_node_graph.node_file.save();
         }
 
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("File")) {
                 if (ImGui::MenuItem("Save", "Ctrl+S")) {
-                    render_node_graph.eval_node_graph.node_graph.save();
+                    render_node_graph.eval_node_graph.node_file.save();
                 }
                 if (ImGui::MenuItem("Save-As")) {
                     auto selection = pfd::save_file("Save Nodeplot File As", "", {"Json File", "*.json"}, pfd::opt::none).result();
@@ -102,7 +100,7 @@ int main(int argc, char** argv) {
                         std::string filename = selection;
                         if (!filename.ends_with(".json"))
                             filename += ".json";
-                        render_node_graph.eval_node_graph.node_graph.save(filename);
+                        render_node_graph.eval_node_graph.node_file.save(filename);
                     }
                 }
                 ImGui::EndMenu();
@@ -117,7 +115,7 @@ int main(int argc, char** argv) {
 
                             T new_node{};
                             new_node.pos = {placement_pos.x, placement_pos.y};
-                            render_node_graph.eval_node_graph.node_graph.add_node(new_node);
+                            render_node_graph.eval_node_graph.node_file.add_node(render_node_graph.current_graph_index, new_node);
                         }
                     });
                     ImGui::EndMenu();
@@ -131,6 +129,8 @@ int main(int argc, char** argv) {
         SideBySide(
             "NodeEditor",
             [&]() {
+                auto& nodes = render_node_graph.eval_node_graph.node_file.node_graph(render_node_graph.current_graph_index).nodes;
+
                 auto render_node_editor_position = ImGui::GetCursorScreenPos();
                 auto render_node_editor_size = ImGui::GetWindowSize();
 
@@ -138,12 +138,10 @@ int main(int argc, char** argv) {
                     render_node_editor_position.x - ImGui::GetStyle().WindowPadding.x,
                     render_node_editor_position.y - ImGui::GetStyle().WindowPadding.y,
                 };
-
                 ImVec2 clip_end = {
                     render_node_editor_position.x - ImGui::GetStyle().WindowPadding.x + render_node_editor_size.x,
                     render_node_editor_position.y - ImGui::GetStyle().WindowPadding.y + render_node_editor_size.y,
                 };
-
                 ImGui::GetForegroundDrawList()->PushClipRect(clip_start, clip_end, true);
                 ImGui::GetBackgroundDrawList()->PushClipRect(clip_start, clip_end, true);
 
@@ -182,7 +180,7 @@ int main(int argc, char** argv) {
 
                 // Draw node connection lines
                 {
-                    for (auto& id_node : render_node_graph.eval_node_graph.node_graph.nodes()) {
+                    for (auto& id_node : nodes) {
                         std::visit(
                             [&](auto& node) {
                                 auto window_pos = render_node_graph.world_to_screen(ImVec2(node.pos.first, node.pos.second));
@@ -191,8 +189,8 @@ int main(int argc, char** argv) {
                                 y_pos += NODE_ELEMENT_HEIGHT / 2;
 
                                 auto render_pin = [&]<typename T>(InputPin<T> pin) {
-                                    auto other_node = render_node_graph.eval_node_graph.node_graph.nodes().find(pin.node);
-                                    if (other_node == render_node_graph.eval_node_graph.node_graph.nodes().end())
+                                    auto other_node = nodes.find(pin.node);
+                                    if (other_node == nodes.end())
                                         return;
 
                                     auto other_node_pos = render_node_graph.world_to_screen(std::visit([](auto node) { return ImVec2{node.pos.first, node.pos.second}; }, other_node->second));
@@ -266,12 +264,12 @@ int main(int argc, char** argv) {
                 ImGui::PushFont(NULL, render_node_graph.scene_scale * 13);
                 ImGui::GetStyle().SeparatorSize = 1.0f;
 
-                std::set<NodeId> nodes_to_delete;
+                std::set<LocalNodeId> nodes_to_delete;
 
-                for (auto& id_node : render_node_graph.eval_node_graph.node_graph.nodes()) {
+                for (auto& base_node : nodes) {
                     std::visit(
                         [&](auto& node) {
-                            EvaluatedNodeGraph::LoadedNode& eval_node = render_node_graph.eval_node_graph.loaded_nodes[node.id];
+                            EvaluatedNodeGraph::LoadedNode& eval_node = render_node_graph.eval_node_graph.loaded_nodes[GlobalNodeId{node.id, render_node_graph.current_graph_index}];
 
                             auto node_error = eval_node.error_message;
 
@@ -317,22 +315,12 @@ int main(int argc, char** argv) {
                                     ImGui::Text("%s", node_error.value().c_str());
                                 }
 
-                                // ImGui::Separator();
-                                // ImGui::Text("Node: %lld", node.id);
-
                                 if (ImGui::BeginPopupContextWindow()) {
-                                    if (ImGui::MenuItem("Delete")) {
-                                        nodes_to_delete.insert(node.id);
-                                        render_node_graph.update_target(node.id);
-                                    }
-
-                                    if (std::is_same_v<decltype(node), OutputNode&>) {
-                                        if (ImGui::MenuItem("Visualize Output")) {
-                                            render_node_graph.eval_node_graph.node_graph.visualize_node() = node.id;
-                                            render_node_graph.update_target(node.id);
+                                    if (node.id != NODE_ID_INPUT && node.id != NODE_ID_OUTPUT)
+                                        if (ImGui::MenuItem("Delete")) {
+                                            nodes_to_delete.insert(node.id);
+                                            render_node_graph.update_target({.id = node.id, .graph_name = render_node_graph.current_graph_index});
                                         }
-                                    }
-
                                     ImGui::EndPopup();
                                 }
                             }
@@ -341,12 +329,12 @@ int main(int argc, char** argv) {
                             if (node_error.has_value())
                                 ImGui::PopStyleColor();
                         },
-                        id_node.second);
+                        base_node.second);
                 }
 
                 if (nodes_to_delete.size() > 0) {
                     for (auto& n : nodes_to_delete)
-                        render_node_graph.eval_node_graph.node_graph.nodes().erase(n);
+                        nodes.erase(n);
                     render_node_graph.update_target();
                 }
 

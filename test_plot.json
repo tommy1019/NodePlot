@@ -1,278 +1,237 @@
 {
-  "nodes": [
-    [
-      0,
-      {
-        "i_has_headers": {
-          "type": "value",
-          "value": true
-        },
-        "i_source_path": {
-          "type": "value",
-          "value": "test_data.csv"
-        },
-        "id": 0,
-        "pos": [
-          269.0,
-          246.0
-        ],
-        "type": "csv_import"
-      }
-    ],
-    [
-      1,
-      {
-        "i_column_name": {
-          "type": "value",
-          "value": "run"
-        },
-        "i_table": {
-          "node": 0,
-          "output_index": "table_data"
-        },
-        "id": 1,
-        "pos": [
-          682.0,
-          241.0
-        ],
-        "type": "column_select"
-      }
-    ],
-    [
-      2,
-      {
-        "i_column_name": {
-          "type": "value",
-          "value": "trig"
-        },
-        "i_table": {
-          "node": 0,
-          "output_index": "table_data"
-        },
-        "id": 2,
-        "pos": [
-          683.0,
-          384.0
-        ],
-        "type": "column_select"
-      }
-    ],
-    [
-      3,
-      {
-        "i_color": {
-          "type": "value",
-          "value": {
-            "a": 1.0,
-            "b": 0.0,
-            "g": 0.0,
-            "r": 1.0
-          }
-        },
-        "i_point_size": {
-          "type": "value",
-          "value": 3.0
-        },
-        "i_x": {
-          "node": 1,
-          "output_index": "column"
-        },
-        "i_y": {
-          "node": 2,
-          "output_index": "column"
-        },
-        "id": 3,
-        "pos": [
-          1054.0,
-          244.0
-        ],
-        "type": "scatter_series_create"
-      }
-    ],
-    [
-      4,
-      {
-        "i_series": [
+  "node_graphs": {
+    "main": {
+      "nodes": [
+        [
+          0,
           {
-            "node": 3,
-            "output_index": "series"
-          },
+            "id": 0,
+            "pos": [
+              -505.0,
+              -11.0
+            ],
+            "type": "input"
+          }
+        ],
+        [
+          1,
           {
-            "node": 8,
-            "output_index": "series"
+            "i_graphs": [
+              {
+                "node": 6,
+                "output_index": "graph"
+              }
+            ],
+            "i_grid_cols": 1,
+            "i_grid_rows": 1,
+            "i_height": {
+              "type": "value",
+              "value": 250.0
+            },
+            "i_output_filename": {
+              "type": "value",
+              "value": ""
+            },
+            "i_width": {
+              "type": "value",
+              "value": 250.0
+            },
+            "id": 1,
+            "pos": [
+              1510.0,
+              156.0
+            ],
+            "type": "output"
           }
         ],
-        "i_style": {
-          "node": 6,
-          "output_index": "graph_style"
-        },
-        "i_title": {
-          "type": "value",
-          "value": ""
-        },
-        "i_x_axis_log_scale": {
-          "type": "value",
-          "value": false
-        },
-        "i_xlab": {
-          "type": "value",
-          "value": ""
-        },
-        "i_y_axis_log_scale": {
-          "type": "value",
-          "value": true
-        },
-        "i_ylab": {
-          "type": "value",
-          "value": ""
-        },
-        "id": 4,
-        "pos": [
-          1513.0,
-          287.0
-        ],
-        "type": "create_graph"
-      }
-    ],
-    [
-      5,
-      {
-        "i_graphs": [
+        [
+          2,
           {
-            "node": 4,
-            "output_index": "graph"
+            "i_has_headers": {
+              "type": "value",
+              "value": true
+            },
+            "i_source_path": {
+              "type": "value",
+              "value": "test_data.csv"
+            },
+            "id": 2,
+            "pos": [
+              -60.0,
+              104.0
+            ],
+            "type": "csv_import"
           }
         ],
-        "i_grid_cols": 1,
-        "i_grid_rows": 1,
-        "i_height": {
-          "type": "value",
-          "value": 250.0
-        },
-        "i_output_filename": {
-          "type": "value",
-          "value": ""
-        },
-        "i_width": {
-          "type": "value",
-          "value": 250.0
-        },
-        "id": 5,
-        "pos": [
-          1951.0,
-          331.0
-        ],
-        "type": "output"
-      }
-    ],
-    [
-      6,
-      {
-        "i_internal_margines": {
-          "type": "value",
-          "value": {
-            "bottom": 0.0,
-            "left": 0.0,
-            "right": 0.0,
-            "top": 0.0
+        [
+          3,
+          {
+            "i_column_name": {
+              "type": "value",
+              "value": "run"
+            },
+            "i_table": {
+              "node": 2,
+              "output_index": "table_data"
+            },
+            "id": 3,
+            "pos": [
+              268.0,
+              65.0
+            ],
+            "type": "column_select"
           }
-        },
-        "i_plot_margines": {
-          "type": "value",
-          "value": {
-            "bottom": 50.0,
-            "left": 60.0,
-            "right": 10.0,
-            "top": 10.0
+        ],
+        [
+          4,
+          {
+            "i_column_name": {
+              "type": "value",
+              "value": "random"
+            },
+            "i_table": {
+              "node": 2,
+              "output_index": "table_data"
+            },
+            "id": 4,
+            "pos": [
+              270.0,
+              242.0
+            ],
+            "type": "column_select"
           }
-        },
-        "i_title_font_size": {
-          "type": "value",
-          "value": 16.0
-        },
-        "i_x_axis_label_font_size": {
-          "type": "value",
-          "value": 12.0
-        },
-        "i_x_axis_tick_mark_font_size": {
-          "type": "value",
-          "value": 12.0
-        },
-        "i_x_axis_tick_mark_size": {
-          "type": "value",
-          "value": 12.0
-        },
-        "i_y_axis_label_font_size": {
-          "type": "value",
-          "value": 12.0
-        },
-        "i_y_axis_tick_mark_font_size": {
-          "type": "value",
-          "value": 12.0
-        },
-        "i_y_axis_tick_mark_size": {
-          "type": "value",
-          "value": 12.0
-        },
-        "id": 6,
-        "pos": [
-          987.0,
-          770.0
         ],
-        "type": "create_graph_style"
-      }
-    ],
-    [
-      7,
-      {
-        "i_column_name": {
-          "type": "value",
-          "value": "random"
-        },
-        "i_table": {
-          "node": 0,
-          "output_index": "table_data"
-        },
-        "id": 7,
-        "pos": [
-          685.0,
-          522.0
-        ],
-        "type": "column_select"
-      }
-    ],
-    [
-      8,
-      {
-        "i_color": {
-          "type": "value",
-          "value": {
-            "a": 1.0,
-            "b": 1.0,
-            "g": 0.0,
-            "r": 0.0
+        [
+          5,
+          {
+            "i_color": {
+              "type": "value",
+              "value": {
+                "a": 1.0,
+                "b": 0.0,
+                "g": 0.0,
+                "r": 1.0
+              }
+            },
+            "i_point_size": {
+              "type": "value",
+              "value": 3.0
+            },
+            "i_x": {
+              "node": 3,
+              "output_index": "column"
+            },
+            "i_y": {
+              "node": 4,
+              "output_index": "column"
+            },
+            "id": 5,
+            "pos": [
+              650.0,
+              229.0
+            ],
+            "type": "scatter_series_create"
           }
-        },
-        "i_point_size": {
-          "type": "value",
-          "value": 3.0
-        },
-        "i_x": {
-          "node": 1,
-          "output_index": "column"
-        },
-        "i_y": {
-          "node": 7,
-          "output_index": "column"
-        },
-        "id": 8,
-        "pos": [
-          1053.0,
-          465.0
         ],
-        "type": "scatter_series_create"
-      }
-    ]
-  ],
-  "visualize_node": 5
+        [
+          6,
+          {
+            "i_series": [
+              {
+                "node": 5,
+                "output_index": "series"
+              }
+            ],
+            "i_style": {
+              "node": 7,
+              "output_index": "graph_style"
+            },
+            "i_title": {
+              "type": "value",
+              "value": ""
+            },
+            "i_x_axis_log_scale": {
+              "type": "value",
+              "value": false
+            },
+            "i_xlab": {
+              "type": "value",
+              "value": ""
+            },
+            "i_y_axis_log_scale": {
+              "type": "value",
+              "value": false
+            },
+            "i_ylab": {
+              "type": "value",
+              "value": ""
+            },
+            "id": 6,
+            "pos": [
+              1070.0,
+              176.0
+            ],
+            "type": "create_graph"
+          }
+        ],
+        [
+          7,
+          {
+            "i_internal_margines": {
+              "type": "value",
+              "value": {
+                "bottom": 0.0,
+                "left": 0.0,
+                "right": 0.0,
+                "top": 0.0
+              }
+            },
+            "i_plot_margines": {
+              "type": "value",
+              "value": {
+                "bottom": 50.0,
+                "left": 60.0,
+                "right": 10.0,
+                "top": 10.0
+              }
+            },
+            "i_title_font_size": {
+              "type": "value",
+              "value": 16.0
+            },
+            "i_x_axis_label_font_size": {
+              "type": "value",
+              "value": 12.0
+            },
+            "i_x_axis_tick_mark_font_size": {
+              "type": "value",
+              "value": 12.0
+            },
+            "i_x_axis_tick_mark_size": {
+              "type": "value",
+              "value": 12.0
+            },
+            "i_y_axis_label_font_size": {
+              "type": "value",
+              "value": 12.0
+            },
+            "i_y_axis_tick_mark_font_size": {
+              "type": "value",
+              "value": 12.0
+            },
+            "i_y_axis_tick_mark_size": {
+              "type": "value",
+              "value": 12.0
+            },
+            "id": 7,
+            "pos": [
+              664.0,
+              460.0
+            ],
+            "type": "create_graph_style"
+          }
+        ]
+      ]
+    }
+  }
 }

@@ -5,12 +5,12 @@
 #include <vector>
 
 template <>
-ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const FilterTableNode& node, OutputIndex id) {
-    auto table = TRY_OR(graph->get_input(node.i_table), return ERR("Could not get 'Table' input"));
-    auto column_name = TRY_OR(graph->get_input(node.i_column_name), return ERR("Could not get 'Column Name' input"));
-    auto compare_type = TRY_OR(graph->get_input(node.i_compare_type), return ERR("Could not get 'Compare Type' input"));
-    auto numeric_compare = TRY_OR(graph->get_input(node.i_numeric_compare), return ERR("Could not get 'Numeric Compare' input"));
-    auto compare_value = TRY_OR(graph->get_input(node.i_compare_value), return ERR("Could not get 'Compare Value' input"));
+ErrorOr<std::map<OutputIndex, NodeOutput>> node_output(EvaluatedNodeGraph* graph, GlobalNodeId id, const FilterTableNode& node) {
+    auto table = TRY_OR(graph->get_input(id.graph_name, node.i_table), return ERR("Could not get 'Table' input"));
+    auto column_name = TRY_OR(graph->get_input(id.graph_name, node.i_column_name), return ERR("Could not get 'Column Name' input"));
+    auto compare_type = TRY_OR(graph->get_input(id.graph_name, node.i_compare_type), return ERR("Could not get 'Compare Type' input"));
+    auto numeric_compare = TRY_OR(graph->get_input(id.graph_name, node.i_numeric_compare), return ERR("Could not get 'Numeric Compare' input"));
+    auto compare_value = TRY_OR(graph->get_input(id.graph_name, node.i_compare_value), return ERR("Could not get 'Compare Value' input"));
 
     auto compare_col = table.columns.find(column_name.name);
     if (compare_col == table.columns.end())
@@ -78,5 +78,5 @@ ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const FilterTableNode
             c.second.raw_column);
     }
 
-    return res;
+    return std::map<OutputIndex, NodeOutput>{{"table", res}};
 }

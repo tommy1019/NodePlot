@@ -1,12 +1,12 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
-#include <tuple>
 #include <variant>
 #include <vector>
 
@@ -15,12 +15,20 @@
 #include "error.h"
 #include "utils.h"
 
-using NodeId = int64_t;
+using GraphIndex = std::string;
 using OutputIndex = std::string;
+
+using LocalNodeId = int64_t;
+struct GlobalNodeId {
+    LocalNodeId id;
+    GraphIndex graph_name;
+
+    auto operator<=>(const GlobalNodeId& other) const = default;
+};
 
 template <typename T>
 struct InputPin {
-    NodeId node = -1;
+    LocalNodeId node = -1;
     OutputIndex output_index = "";
 
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(InputPin, node, output_index);
@@ -172,324 +180,16 @@ constexpr size_t NODE_OUTPUT_INDEX_ID = 0;
 constexpr size_t NODE_OUTPUT_INDEX_NAME = 1;
 
 struct BaseNode {
-    NodeId id;
+    LocalNodeId id;
 
     std::pair<float, float> pos = {};
 };
 
-struct IntegerValueNode : public BaseNode {
-    Input<int32_t> i_val;
-
-    static std::string name() { return "Integer Value"; }
-    static std::string type() { return "int_value"; }
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(IntegerValueNode, id, pos, i_val);
-
-    constexpr auto inputs() { return std::make_tuple(std::make_tuple(std::reference_wrapper{i_val}, "value", "Value")); }
-
-    constexpr auto outputs() { return std::make_tuple(std::make_tuple("value", "Value")); }
-};
-
-struct NumericValueNode : public BaseNode {
-    Input<double> i_val;
-
-    static std::string name() { return "Numeric Value"; }
-    static std::string type() { return "numeric_value"; }
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(NumericValueNode, id, pos, i_val);
-
-    constexpr auto inputs() { return std::make_tuple(std::make_tuple(std::reference_wrapper{i_val}, "value", "Value")); }
-
-    constexpr auto outputs() { return std::make_tuple(std::make_tuple("value", "Value")); }
-};
-
-struct StringValueNode : public BaseNode {
-    Input<std::string> i_val;
-
-    static std::string name() { return "String Value"; }
-    static std::string type() { return "string_value"; }
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(StringValueNode, id, pos, i_val);
-
-    constexpr auto inputs() { return std::make_tuple(std::make_tuple(std::reference_wrapper{i_val}, "value", "Value")); }
-
-    constexpr auto outputs() { return std::make_tuple(std::make_tuple("value", "Value")); }
-};
-
-struct CSVImportNode : public BaseNode {
-    Input<std::filesystem::path> i_source_path;
-    Input<bool> i_has_headers = true;
-
-    static std::string name() { return "CSV Input"; }
-    static std::string type() { return "csv_import"; }
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(CSVImportNode, id, pos, i_source_path, i_has_headers);
-
-    constexpr auto inputs() {
-        return std::make_tuple(std::make_tuple(std::reference_wrapper{i_source_path}, "source_path", "Source Path"),
-                               std::make_tuple(std::reference_wrapper{i_has_headers}, "has_headers", "Has Headers"));
-    }
-
-    constexpr auto outputs() { return std::make_tuple(std::make_tuple("table_data", "Table Data")); }
-};
-
-struct FilterTableNode : public BaseNode {
-    InputPin<Table> i_table;
-    Input<ColumnName> i_column_name;
-    Input<std::string> i_compare_type = "<";
-    Input<std::string> i_compare_value;
-    Input<bool> i_numeric_compare;
-
-    static std::string name() { return "Filter Table"; }
-    static std::string type() { return "filter_table"; }
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(FilterTableNode, id, pos, i_table, i_column_name, i_compare_type, i_compare_value, i_numeric_compare);
-
-    constexpr auto inputs() {
-        return std::make_tuple(std::make_tuple(std::reference_wrapper{i_table}, "table", "Table"),
-                               std::make_tuple(std::reference_wrapper{i_column_name}, "column_name", "Column Name"),
-                               std::make_tuple(std::reference_wrapper{i_compare_type},
-                                               "compare_type",
-                                               "Compare Type",
-                                               std::map<std::string, std::string>{
-                                                   {"<", "< Less Than"},
-                                                   {"<=", "<= Less Than or Equal To"},
-                                                   {"==", "== Equals"},
-                                                   {"!=", "!= Not Equals"},
-                                                   {">=", ">= Greater Than or Equal To"},
-                                                   {">", "> Greater Than"},
-                                               }),
-                               std::make_tuple(std::reference_wrapper{i_compare_value}, "compare_value", "Compare Value"),
-                               std::make_tuple(std::reference_wrapper{i_numeric_compare}, "numeric_compare", "Numeric Compare"));
-    }
-
-    constexpr auto outputs() { return std::make_tuple(std::make_tuple("table", "Table")); }
-};
-
-struct ColumnSelectNode : public BaseNode {
-    InputPin<Table> i_table;
-    Input<ColumnName> i_column_name;
-
-    static std::string name() { return "Column Select"; }
-    static std::string type() { return "column_select"; }
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(ColumnSelectNode, id, pos, i_table, i_column_name);
-
-    constexpr auto inputs() {
-        return std::make_tuple(std::make_tuple(std::reference_wrapper{i_table}, "table", "Table"), std::make_tuple(std::reference_wrapper{i_column_name}, "column_name", "Column Name"));
-    }
-
-    constexpr auto outputs() { return std::make_tuple(std::make_tuple("column", "Column")); }
-};
-
-struct BinaryOperationNode : public BaseNode {
-    // TODO: Allow the type system to specify these can be columns or values
-    InputPin<Column> i_a;
-    InputPin<Column> i_b;
-    Input<std::string> i_operation = "+";
-
-    static std::string name() { return "Binary Operation"; }
-    static std::string type() { return "binary_operation"; }
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(BinaryOperationNode, id, pos, i_a, i_b, i_operation);
-
-    constexpr auto inputs() {
-        return std::make_tuple(std::make_tuple(std::reference_wrapper{i_a}, "a", "A"),
-                               std::make_tuple(std::reference_wrapper{i_b}, "b", "B"),
-                               std::make_tuple(std::reference_wrapper{i_operation},
-                                               "operation",
-                                               "Operation",
-                                               std::map<std::string, std::string>{
-                                                   {"+", "+ Addition"},
-                                                   {"-", "- Subtraction"},
-                                                   {"*", "* Multiplication"},
-                                                   {"/", "/ Division"},
-                                               }));
-    }
-
-    constexpr auto outputs() { return std::make_tuple(std::make_tuple("result", "Result")); }
-};
-
-struct SampledPropertyExtractNode : public BaseNode {
-    InputPin<Column> i_x;
-    InputPin<Column> i_y;
-
-    static std::string name() { return "Sampled Property Extract"; }
-    static std::string type() { return "sampled_property_extract"; }
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(SampledPropertyExtractNode, id, pos, i_x, i_y);
-
-    constexpr auto inputs() { return std::make_tuple(std::make_tuple(std::reference_wrapper{i_x}, "x", "X"), std::make_tuple(std::reference_wrapper{i_y}, "y", "Y")); }
-
-    constexpr auto outputs() {
-        return std::make_tuple(std::make_tuple("x", "X Values"),
-                               std::make_tuple("min", "Minimum"),
-                               std::make_tuple("avg", "Average"),
-                               std::make_tuple("stdev", "Standard Deviation"),
-                               std::make_tuple("max", "Maximum"),
-                               std::make_tuple("sample_count", "Sample Count"));
-    }
-};
-
-struct ScatterSeriesCreateNode : public BaseNode {
-    InputPin<Column> i_x;
-    InputPin<Column> i_y;
-    Input<Color> i_color = Color{.r = 1, .g = 0, .b = 0, .a = 1};
-    Input<double> i_point_size = 3.0;
-
-    static std::string name() { return "Scatter Series Create"; }
-    static std::string type() { return "scatter_series_create"; }
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(ScatterSeriesCreateNode, id, pos, i_x, i_y, i_color, i_point_size);
-
-    constexpr auto inputs() {
-        return std::make_tuple(std::make_tuple(std::reference_wrapper{i_x}, "x", "X"),
-                               std::make_tuple(std::reference_wrapper{i_y}, "y", "Y"),
-                               std::make_tuple(std::reference_wrapper{i_color}, "color", "Color"),
-                               std::make_tuple(std::reference_wrapper{i_point_size}, "point_size", "Point Size"));
-    }
-
-    constexpr auto outputs() { return std::make_tuple(std::make_tuple("series", "Series")); }
-};
-
-struct LineSeriesCreateNode : public BaseNode {
-    InputPin<Column> i_x;
-    InputPin<Column> i_y;
-    Input<Color> i_color = Color{.r = 1, .g = 0, .b = 0, .a = 1};
-    Input<double> i_stroke_width = 3.0;
-
-    static std::string name() { return "Line Series Create"; }
-    static std::string type() { return "line_series_create"; }
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(LineSeriesCreateNode, id, pos, i_x, i_y, i_color, i_stroke_width);
-
-    constexpr auto inputs() {
-        return std::make_tuple(std::make_tuple(std::reference_wrapper{i_x}, "x", "X"),
-                               std::make_tuple(std::reference_wrapper{i_y}, "y", "Y"),
-                               std::make_tuple(std::reference_wrapper{i_color}, "color", "Color"),
-                               std::make_tuple(std::reference_wrapper{i_stroke_width}, "stroke_width", "Stroke Width"));
-    }
-
-    constexpr auto outputs() { return std::make_tuple(std::make_tuple("series", "Series")); }
-};
-
-struct RibbonSeriesCreateNode : public BaseNode {
-    InputPin<Column> i_x;
-    InputPin<Column> i_y_min;
-    InputPin<Column> i_y_max;
-    Input<Color> i_color = Color{.r = 1, .g = 0, .b = 0, .a = 0.25};
-
-    static std::string name() { return "Ribbon Series Create"; }
-    static std::string type() { return "ribbon_series_create"; }
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(RibbonSeriesCreateNode, id, pos, i_x, i_y_min, i_y_max, i_color);
-
-    constexpr auto inputs() {
-        return std::make_tuple(std::make_tuple(std::reference_wrapper{i_x}, "x", "X"),
-                               std::make_tuple(std::reference_wrapper{i_y_min}, "y_min", "Y Min"),
-                               std::make_tuple(std::reference_wrapper{i_y_max}, "y_max", "Y Max"),
-                               std::make_tuple(std::reference_wrapper{i_color}, "color", "Color"));
-    }
-
-    constexpr auto outputs() { return std::make_tuple(std::make_tuple("series", "Series")); }
-};
-
-struct CreateGraphStyleNode : public BaseNode {
-    Input<Margins> i_plot_margines = Margins{.left = 60, .right = 10, .top = 10, .bottom = 50};
-    Input<Margins> i_internal_margines = Margins{.left = 0, .right = 0, .top = 0, .bottom = 0};
-
-    Input<double> i_x_axis_tick_mark_font_size = 12.0;
-    Input<double> i_x_axis_tick_mark_size = 12.0;
-    Input<double> i_x_axis_label_font_size = 12.0;
-
-    Input<double> i_y_axis_tick_mark_font_size = 12.0;
-    Input<double> i_y_axis_tick_mark_size = 12.0;
-    Input<double> i_y_axis_label_font_size = 12.0;
-
-    Input<double> i_title_font_size = 16.0;
-
-    static std::string name() { return "Create Graph Style"; }
-    static std::string type() { return "create_graph_style"; }
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(CreateGraphStyleNode,
-                                                id,
-                                                pos,
-                                                i_plot_margines,
-                                                i_internal_margines,
-                                                i_x_axis_tick_mark_font_size,
-                                                i_x_axis_tick_mark_size,
-                                                i_x_axis_label_font_size,
-                                                i_y_axis_tick_mark_font_size,
-                                                i_y_axis_tick_mark_size,
-                                                i_y_axis_label_font_size,
-                                                i_title_font_size);
-
-    constexpr auto inputs() {
-        return std::make_tuple(std::make_tuple(std::reference_wrapper{i_plot_margines}, "plot_margines", "Plot Margines"),
-                               std::make_tuple(std::reference_wrapper{i_internal_margines}, "internal_margines", "Internal Margines"),
-
-                               std::make_tuple(std::reference_wrapper{i_x_axis_tick_mark_font_size}, "x_axis_tick_mark_font_size", "X Axis Tick Mark Font Size"),
-                               std::make_tuple(std::reference_wrapper{i_x_axis_tick_mark_size}, "x_axis_tick_mark_size", "X Axis Tick Mark Size"),
-                               std::make_tuple(std::reference_wrapper{i_x_axis_label_font_size}, "x_axis_label_font_size", "X Axis Label Font Size"),
-
-                               std::make_tuple(std::reference_wrapper{i_y_axis_tick_mark_font_size}, "y_axis_tick_mark_font_size", "Y Axis Tick Mark Font Size"),
-                               std::make_tuple(std::reference_wrapper{i_y_axis_tick_mark_size}, "y_axis_tick_mark_size", "Y Axis Tick Mark Size"),
-                               std::make_tuple(std::reference_wrapper{i_y_axis_label_font_size}, "y_axis_label_font_size", "Y Axis Label Font Size"),
-
-                               std::make_tuple(std::reference_wrapper{i_title_font_size}, "title_font_size", "Title Font Size"));
-    }
-
-    constexpr auto outputs() { return std::make_tuple(std::make_tuple("graph_style", "Graph Style")); }
-};
-
-struct CreateGraphNode : public BaseNode {
-    std::vector<InputPin<Series>> i_series;
-
-    Input<std::string> i_title;
-
-    Input<std::string> i_xlab;
-    Input<std::string> i_ylab;
-
-    Input<bool> i_x_axis_log_scale = false;
-    Input<bool> i_y_axis_log_scale = false;
-
-    InputPin<GraphStyle> i_style;
-
-    static std::string name() { return "Create Graph"; }
-    static std::string type() { return "create_graph"; }
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(CreateGraphNode, id, pos, i_series, i_title, i_xlab, i_ylab, i_x_axis_log_scale, i_y_axis_log_scale, i_style);
-
-    constexpr auto inputs() {
-        return std::make_tuple(std::make_tuple(std::reference_wrapper{i_series}, "series", "Series"),
-                               std::make_tuple(std::reference_wrapper{i_title}, "title", "Title"),
-                               std::make_tuple(std::reference_wrapper{i_xlab}, "xlab", "X Label"),
-                               std::make_tuple(std::reference_wrapper{i_ylab}, "ylab", "Y Label"),
-                               std::make_tuple(std::reference_wrapper{i_x_axis_log_scale}, "x_axis_log_scale", "X Axis Log Scale"),
-                               std::make_tuple(std::reference_wrapper{i_y_axis_log_scale}, "y_axis_log_scale", "Y Axis Log Scale"),
-                               std::make_tuple(std::reference_wrapper{i_style}, "style", "Style"));
-    }
-
-    constexpr auto outputs() { return std::make_tuple(std::make_tuple("graph", "Graph")); }
-};
-
-struct OutputNode : public BaseNode {
-    std::vector<InputPin<Graph>> i_graphs;
-
-    Input<std::string> i_output_filename;
-
-    Input<double> i_width = 250.0;
-    Input<double> i_height = 250.0;
-
-    int32_t i_grid_cols = 1;
-    int32_t i_grid_rows = 1;
-
-    static std::string name() { return "Output"; }
-    static std::string type() { return "output"; }
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(OutputNode, id, pos, i_graphs, i_output_filename, i_width, i_height, i_grid_cols, i_grid_rows);
-
-    constexpr auto inputs() {
-        return std::make_tuple(std::make_tuple(std::reference_wrapper{i_graphs}, "graphs", "Graphs"),
-                               std::make_tuple(std::reference_wrapper{i_output_filename}, "output_filename", "Output Filename"),
-                               std::make_tuple(std::reference_wrapper{i_width}, "width", "Width"),
-                               std::make_tuple(std::reference_wrapper{i_height}, "height", "Height"),
-                               std::make_tuple(std::reference_wrapper{i_grid_cols}, "grid_cols", "Grid Columns"),
-                               std::make_tuple(std::reference_wrapper{i_grid_rows}, "grid_rows", "Grid Rows"));
-    }
-
-    constexpr auto outputs() { return std::make_tuple(); }
-
-    ErrorOr<std::string> get_svg(EvaluatedNodeGraph* graph);
-};
-
-using Node = std::variant<IntegerValueNode,
+#include "nodes.h"
+
+using Node = std::variant<InputNode,
+                          OutputNode,
+                          IntegerValueNode,
                           NumericValueNode,
                           StringValueNode,
                           CSVImportNode,
@@ -501,112 +201,123 @@ using Node = std::variant<IntegerValueNode,
                           LineSeriesCreateNode,
                           RibbonSeriesCreateNode,
                           CreateGraphStyleNode,
-                          CreateGraphNode,
-                          OutputNode>;
+                          CreateGraphNode>;
+
+constexpr GraphIndex MAIN_GRAPH_INDEX = "main";
+
+constexpr LocalNodeId NODE_ID_INPUT = 0;
+constexpr LocalNodeId NODE_ID_OUTPUT = 1;
+
+constexpr GlobalNodeId GLOBAL_NODE_ID_INPUT = {.id = NODE_ID_INPUT, .graph_name = MAIN_GRAPH_INDEX};
+constexpr GlobalNodeId GLOBAL_NODE_ID_OUTPUT = {.id = NODE_ID_OUTPUT, .graph_name = MAIN_GRAPH_INDEX};
 
 struct NodeGraph {
+    LocalNodeId next_node_id;
+    std::map<LocalNodeId, Node> nodes;
 
-    static ErrorOr<NodeGraph> create(std::filesystem::path path);
-    static ErrorOr<NodeGraph> read(std::filesystem::path path);
+    NodeGraph() {
+        next_node_id = 2;
+        nodes = {
+            {NODE_ID_INPUT, Node(InputNode{})},
+            {NODE_ID_OUTPUT, Node(OutputNode{})},
+        };
+
+        std::get<InputNode>(nodes[NODE_ID_INPUT]).id = NODE_ID_INPUT;
+        std::get<OutputNode>(nodes[NODE_ID_OUTPUT]).id = NODE_ID_OUTPUT;
+
+        std::get<OutputNode>(nodes[NODE_ID_OUTPUT]).pos = {300, 300};
+        printf("Populating nodes...\n");
+    }
+
+    friend void to_json(nlohmann::json& json, const NodeGraph& n) {
+        std::map<LocalNodeId, nlohmann::json> node_jsons;
+        for (auto n : n.nodes) {
+            node_jsons[n.first] = std::visit(
+                [](auto& n) -> nlohmann::json {
+                    nlohmann::json res = n;
+                    res["type"] = std::remove_reference_t<decltype(n)>::type();
+                    return res;
+                },
+                n.second);
+        }
+
+        json["nodes"] = node_jsons;
+    }
+    friend void from_json(const nlohmann::json& json, NodeGraph& n) {
+        for (auto& node_pair : json["nodes"]) {
+            LocalNodeId id = node_pair[0];
+            n.next_node_id = std::max(id + 1, n.next_node_id);
+            auto& node_json = node_pair[1];
+
+            auto& type = node_json["type"];
+
+            std::optional<Node> parsed_node;
+            for_each_type<Node>([&]<typename T>() {
+                if (type == T::type()) {
+                    if (parsed_node.has_value())
+                        REQUIRE_NOT_REACHED("Error while parsing json. Node matched two types");
+                    T typed_node = node_json;
+                    parsed_node = typed_node;
+                }
+            });
+
+            n.nodes[id] = parsed_node.value();
+        }
+    }
+};
+
+struct NodePlotFile {
+    static ErrorOr<NodePlotFile> create(std::filesystem::path path);
+    static ErrorOr<NodePlotFile> read(std::filesystem::path path);
 
     ErrorOr<void> save(std::filesystem::path path);
     ErrorOr<void> save() { return save(m_file_path); }
 
-    ErrorOr<std::string> json_string();
+    ErrorOr<void> add_node(std::string graph_name, Node node);
 
-    ErrorOr<void> add_node(Node node);
+    std::map<std::string, NodeGraph>& node_graphs() { return m_node_graphs; }
+    const std::map<std::string, NodeGraph>& node_graphs() const { return m_node_graphs; }
 
-    std::map<NodeId, Node>& nodes() { return m_nodes; }
-    const std::map<NodeId, Node>& nodes() const { return m_nodes; }
+    NodeGraph& node_graph(std::string name) { return m_node_graphs[name]; }
+    const NodeGraph& node_graph(std::string name) const { return m_node_graphs.at(name); }
 
-    NodeId& visualize_node() { return m_visualize_node; }
-    const NodeId& visualize_node() const { return m_visualize_node; }
+    NodeGraph& main_graph() { return m_node_graphs[MAIN_GRAPH_INDEX]; }
+    const NodeGraph& main_graph() const { return m_node_graphs.at(MAIN_GRAPH_INDEX); }
 
     const std::filesystem::path& file_path() const { return m_file_path; }
 
+    friend void to_json(nlohmann::json& json, const NodePlotFile& n) { json["node_graphs"] = n.m_node_graphs; }
+    friend void from_json(const nlohmann::json& json, NodePlotFile& n) { n.m_node_graphs = json["node_graphs"]; }
+
   private:
-    NodeGraph() = default;
+    NodePlotFile() = default;
 
-    NodeId m_next_node_id = 0;
-    std::map<NodeId, Node> m_nodes;
-
-    NodeId m_visualize_node = -1;
+    std::map<std::string, NodeGraph> m_node_graphs;
 
     std::filesystem::path m_file_path;
 
-    static ErrorOr<NodeGraph> read_from_json(const nlohmann::json& json);
+    static ErrorOr<NodePlotFile> read_from_json(const nlohmann::json& json);
 };
 
 struct EvaluatedNodeGraph;
 
-ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const auto& node, OutputIndex id);
+ErrorOr<std::map<OutputIndex, NodeOutput>> node_output(EvaluatedNodeGraph* graph, GlobalNodeId id, const auto& node);
 
 struct EvaluatedNodeGraph {
-    NodeGraph node_graph;
+    NodePlotFile node_file;
 
     struct LoadedNode {
         std::map<OutputIndex, NodeOutput> cache;
         std::optional<std::string> error_message;
     };
 
-    std::map<NodeId, LoadedNode> loaded_nodes;
+    std::map<GlobalNodeId, LoadedNode> loaded_nodes;
 
-    ErrorOr<std::vector<NodeId>> dependent_nodes(NodeId id) {
-        auto n = node_graph.nodes().find(id);
-        if (n == node_graph.nodes().end())
-            return ERR("Invalid Node ID");
-
-        std::vector<NodeId> res;
-
-        std::visit(
-            [&](auto node) {
-                std::apply(
-                    [&](auto&&... args) {
-                        (overloaded{
-                             [&]<typename T>(std::vector<T> list) {
-                                 for (auto& e : list) {
-                                     overloaded{
-                                         [&]<typename V>(Input<V> input) {
-                                             if (std::holds_alternative<InputPin<V>>(input)) {
-                                                 NodeId id = std::get<InputPin<V>>(input).node;
-                                                 if (id >= 0)
-                                                     res.push_back(id);
-                                             }
-                                         },
-                                         [&]<typename V>(InputPin<V> pin) {
-                                             if (pin.node >= 0)
-                                                 res.push_back(pin.node);
-                                         },
-                                     }(e);
-                                 }
-                             },
-                             [&]<typename T>(Input<T> input) {
-                                 if (std::holds_alternative<InputPin<T>>(input)) {
-                                     NodeId id = std::get<InputPin<T>>(input).node;
-                                     if (id >= 0)
-                                         res.push_back(id);
-                                 }
-                             },
-                             [&]<typename T>(InputPin<T> pin) {
-                                 if (pin.node >= 0)
-                                     res.push_back(pin.node);
-                             },
-                             [&]<typename T>(T input) {},
-                         }(std::get<NODE_INPUT_INDEX_STORAGE>(args))
-
-                             ,
-                         ...);
-                    },
-                    node.inputs());
-            },
-            n->second);
-
-        return res;
-    }
+    ErrorOr<std::vector<GlobalNodeId>> dependent_nodes(GlobalNodeId gid);
 
     template <typename T>
-    ErrorOr<T> get_input(const InputPin<T>& input) {
-        auto out = TRY(get_output(input));
+    ErrorOr<T> get_input(GraphIndex graph, const InputPin<T>& input) {
+        auto out = TRY(get_output(GlobalNodeId{.id = input.node, .graph_name = graph}, input.output_index));
 
         if constexpr (std::is_same_v<T, std::filesystem::path>) { // TODO: Don't like this manual check and conversion from paths to strings
             if (std::holds_alternative<std::string>(out))
@@ -625,18 +336,13 @@ struct EvaluatedNodeGraph {
     }
 
     template <typename T>
-    ErrorOr<T> get_input(const Input<T>& input) {
+    ErrorOr<T> get_input(GraphIndex graph, const Input<T>& input) {
         if (std::holds_alternative<T>(input))
             return std::get<T>(input);
-        return get_input(std::get<InputPin<T>>(input));
+        return get_input(graph, std::get<InputPin<T>>(input));
     }
 
-    ErrorOr<NodeOutput> get_output(NodeId node_id, OutputIndex output_id);
-
-    template <typename T>
-    ErrorOr<NodeOutput> get_output(InputPin<T> pin) {
-        return get_output(pin.node, pin.output_index);
-    }
+    ErrorOr<NodeOutput> get_output(GlobalNodeId node_id, OutputIndex output_id);
 
     ErrorOr<ColumnNumeric> column_as_numeric(Column column);
 };

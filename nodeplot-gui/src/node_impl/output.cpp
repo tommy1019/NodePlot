@@ -37,16 +37,4 @@ void node_render(RenderNodeGraph* rng, OutputNode& node) {
             });
         },
         [&](auto output) {});
-
-    if (ImGui::BeginPopupContextItem("output_context")) {
-        if (ImGui::MenuItem("Visualize Output")) {
-            rng->eval_node_graph.node_graph.visualize_node() = node.id;
-            rng->update_target(node.id);
-        }
-        ImGui::EndPopup();
-    }
-
-    if (rng->eval_node_graph.node_graph.visualize_node() == node.id) {
-        ImGui::Text("Visualizing...");
-    }
 }

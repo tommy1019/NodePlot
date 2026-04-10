@@ -1,16 +1,19 @@
 #include "nodeplot.h"
 
 template <>
-ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const IntegerValueNode& node, OutputIndex id) {
-    return TRY_OR(graph->get_input(node.i_val), return ERR("Could not get 'Value' input"));
+ErrorOr<std::map<OutputIndex, NodeOutput>> node_output(EvaluatedNodeGraph* graph, GlobalNodeId id, const IntegerValueNode& node) {
+    auto res = TRY_OR(graph->get_input(id.graph_name, node.i_val), return ERR("Could not get 'Value' input"));
+    return std::map<OutputIndex, NodeOutput>{{"value", res}};
 }
 
 template <>
-ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const NumericValueNode& node, OutputIndex id) {
-    return TRY_OR(graph->get_input(node.i_val), return ERR("Could not get 'Value' input"));
+ErrorOr<std::map<OutputIndex, NodeOutput>> node_output(EvaluatedNodeGraph* graph, GlobalNodeId id, const NumericValueNode& node) {
+    auto res = TRY_OR(graph->get_input(id.graph_name, node.i_val), return ERR("Could not get 'Value' input"));
+    return std::map<OutputIndex, NodeOutput>{{"value", res}};
 }
 
 template <>
-ErrorOr<NodeOutput> node_output(EvaluatedNodeGraph* graph, const StringValueNode& node, OutputIndex id) {
-    return TRY_OR(graph->get_input(node.i_val), return ERR("Could not get 'Value' input"));
+ErrorOr<std::map<OutputIndex, NodeOutput>> node_output(EvaluatedNodeGraph* graph, GlobalNodeId id, const StringValueNode& node) {
+    auto res = TRY_OR(graph->get_input(id.graph_name, node.i_val), return ERR("Could not get 'Value' input"));
+    return std::map<OutputIndex, NodeOutput>{{"value", res}};
 }
