@@ -1,12 +1,87 @@
 #include "nodeplot.h"
 #include "nlohmann/json_fwd.hpp"
 
+#include <filesystem>
 #include <limits>
 #include <sys/mman.h>
 
 #include <charconv>
 #include <fstream>
 #include <variant>
+
+namespace NodePlot {
+
+std::map<NodeTypeId, Node> NodePlot::node_map = {};
+
+void NodePlot::init() {
+    NodePlot::register_node("csv_import",
+                            Node{
+                                .type_id = "csv_import",
+                                .display_name = "CSV Import",
+                                .inputs = [](EvaluatedNodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::map<InputId, Node::Input> {
+                                    return {
+                                        {"filename", Node::Input{.id = "filename", .display_name = "Filename", .data_type = DataType::FILE_PATH}},
+                                        {"has_headers", Node::Input{.id = "has_headers", .display_name = "Has Headers", .data_type = DataType::BOOLEAN}},
+                                    };
+                                },
+                                .outputs = [](EvaluatedNodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::map<OutputId, Node::Output> {
+                                    return {
+                                        {"table", Node::Output{.id = "table", .display_name = "Table", .data_type = DataType::TABLE}},
+                                    };
+                                },
+                                .evalulate = [](EvaluatedNodePlotFile* enpf, EvaluatedNodeGraph* eng, NodeId node_id, NodeOutputCache cache) -> ErrorOr<void> {
+                                    std::filesystem::path filename = TRY(eng->get_input_value<std::filesystem::path>(enpf, node_id, "filename"));
+                                    bool has_headers = TRY(eng->get_input_value<bool>(enpf, node_id, "has_headers"));
+
+                                    filename = enpf->node_plot_file.path.parent_path() / filename;
+
+                                    std::print("Loading: {}\n", filename.string());
+
+                                    if (!std::filesystem::exists(filename)) {
+                                        return ERR("Input CSV file does not exist");
+                                    }
+
+                                    if (std::filesystem::is_directory(filename)) {
+                                        return ERR("Input CSV file is a directory");
+                                    }
+
+                                    auto file_size = std::filesystem::file_size(filename);
+
+                                    return {};
+                                },
+                            });
+}
+
+void NodePlot::NodePlot::register_node(NodeTypeId node_id, Node node) { NodePlot::node_map.insert({node_id, node}); }
+
+ErrorOr<Data> EvaluatedNodeGraph::get_output_data(EvaluatedNodePlotFile* enpf, NodeId node_id, OutputId output_id) {
+    NodeOutputCache& output_cache = cache[node_id];
+
+    auto data = output_cache.outputs.find(output_id);
+    if (data != output_cache.outputs.end()) {
+        return data->second;
+    }
+
+    NodeGraph::InputStorage& node_input_storage = TRY(Utils::try_find(node_graph.nodes, node_id, "Invalid NodeID")).get();
+    Node& node = TRY(Utils::try_find(NodePlot::node_map, node_input_storage.type_id, "Invalid NodeTypeId")).get();
+
+    TRY(node.evalulate(enpf, this, node_id, output_cache));
+
+    return TRY(Utils::try_find(output_cache.outputs, output_id, "OutputId not found")).get();
+}
+
+ErrorOr<Data> EvaluatedNodeGraph::get_input_data(EvaluatedNodePlotFile* enpf, NodeId node_id, InputId input_id) {
+    NodeGraph::InputStorage& node_input_storage = TRY(Utils::try_find(node_graph.nodes, node_id, "Invalid NodeID")).get();
+    auto& input_storage = TRY(Utils::try_find(node_input_storage.inputs, input_id, "Invalid InputID")).get();
+
+    return std::visit(overloaded{
+                          [&](Data data) -> ErrorOr<Data> { return data; },
+                          [&](NodeGraph::InputPin input_pin) -> ErrorOr<Data> { return this->get_output_data(enpf, input_pin.node_id, input_pin.output_id); },
+                      },
+                      input_storage);
+}
+
+} // namespace NodePlot
 
 MappedFile::~MappedFile() {
     if (munmap(data, file_size) == -1) {

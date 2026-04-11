@@ -7,13 +7,303 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <variant>
 #include <vector>
 
 #include <nlohmann/json.hpp>
 
 #include "error.h"
+#include "nlohmann/json_fwd.hpp"
 #include "utils.h"
+
+namespace NodePlot {
+
+namespace Utils {
+
+template <typename Map>
+auto try_find(Map& map, auto key, const char* err) -> ErrorOr<std::reference_wrapper<typename Map::mapped_type>> {
+    auto res = map.find(key);
+    if (res == map.end())
+        return ERR(err);
+    return res->second;
+}
+
+} // namespace Utils
+
+using GraphId = std::string;
+
+using NodeTypeId = std::string;
+
+using InputId = std::string;
+using OutputId = std::string;
+
+using NodeId = ssize_t;
+
+struct Color {
+    float r, g, b, a;
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(Color, r, g, b, a);
+};
+
+enum class DataType {
+    NUMBER,
+    STRING,
+    BOOLEAN,
+    FILE_PATH,
+
+    TABLE,
+};
+
+using Data = std::variant<double, std::string, bool>;
+
+struct EvaluatedNodeGraph;
+struct EvaluatedNodePlotFile;
+
+struct NodeOutputCache {
+    std::map<OutputId, Data> outputs;
+};
+
+struct Node {
+    struct Input {
+        InputId id;
+        std::string display_name;
+        DataType data_type;
+    };
+
+    struct Output {
+        OutputId id;
+        std::string display_name;
+        DataType data_type;
+    };
+
+    NodeTypeId type_id;
+    std::string display_name;
+
+    std::function<ErrorOr<std::map<InputId, Input>>(EvaluatedNodePlotFile*, EvaluatedNodeGraph*, NodeId)> inputs;
+    std::function<ErrorOr<std::map<OutputId, Output>>(EvaluatedNodePlotFile*, EvaluatedNodeGraph*, NodeId)> outputs;
+
+    std::function<ErrorOr<void>(EvaluatedNodePlotFile*, EvaluatedNodeGraph*, NodeId, NodeOutputCache&)> evalulate;
+};
+
+struct NodePlot {
+    static std::map<NodeTypeId, Node> node_map;
+
+    static void init();
+
+    static void register_node(NodeTypeId node_id, Node node);
+};
+
+struct NodeGraph {
+    struct InputPin {
+        NodeId node_id;
+        OutputId output_id;
+    };
+
+    struct InputStorage {
+        NodeTypeId type_id;
+        std::map<InputId, std::variant<Data, InputPin>> inputs;
+    };
+
+    std::map<NodeId, InputStorage> nodes;
+
+    static ErrorOr<NodeGraph> from_json(nlohmann::json json) {
+        auto get = [](nlohmann::json json, const char* key, const char* err) -> ErrorOr<nlohmann::json> {
+            auto res = json.find(key);
+            if (res == json.end())
+                return ERR(err);
+            return res.value();
+        };
+
+        auto get_typed = [&]<typename T>(std::type_identity<T>, nlohmann::json json, const char* key, const char* err) -> ErrorOr<T> {
+            auto j = TRY(get(json, key, err));
+            try {
+                return j.get<T>();
+            } catch (nlohmann::json::type_error) {
+                return ERR(err);
+            }
+        };
+
+        NodeGraph res;
+
+        nlohmann::json nodes_json = TRY(get(json, "nodes", "Missing nodes data"));
+        for (auto nodes_it = nodes_json.begin(); nodes_it != nodes_json.end(); nodes_it++) {
+            NodeId node_id = TRY([&]() -> ErrorOr<NodeId> {
+                try {
+                    return static_cast<NodeId>(std::stoll(nodes_it.key()));
+                } catch (const std::out_of_range& e) {
+                    return ERR("Invalid NodeId");
+                } catch (const std::invalid_argument& e) {
+                    return ERR("Invalid NodeId");
+                }
+            }());
+
+            InputStorage input_storage;
+            input_storage.type_id = TRY(get_typed(std::type_identity<NodeTypeId>{}, nodes_it.value(), "type_id", "Missing NodeTypeId"));
+
+            if (!NodePlot::node_map.contains(input_storage.type_id))
+                return ERR("Invalid NodeTypeId");
+
+            auto inputs_json = TRY(get(nodes_it.value(), "inputs", "Missing Node Inputs"));
+            for (auto inputs_it = inputs_json.begin(); inputs_it != inputs_json.end(); inputs_it++) {
+                nlohmann::json input_json = inputs_it.value();
+
+                auto input_val = TRY([&]() -> ErrorOr<std::variant<Data, InputPin>> {
+                    std::string input_type = TRY(get_typed(std::type_identity<std::string>{}, input_json, "type", "Missing input type"));
+                    if (input_type == "pin") {
+                        InputPin pin;
+                        pin.node_id = TRY(get_typed(std::type_identity<NodeId>{}, input_json, "node", "Missing input pin NodeId"));
+                        pin.output_id = TRY(get_typed(std::type_identity<OutputId>{}, input_json, "output", "Missing input pin OutputId"));
+                        return pin;
+                    } else if (input_type == "data") {
+                        std::string dara_type = TRY(get_typed(std::type_identity<std::string>{}, input_json, "data_type", "Missing input data type"));
+                        if (dara_type == "number")
+                            return Data(TRY(get_typed(std::type_identity<double>{}, input_json, "value", "Missing input data value")));
+                        else if (dara_type == "string")
+                            return Data(TRY(get_typed(std::type_identity<std::string>{}, input_json, "value", "Missing input data value")));
+                        else if (dara_type == "boolean")
+                            return Data(TRY(get_typed(std::type_identity<bool>{}, input_json, "value", "Missing input data value")));
+                        else
+                            return ERR("Invalid data type for input");
+                    } else {
+                        return ERR("Input type is invalid");
+                    }
+                }());
+
+                input_storage.inputs[inputs_it.key()] = input_val;
+            }
+
+            res.nodes[node_id] = input_storage;
+        }
+
+        return res;
+    }
+
+    ErrorOr<nlohmann::json> to_json() {
+        nlohmann::json nodes_json;
+
+        for (auto [node_id, input_storage] : nodes) {
+            nlohmann::json node_inputs;
+            for (auto [input_id, data_or_pin] : input_storage.inputs) {
+                node_inputs[input_id] = TRY(std::visit(overloaded{
+                                                           [](Data data) -> ErrorOr<nlohmann::json> {
+                                                               nlohmann::json res;
+                                                               res["type"] = "data";
+
+                                                               std::visit(overloaded{
+                                                                              [&](double v) {
+                                                                                  res["data_type"] = "number";
+                                                                                  res["value"] = v;
+                                                                              },
+                                                                              [&](std::string v) {
+                                                                                  res["data_type"] = "string";
+                                                                                  res["value"] = v;
+                                                                              },
+                                                                              [&](bool v) {
+                                                                                  res["data_type"] = "boolean";
+                                                                                  res["value"] = v;
+                                                                              },
+                                                                          },
+                                                                          data);
+
+                                                               return res;
+                                                           },
+                                                           [](InputPin pin) -> ErrorOr<nlohmann::json> {
+                                                               nlohmann::json res;
+                                                               res["type"] = "pin";
+                                                               res["node"] = pin.node_id;
+                                                               res["output"] = pin.output_id;
+                                                               return res;
+                                                           },
+                                                       },
+                                                       data_or_pin));
+            }
+
+            nlohmann::json node_json;
+            node_json["inputs"] = node_inputs;
+            node_json["type_id"] = input_storage.type_id;
+            nodes_json[std::to_string(node_id)] = node_json;
+        }
+
+        nlohmann::json res;
+        res["nodes"] = nodes_json;
+
+        return res;
+    }
+};
+
+struct EvaluatedNodeGraph {
+    NodeGraph node_graph;
+
+    std::map<NodeId, NodeOutputCache> cache;
+
+    ErrorOr<Data> get_output_data(EvaluatedNodePlotFile* enpf, NodeId node_id, OutputId output_id);
+
+    ErrorOr<Data> get_input_data(EvaluatedNodePlotFile* enpf, NodeId node_id, InputId input_id);
+
+    template <typename T>
+    ErrorOr<T> get_input_value(EvaluatedNodePlotFile* enpf, NodeId node_id, InputId input_id) {
+        return std::visit(overloaded{
+                              [](double v) -> ErrorOr<T> {
+                                  if constexpr (std::is_same_v<T, double>)
+                                      return v;
+                                  return ERR("Invalid type");
+                              },
+                              [](std::string v) -> ErrorOr<T> {
+                                  if constexpr (std::is_same_v<T, std::string>)
+                                      return v;
+                                  if constexpr (std::is_same_v<T, std::filesystem::path>)
+                                      return std::filesystem::path(v);
+                                  return ERR("Invalid type");
+                              },
+                              [](bool v) -> ErrorOr<T> {
+                                  if constexpr (std::is_same_v<T, bool>)
+                                      return v;
+                                  return ERR("Invalid type");
+                              },
+                          },
+                          TRY(get_input_data(enpf, node_id, input_id)));
+    }
+};
+
+struct NodePlotFile {
+    std::filesystem::path path;
+    std::map<GraphId, NodeGraph> graphs;
+
+    static ErrorOr<NodePlotFile> from_json(nlohmann::json json, std::filesystem::path path) {
+        NodePlotFile res;
+        res.path = path;
+
+        auto graphs = json.find("graphs");
+        if (graphs == json.end())
+            return ERR("Missing graphs");
+
+        for (auto it = graphs.value().begin(); it != graphs.value().end(); it++) {
+            res.graphs[it.key()] = TRY(NodeGraph::from_json(it.value()));
+        }
+
+        return res;
+    }
+
+    ErrorOr<nlohmann::json> to_json() {
+        nlohmann::json graphs;
+
+        for (auto [graph_id, graph] : this->graphs) {
+            graphs[graph_id] = TRY(graph.to_json());
+        }
+
+        nlohmann::json res;
+        res["graphs"] = graphs;
+
+        return res;
+    };
+};
+
+struct EvaluatedNodePlotFile {
+    NodePlotFile node_plot_file;
+    std::map<GraphId, EvaluatedNodeGraph> graphs;
+};
+
+} // namespace NodePlot
 
 using GraphIndex = std::string;
 using OutputIndex = std::string;
