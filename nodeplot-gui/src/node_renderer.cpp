@@ -86,8 +86,6 @@ NodeRenderer::RenderFunction NodeRenderer::default_renderer = [](Renderer& rnd, 
                                     data = res.value();
                                 }
                             }
-                        } else {
-                            std::print("Err: {}\n", table.error());
                         }
                     }
                 }
