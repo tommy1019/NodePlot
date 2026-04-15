@@ -44,7 +44,7 @@ void register_output() {
                     {"svg", Node::Output{.id = "svg", .display_name = "SVG", .valid_data_types = {DataType::STRING}}},
                 };
             },
-            .evalulate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, NodeOutputCache& cache) -> ErrorOr<void> {
+            .evalulate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
                 auto get_internal_svg = [](Plot graph, double width, double height, double x_offset, double y_offset) -> ErrorOr<std::string> {
                     std::pair<double, double> x_lims = {std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity()};
                     std::pair<double, double> y_lims = {std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity()};
@@ -57,7 +57,7 @@ void register_output() {
                     };
 
                     for (auto& series : graph.series) {
-                        TRY(std::visit(overloaded{
+                        TRY(std::visit(Utils::overloaded{
                                            [&](ScatterSeries& s) -> ErrorOr<void> {
                                                auto x = TRY(s.x.as_numeric_column());
                                                auto y = TRY(s.y.as_numeric_column());
@@ -184,7 +184,7 @@ void register_output() {
                     };
 
                     for (auto& series : graph.series) {
-                        std::visit(overloaded{
+                        std::visit(Utils::overloaded{
                                        [&](ScatterSeries& s) -> ErrorOr<void> {
                                            auto x_col = TRY(s.x.as_numeric_column());
                                            auto y_col = TRY(s.y.as_numeric_column());

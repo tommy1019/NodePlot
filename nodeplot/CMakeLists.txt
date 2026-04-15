@@ -1,7 +1,11 @@
 cmake_minimum_required(VERSION 3.25)
 
 set(SOURCES
-    src/nodeplot.cpp
+    src/eval_node_graph.cpp
+    src/file.cpp
+    src/node_registry.cpp
+    src/types.cpp
+    src/node_graph.cpp
 
     src/node_impl/output.cpp
 

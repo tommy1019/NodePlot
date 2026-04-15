@@ -20,7 +20,7 @@ void register_binary_operation() {
                                             {"result", Node::Output{.id = "result", .display_name = "Result", .valid_data_types = {DataType::NUMBER, DataType::STRING, DataType::COLUMN}}},
                                         };
                                     },
-                                    .evalulate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, NodeOutputCache& cache) -> ErrorOr<void> {
+                                    .evalulate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
                                         std::string operation = TRY(eng->get_input_value<std::string>(npf, node_id, "operation"));
 
                                         auto a_val = TRY(eng->get_input_value_variant<double, std::string, Column>(npf, node_id, "a"));
@@ -38,7 +38,7 @@ void register_binary_operation() {
                                             return ERR("Unknown operation");
                                         };
 
-                                        cache.computed_outputs["result"] = TRY(std::visit(overloaded{
+                                        cache.computed_outputs["result"] = TRY(std::visit(Utils::overloaded{
                                                                                               [&](Column a, Column b) -> ErrorOr<Data> {
                                                                                                   auto na = TRY_OR(a.as_numeric_column(), return ERR("Column 'A' is not numeric"));
                                                                                                   auto nb = TRY_OR(b.as_numeric_column(), return ERR("Column 'B' is not numeric"));

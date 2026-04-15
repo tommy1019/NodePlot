@@ -35,7 +35,7 @@ void register_filter_table() {
                     {"table", Node::Output{.id = "table", .display_name = "Table", .valid_data_types = {DataType::TABLE}}},
                 };
             },
-            .evalulate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, NodeOutputCache& cache) -> ErrorOr<void> {
+            .evalulate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
                 Table table = TRY(eng->get_input_value<Table>(npf, node_id, "table"));
                 std::string column_name = TRY(eng->get_input_value<std::string>(npf, node_id, "column_name"));
                 std::string compare_type = TRY(eng->get_input_value<std::string>(npf, node_id, "compare_type"));
@@ -73,7 +73,7 @@ void register_filter_table() {
                         return comparision_check(TRY(column->second.as_numeric_column()), TRY(eng->get_input_value<double>(npf, node_id, "compare_value")));
                     } else {
                         return std::visit(
-                            overloaded{
+                            Utils::overloaded{
                                 [&](Column::CSVImported col) -> ErrorOr<std::vector<bool>> { return comparision_check(col, TRY(eng->get_input_value<std::string>(npf, node_id, "compare_value"))); },
                                 [](Column::Numeric col) -> ErrorOr<std::vector<bool>> { return ERR("Cannot compare a numeric column with a string"); },
                             },

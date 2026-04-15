@@ -21,7 +21,7 @@ void register_series_create() {
                     {"series", Node::Output{.id = "series", .display_name = "Series", .valid_data_types = {DataType::SERIES}}},
                 };
             },
-            .evalulate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, NodeOutputCache& cache) -> ErrorOr<void> {
+            .evalulate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
                 Column x = TRY(eng->get_input_value<Column>(npf, node_id, "x"));
                 Column y = TRY(eng->get_input_value<Column>(npf, node_id, "y"));
 
@@ -57,7 +57,7 @@ void register_series_create() {
                     {"series", Node::Output{.id = "series", .display_name = "Series", .valid_data_types = {DataType::SERIES}}},
                 };
             },
-            .evalulate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, NodeOutputCache& cache) -> ErrorOr<void> {
+            .evalulate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
                 Column x = TRY(eng->get_input_value<Column>(npf, node_id, "x"));
                 Column y = TRY(eng->get_input_value<Column>(npf, node_id, "y"));
 
@@ -93,7 +93,7 @@ void register_series_create() {
                     {"series", Node::Output{.id = "series", .display_name = "Series", .valid_data_types = {DataType::SERIES}}},
                 };
             },
-            .evalulate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, NodeOutputCache& cache) -> ErrorOr<void> {
+            .evalulate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
                 Column x = TRY(eng->get_input_value<Column>(npf, node_id, "x"));
                 Column y_min = TRY(eng->get_input_value<Column>(npf, node_id, "y_min"));
                 Column y_max = TRY(eng->get_input_value<Column>(npf, node_id, "y_max"));

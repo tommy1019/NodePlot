@@ -96,7 +96,7 @@ int main(int argc, char** argv) {
     };
     update_svg();
 
-    window->event_loop(overloaded{[&](Window::RenderEvent) -> ErrorOr<void> {
+    window->event_loop(NodePlot::Utils::overloaded{[&](Window::RenderEvent) -> ErrorOr<void> {
         ImGuiViewport* viewport = ImGui::GetMainViewport();
         ImGui::SetNextWindowPos(viewport->WorkPos);
         ImGui::SetNextWindowSize(viewport->WorkSize);

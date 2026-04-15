@@ -1,20 +1,24 @@
-#include <tuple>
-#include <variant>
+#pragma once
 
-template <typename Variant, typename Func, std::size_t I = 0>
-void for_each_type(Func&& func) {
-    if constexpr (I < std::variant_size_v<Variant>) {
-        using T = std::variant_alternative_t<I, Variant>;
-        func.template operator()<T>();
-        for_each_type<Variant, Func, I + 1>(std::forward<Func>(func));
-    }
-};
+#include <string>
 
-auto for_each_tuple(auto func, auto tuple) {
-    std::apply([&](auto&&... args) { ([&]() { func(args); }(), ...); }, tuple);
-};
+#include "error.h"
+
+namespace NodePlot {
+namespace Utils {
+
+template <typename Map>
+auto try_find(Map& map, auto key, std::string err) -> ErrorOr<std::reference_wrapper<typename Map::mapped_type>> {
+    auto res = map.find(key);
+    if (res == map.end())
+        return ERR(err);
+    return res->second;
+}
 
 template <class... Ts>
 struct overloaded : Ts... {
     using Ts::operator()...;
 };
+
+} // namespace Utils
+} // namespace NodePlot

@@ -26,7 +26,7 @@ NodeRenderer::RenderFunction NodeRenderer::default_renderer = [](Renderer& rnd, 
     float INPUT_TEXT_WIDTH = 150 * rs;
     float INPUT_ELEMENT_WIDTH = 150 * rs;
 
-    float OUTPUT_PIN_X = INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH + INPUT_ELEMENT_WIDTH + PADDING + 50 * rs;
+    float OUTPUT_PIN_X = INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH + INPUT_ELEMENT_WIDTH + PADDING + 75 * rs;
 
     float y_pos = -INPUT_HEIGHT + PADDING;
 

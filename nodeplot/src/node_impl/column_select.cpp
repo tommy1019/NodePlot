@@ -21,7 +21,7 @@ void register_column_select() {
                     {"column", Node::Output{.id = "column", .display_name = "Column", .valid_data_types = {DataType::COLUMN}}},
                 };
             },
-            .evalulate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, NodeOutputCache& cache) -> ErrorOr<void> {
+            .evalulate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
                 Table table = TRY(eng->get_input_value<Table>(npf, node_id, "table"));
                 std::string column_name = TRY(eng->get_input_value<std::string>(npf, node_id, "column_name"));
 

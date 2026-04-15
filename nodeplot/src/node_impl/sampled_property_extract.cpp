@@ -27,7 +27,7 @@ void register_sampled_property_extract() {
                                             {"sample_count", Node::Output{.id = "sample_count", .display_name = "Sample Count", .valid_data_types = {DataType::COLUMN}}},
                                         };
                                     },
-                                    .evalulate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, NodeOutputCache& cache) -> ErrorOr<void> {
+                                    .evalulate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
                                         Column::Numeric x = TRY(TRY(eng->get_input_value<Column>(npf, node_id, "x")).as_numeric_column());
                                         Column::Numeric y = TRY(TRY(eng->get_input_value<Column>(npf, node_id, "y")).as_numeric_column());
 
