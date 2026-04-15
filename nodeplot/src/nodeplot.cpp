@@ -2,86 +2,69 @@
 #include "nlohmann/json_fwd.hpp"
 
 #include <filesystem>
-#include <limits>
+
 #include <sys/mman.h>
 
-#include <charconv>
-#include <fstream>
-#include <variant>
+extern void register_binary_operation();
+extern void register_column_select();
+extern void register_create_plot();
+extern void register_csv_import();
+extern void register_filter_table();
+extern void register_sampled_property_extract();
+extern void register_series_create();
+extern void register_value();
+
+void register_output();
 
 namespace NodePlot {
 
-std::map<NodeTypeId, Node> NodePlot::node_map = {};
+std::map<NodeTypeId, Node> NodeRegistry::node_map = {};
 
-void NodePlot::init() {
-    NodePlot::register_node("csv_import",
-                            Node{
-                                .type_id = "csv_import",
-                                .display_name = "CSV Import",
-                                .inputs = [](EvaluatedNodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::map<InputId, Node::Input> {
-                                    return {
-                                        {"filename", Node::Input{.id = "filename", .display_name = "Filename", .data_type = DataType::FILE_PATH}},
-                                        {"has_headers", Node::Input{.id = "has_headers", .display_name = "Has Headers", .data_type = DataType::BOOLEAN}},
-                                    };
-                                },
-                                .outputs = [](EvaluatedNodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::map<OutputId, Node::Output> {
-                                    return {
-                                        {"table", Node::Output{.id = "table", .display_name = "Table", .data_type = DataType::TABLE}},
-                                    };
-                                },
-                                .evalulate = [](EvaluatedNodePlotFile* enpf, EvaluatedNodeGraph* eng, NodeId node_id, NodeOutputCache cache) -> ErrorOr<void> {
-                                    std::filesystem::path filename = TRY(eng->get_input_value<std::filesystem::path>(enpf, node_id, "filename"));
-                                    bool has_headers = TRY(eng->get_input_value<bool>(enpf, node_id, "has_headers"));
-
-                                    filename = enpf->node_plot_file.path.parent_path() / filename;
-
-                                    std::print("Loading: {}\n", filename.string());
-
-                                    if (!std::filesystem::exists(filename)) {
-                                        return ERR("Input CSV file does not exist");
-                                    }
-
-                                    if (std::filesystem::is_directory(filename)) {
-                                        return ERR("Input CSV file is a directory");
-                                    }
-
-                                    auto file_size = std::filesystem::file_size(filename);
-
-                                    return {};
-                                },
-                            });
+void NodeRegistry::init() {
+    register_binary_operation();
+    register_column_select();
+    register_create_plot();
+    register_csv_import();
+    register_filter_table();
+    register_sampled_property_extract();
+    register_series_create();
+    register_value();
+    register_output();
 }
 
-void NodePlot::NodePlot::register_node(NodeTypeId node_id, Node node) { NodePlot::node_map.insert({node_id, node}); }
+void NodeRegistry::NodeRegistry::register_node(NodeTypeId node_id, Node node) { NodeRegistry::node_map.insert({node_id, node}); }
 
-ErrorOr<Data> EvaluatedNodeGraph::get_output_data(EvaluatedNodePlotFile* enpf, NodeId node_id, OutputId output_id) {
+ErrorOr<Data> EvaluatedNodeGraph::get_output_data(NodePlotFile* npf, NodeId node_id, OutputId output_id) {
     NodeOutputCache& output_cache = cache[node_id];
 
-    auto data = output_cache.outputs.find(output_id);
-    if (data != output_cache.outputs.end()) {
+    auto data = output_cache.computed_outputs.find(output_id);
+    if (data != output_cache.computed_outputs.end()) {
         return data->second;
     }
 
-    NodeGraph::InputStorage& node_input_storage = TRY(Utils::try_find(node_graph.nodes, node_id, "Invalid NodeID")).get();
-    Node& node = TRY(Utils::try_find(NodePlot::node_map, node_input_storage.type_id, "Invalid NodeTypeId")).get();
+    auto& ng = TRY(node_graph(npf)).get();
+    NodeGraph::NodeStorage& node_input_storage = TRY(Utils::try_find(ng.nodes, node_id, "Invalid NodeID")).get();
+    Node& node = TRY(Utils::try_find(NodeRegistry::node_map, node_input_storage.type_id, "Invalid NodeTypeId")).get();
 
-    TRY(node.evalulate(enpf, this, node_id, output_cache));
+    auto eval_err = node.evalulate(npf, this, node_id, output_cache);
+    if (!eval_err.has_value()) {
+        output_cache.error = eval_err.error();
+    }
 
-    return TRY(Utils::try_find(output_cache.outputs, output_id, "OutputId not found")).get();
+    return TRY(Utils::try_find(output_cache.computed_outputs, output_id, "OutputId not found")).get();
 }
 
-ErrorOr<Data> EvaluatedNodeGraph::get_input_data(EvaluatedNodePlotFile* enpf, NodeId node_id, InputId input_id) {
-    NodeGraph::InputStorage& node_input_storage = TRY(Utils::try_find(node_graph.nodes, node_id, "Invalid NodeID")).get();
-    auto& input_storage = TRY(Utils::try_find(node_input_storage.inputs, input_id, "Invalid InputID")).get();
+ErrorOr<Data> EvaluatedNodeGraph::get_input_data(NodePlotFile* npf, NodeId node_id, InputId input_id) {
+    auto& ng = TRY(node_graph(npf)).get();
+    NodeGraph::NodeStorage& node_input_storage = TRY(Utils::try_find(ng.nodes, node_id, "Invalid NodeID")).get();
+    auto& input_storage = TRY(Utils::try_find(node_input_storage.input_storage, input_id, "Invalid InputID: " + input_id)).get();
 
     return std::visit(overloaded{
                           [&](Data data) -> ErrorOr<Data> { return data; },
-                          [&](NodeGraph::InputPin input_pin) -> ErrorOr<Data> { return this->get_output_data(enpf, input_pin.node_id, input_pin.output_id); },
+                          [&](NodeGraph::InputPin input_pin) -> ErrorOr<Data> { return this->get_output_data(npf, input_pin.node_id, input_pin.output_id); },
                       },
                       input_storage);
 }
-
-} // namespace NodePlot
 
 MappedFile::~MappedFile() {
     if (munmap(data, file_size) == -1) {
@@ -89,178 +72,228 @@ MappedFile::~MappedFile() {
     }
 }
 
-ErrorOr<NodeOutput> EvaluatedNodeGraph::get_output(GlobalNodeId id, OutputIndex output_id) {
-    auto& loaded_node = loaded_nodes[id];
-
-    if (auto val = loaded_node.cache.find(output_id); val != loaded_node.cache.end()) {
-        return val->second;
-    }
-
-    auto node_or_error = node_file.node_graph(id.graph_name).nodes.find(id.id);
-    if (node_or_error == node_file.node_graph(id.graph_name).nodes.end()) {
-        return ERR("Trying to get output from non-existent node");
-    }
-
-    auto new_cache_or_error = std::visit([&](const auto& node) { return node_output(this, id, node); }, node_or_error->second);
-    if (!new_cache_or_error.has_value()) {
-        loaded_node.error_message = new_cache_or_error.error();
-    } else {
-        loaded_node.cache = new_cache_or_error.value();
-    }
-
-    if (auto val = loaded_node.cache.find(output_id); val != loaded_node.cache.end()) {
-        return val->second;
-    }
-
-    return ERR("Requested output is not exported by the node");
-}
-
-ErrorOr<NodePlotFile> NodePlotFile::read_from_json(const nlohmann::json& json) {
-    NodePlotFile res;
-    for (auto it = json["node_graphs"].begin(); it != json["node_graphs"].end(); ++it) {
-        std::string name = it.key();
-        NodeGraph ng = it.value();
-        res.m_node_graphs[it.key()] = it.value();
-    }
-    return res;
-}
-
-ErrorOr<void> NodePlotFile::save(std::filesystem::path path) {
-    std::ofstream out(path);
-    if (!out)
-        return ERR("Could not open file for writing");
-
-    nlohmann::json json = *this;
-
-    out << json.dump(2);
-    out.close();
-
-    m_file_path = path;
-
-    return {};
-}
-
-ErrorOr<void> NodePlotFile::add_node(std::string graph_name, Node node) {
-    std::visit(
-        [&](auto& node) {
-            node.id = m_node_graphs[graph_name].next_node_id++;
-            m_node_graphs[graph_name].nodes.insert({node.id, node});
-        },
-        node);
-    return {};
-}
-
-ErrorOr<NodePlotFile> NodePlotFile::read(std::filesystem::path path) {
-    std::ifstream f(path);
-    if (!f)
-        return ERR("Could not open input json file");
-
-    nlohmann::json data = nlohmann::json::parse(f);
-
-    auto res = TRY(read_from_json(data));
-    res.m_file_path = std::filesystem::path(path);
-
-    return res;
-}
-
 ErrorOr<NodePlotFile> NodePlotFile::create(std::filesystem::path path) {
     NodePlotFile res;
-    res.m_file_path = std::filesystem::path(path);
-    res.m_node_graphs = {};
-    res.m_node_graphs.insert({MAIN_GRAPH_INDEX, NodeGraph{}});
+    res.path = path;
+    res.graphs = {{"main", NodeGraph{}}};
+    return res;
+}
+
+ErrorOr<NodePlotFile> NodePlotFile::from_json(nlohmann::json json, std::filesystem::path path) {
+    NodePlotFile res;
+    res.path = path;
+
+    auto graphs = json.find("graphs");
+    if (graphs == json.end())
+        return ERR("Missing graphs");
+
+    for (auto it = graphs.value().begin(); it != graphs.value().end(); it++) {
+        res.graphs[it.key()] = TRY(NodeGraph::from_json(it.value()));
+    }
+
+    return res;
+}
+
+ErrorOr<nlohmann::json> NodePlotFile::to_json() {
+    nlohmann::json graphs;
+
+    for (auto [graph_id, graph] : this->graphs) {
+        graphs[graph_id] = TRY(graph.to_json());
+    }
+
+    nlohmann::json res;
+    res["graphs"] = graphs;
+
     return res;
 };
 
-ErrorOr<double> string_to_double(std::string_view s) {
-    double dbl;
-    auto result = std::from_chars(s.data(), s.data() + s.size(), dbl);
-    if (result.ec == std::errc()) {
-        return dbl;
+ErrorOr<NodeGraph> NodeGraph::from_json(nlohmann::json json) {
+    auto get = [](nlohmann::json json, const char* key, std::string err) -> ErrorOr<nlohmann::json> {
+        auto res = json.find(key);
+        if (res == json.end())
+            return ERR(err);
+        return res.value();
+    };
+
+    auto get_typed = [&]<typename T>(std::type_identity<T>, nlohmann::json json, const char* key, std::string err) -> ErrorOr<T> {
+        auto j = TRY(get(json, key, err));
+        try {
+            return j.get<T>();
+        } catch (nlohmann::json::type_error) {
+            return ERR(err);
+        }
+    };
+
+    NodeGraph res;
+
+    nlohmann::json nodes_json = TRY(get(json, "nodes", "Missing nodes data"));
+    for (auto nodes_it = nodes_json.begin(); nodes_it != nodes_json.end(); nodes_it++) {
+        NodeId node_id = TRY([&]() -> ErrorOr<NodeId> {
+            try {
+                return static_cast<NodeId>(std::stoll(nodes_it.key()));
+            } catch (const std::out_of_range& e) {
+                return ERR("Invalid NodeId: " + nodes_it.key());
+            } catch (const std::invalid_argument& e) {
+                return ERR("Invalid NodeId: " + nodes_it.key());
+            }
+        }());
+        res.next_free_node_id = std::max(res.next_free_node_id, node_id + 1);
+
+        NodeStorage node_storage;
+        node_storage.type_id = TRY(get_typed(std::type_identity<NodeTypeId>{}, nodes_it.value(), "type_id", "Missing NodeTypeId for node " + std::to_string(node_id)));
+
+        auto pos_json = TRY(get_typed(std::type_identity<nlohmann::json>{}, nodes_it.value(), "pos", "Missing node position for node " + std::to_string(node_id)));
+        if (!pos_json.is_array() && pos_json.size() == 2)
+            return ERR("Malformed node position data for node " + std::to_string(node_id));
+        try {
+            node_storage.pos.x = pos_json[0].get<double>();
+            node_storage.pos.y = pos_json[1].get<double>();
+        } catch (nlohmann::json::type_error) {
+            return ERR("Malformed node position data for node " + std::to_string(node_id));
+        }
+
+        if (!NodeRegistry::node_map.contains(node_storage.type_id))
+            return ERR("Invalid NodeTypeId for node " + std::to_string(node_id));
+
+        auto inputs_json = TRY(get(nodes_it.value(), "inputs", "Missing Node Inputs for node " + std::to_string(node_id)));
+        for (auto inputs_it = inputs_json.begin(); inputs_it != inputs_json.end(); inputs_it++) {
+            nlohmann::json input_json = inputs_it.value();
+
+            auto err_str = [&]() { return "Node [" + std::to_string(node_id) + "] Input '" + inputs_it.key() + "': "; };
+
+            auto input_val = TRY([&]() -> ErrorOr<std::variant<Data, InputPin>> {
+                std::string input_type = TRY(get_typed(std::type_identity<std::string>{}, input_json, "type", err_str() + "Missing input type"));
+                if (input_type == "pin") {
+                    InputPin pin;
+                    pin.node_id = TRY(get_typed(std::type_identity<NodeId>{}, input_json, "node", err_str() + "Missing input pin NodeId"));
+                    pin.output_id = TRY(get_typed(std::type_identity<OutputId>{}, input_json, "output", err_str() + "Missing input pin OutputId"));
+                    return pin;
+                } else if (input_type == "data") {
+                    std::string data_type = TRY(get_typed(std::type_identity<std::string>{}, input_json, "data_type", err_str() + "Missing input data type"));
+                    if (data_type == "number")
+                        return Data(TRY(get_typed(std::type_identity<double>{}, input_json, "value", err_str() + "Missing input data value double")));
+                    else if (data_type == "string")
+                        return Data(TRY(get_typed(std::type_identity<std::string>{}, input_json, "value", err_str() + "Missing input data value string")));
+                    else if (data_type == "boolean")
+                        return Data(TRY(get_typed(std::type_identity<bool>{}, input_json, "value", err_str() + "Missing input data value boolean")));
+                    else if (data_type == "integer")
+                        return Data(TRY(get_typed(std::type_identity<int64_t>{}, input_json, "value", err_str() + "Missing input data value integer")));
+                    else if (data_type == "color") {
+                        std::vector<float> color_arr = TRY(get_typed(std::type_identity<std::vector<float>>{}, input_json, "value", err_str() + "Missing input data value color"));
+                        if (color_arr.size() != 4)
+                            return ERR("Invalid color data");
+                        return Data(Color{color_arr[0], color_arr[1], color_arr[2], color_arr[3]});
+                    } else if (data_type == "margin") {
+                        std::vector<float> margin_arr = TRY(get_typed(std::type_identity<std::vector<float>>{}, input_json, "value", err_str() + "Missing input data value color"));
+                        if (margin_arr.size() != 4)
+                            return ERR(err_str() + "Invalid margin data");
+                        return Data(NodePlot::Margins{margin_arr[0], margin_arr[1], margin_arr[2], margin_arr[3]});
+                    } else
+                        return ERR(err_str() + "Invalid data type for input");
+                } else {
+                    return ERR(err_str() + "Input type is invalid");
+                }
+            }());
+
+            node_storage.input_storage[inputs_it.key()] = input_val;
+        }
+
+        res.nodes[node_id] = node_storage;
     }
-    return ERR("Invalid number");
-}
-
-ErrorOr<ColumnNumeric> EvaluatedNodeGraph::column_as_numeric(Column column) {
-    return std::visit(overloaded{
-                          [&](ColumnNumeric& col) -> ErrorOr<ColumnNumeric> { return col; },
-                          [&](ColumnCSVImported& col) -> ErrorOr<ColumnNumeric> {
-                              ColumnNumeric res;
-                              res.values.reserve(col.values.size());
-                              for (auto& v : col.values) {
-                                  auto parsed = string_to_double(v);
-                                  if (parsed.has_value())
-                                      res.values.push_back(*parsed);
-                                  else
-                                      res.values.push_back(std::numeric_limits<double>::quiet_NaN());
-                              }
-                              return res;
-                          },
-                      },
-                      column.raw_column);
-}
-
-ErrorOr<std::vector<GlobalNodeId>> EvaluatedNodeGraph::dependent_nodes(GlobalNodeId gid) {
-
-    auto n = node_file.node_graph(gid.graph_name).nodes.find(gid.id);
-    if (n == node_file.node_graph(gid.graph_name).nodes.end())
-        return ERR("Invalid Node ID");
-
-    std::vector<GlobalNodeId> res;
-
-    std::visit(
-        [&](auto node) {
-            std::apply(
-                [&](auto&&... args) {
-                    (overloaded{
-                         [&]<typename T>(std::vector<T> list) {
-                             for (auto& e : list) {
-                                 overloaded{
-                                     [&]<typename V>(Input<V> input) {
-                                         if (std::holds_alternative<InputPin<V>>(input)) {
-                                             LocalNodeId id = std::get<InputPin<V>>(input).node;
-                                             if (id >= 0)
-                                                 res.push_back(GlobalNodeId{
-                                                     .id = id,
-                                                     .graph_name = gid.graph_name,
-                                                 });
-                                         }
-                                     },
-                                     [&]<typename V>(InputPin<V> pin) {
-                                         if (pin.node >= 0)
-                                             res.push_back(GlobalNodeId{
-                                                 pin.node,
-                                                 gid.graph_name,
-                                             });
-                                     },
-                                 }(e);
-                             }
-                         },
-                         [&]<typename T>(Input<T> input) {
-                             if (std::holds_alternative<InputPin<T>>(input)) {
-                                 LocalNodeId id = std::get<InputPin<T>>(input).node;
-                                 if (id >= 0)
-                                     res.push_back(GlobalNodeId{
-                                         .id = id,
-                                         .graph_name = gid.graph_name,
-                                     });
-                             }
-                         },
-                         [&]<typename T>(InputPin<T> pin) {
-                             if (pin.node >= 0)
-                                 res.push_back(GlobalNodeId{
-                                     pin.node,
-                                     gid.graph_name,
-                                 });
-                         },
-                         [&]<typename T>(T input) {},
-                     }(std::get<NODE_INPUT_INDEX_STORAGE>(args))
-
-                         ,
-                     ...);
-                },
-                node.inputs());
-        },
-        n->second);
 
     return res;
 }
+
+ErrorOr<nlohmann::json> NodeGraph::to_json() {
+    nlohmann::json nodes_json;
+
+    for (auto [node_id, node_storage] : nodes) {
+        nlohmann::json node_inputs;
+        for (auto [input_id, data_or_pin] : node_storage.input_storage) {
+            node_inputs[input_id] = TRY(std::visit(overloaded{
+                                                       [](Data data) -> ErrorOr<nlohmann::json> {
+                                                           nlohmann::json res;
+                                                           res["type"] = "data";
+
+                                                           TRY(std::visit(overloaded{[&](double v) -> ErrorOr<void> {
+                                                                                         res["data_type"] = "number";
+                                                                                         res["value"] = v;
+                                                                                         return {};
+                                                                                     },
+                                                                                     [&](std::string v) -> ErrorOr<void> {
+                                                                                         res["data_type"] = "string";
+                                                                                         res["value"] = v;
+                                                                                         return {};
+                                                                                     },
+                                                                                     [&](bool v) -> ErrorOr<void> {
+                                                                                         res["data_type"] = "boolean";
+                                                                                         res["value"] = v;
+                                                                                         return {};
+                                                                                     },
+                                                                                     [&](int64_t v) -> ErrorOr<void> {
+                                                                                         res["data_type"] = "integer";
+                                                                                         res["value"] = v;
+                                                                                         return {};
+                                                                                     },
+                                                                                     [&](Color v) -> ErrorOr<void> {
+                                                                                         res["data_type"] = "color";
+                                                                                         res["value"] = std::vector<float>{v.r, v.g, v.b, v.a};
+                                                                                         return {};
+                                                                                     },
+                                                                                     [&](Margins v) -> ErrorOr<void> {
+                                                                                         res["data_type"] = "margin";
+                                                                                         res["value"] = std::vector<float>{v.left, v.right, v.top, v.bottom};
+                                                                                         return {};
+                                                                                     },
+                                                                                     [&](auto) -> ErrorOr<void> { return ERR("Cannot encode input value"); }},
+                                                                          data));
+
+                                                           return res;
+                                                       },
+                                                       [](InputPin pin) -> ErrorOr<nlohmann::json> {
+                                                           nlohmann::json res;
+                                                           res["type"] = "pin";
+                                                           res["node"] = pin.node_id;
+                                                           res["output"] = pin.output_id;
+                                                           return res;
+                                                       },
+                                                   },
+                                                   data_or_pin));
+        }
+
+        nlohmann::json node_json;
+        node_json["inputs"] = node_inputs;
+        node_json["type_id"] = node_storage.type_id;
+        node_json["pos"] = {node_storage.pos.x, node_storage.pos.y};
+        nodes_json[std::to_string(node_id)] = node_json;
+    }
+
+    nlohmann::json res;
+    res["nodes"] = nodes_json;
+
+    return res;
+}
+
+ErrorOr<NodeId> NodeGraph::create_node(NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeTypeId type, float x, float y) {
+    auto node = TRY(Utils::try_find(NodeRegistry::node_map, type, "Invalid node type id")).get();
+
+    NodeId id = next_free_node_id++;
+
+    auto& storage = nodes[id];
+    storage = {
+        .type_id = type,
+        .pos = {.x = x, .y = y},
+    };
+
+    auto inputs = node.inputs(npf, eng, id);
+    if (inputs.has_value()) {
+        for (auto& i : inputs.value()) {
+            if (i.second.default_value.has_value())
+                storage.input_storage[i.first] = i.second.default_value.value();
+        }
+    }
+
+    return id;
+}
+
+} // namespace NodePlot

@@ -1,19 +1,45 @@
 #include "nodeplot.h"
 
-template <>
-ErrorOr<std::map<OutputIndex, NodeOutput>> node_output(EvaluatedNodeGraph* graph, GlobalNodeId id, const IntegerValueNode& node) {
-    auto res = TRY_OR(graph->get_input(id.graph_name, node.i_val), return ERR("Could not get 'Value' input"));
-    return std::map<OutputIndex, NodeOutput>{{"value", res}};
-}
+using namespace NodePlot;
 
-template <>
-ErrorOr<std::map<OutputIndex, NodeOutput>> node_output(EvaluatedNodeGraph* graph, GlobalNodeId id, const NumericValueNode& node) {
-    auto res = TRY_OR(graph->get_input(id.graph_name, node.i_val), return ERR("Could not get 'Value' input"));
-    return std::map<OutputIndex, NodeOutput>{{"value", res}};
-}
+void register_value() {
+    NodeRegistry::register_node("numeric_value",
+                                Node{
+                                    .type_id = "numeric_value",
+                                    .display_name = "Numeric Value",
+                                    .inputs = [](NodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::vector<std::pair<InputId, Node::Input>> {
+                                        return {
+                                            {"value", Node::Input{.id = "value", .display_name = "Value", .valid_data_types = {DataType::NUMBER}}},
+                                        };
+                                    },
+                                    .outputs = [](NodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::vector<std::pair<OutputId, Node::Output>> {
+                                        return {
+                                            {"value", Node::Output{.id = "value", .display_name = "Value", .valid_data_types = {DataType::NUMBER}}},
+                                        };
+                                    },
+                                    .evalulate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, NodeOutputCache& cache) -> ErrorOr<void> {
+                                        cache.computed_outputs["value"] = TRY(eng->get_input_value<double>(npf, node_id, "value"));
+                                        return {};
+                                    },
+                                });
 
-template <>
-ErrorOr<std::map<OutputIndex, NodeOutput>> node_output(EvaluatedNodeGraph* graph, GlobalNodeId id, const StringValueNode& node) {
-    auto res = TRY_OR(graph->get_input(id.graph_name, node.i_val), return ERR("Could not get 'Value' input"));
-    return std::map<OutputIndex, NodeOutput>{{"value", res}};
+    NodeRegistry::register_node("string_value",
+                                Node{
+                                    .type_id = "string_value",
+                                    .display_name = "String Value",
+                                    .inputs = [](NodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::vector<std::pair<InputId, Node::Input>> {
+                                        return {
+                                            {"value", Node::Input{.id = "value", .display_name = "Value", .valid_data_types = {DataType::STRING}}},
+                                        };
+                                    },
+                                    .outputs = [](NodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::vector<std::pair<OutputId, Node::Output>> {
+                                        return {
+                                            {"value", Node::Output{.id = "value", .display_name = "Value", .valid_data_types = {DataType::STRING}}},
+                                        };
+                                    },
+                                    .evalulate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, NodeOutputCache& cache) -> ErrorOr<void> {
+                                        cache.computed_outputs["value"] = TRY(eng->get_input_value<std::string>(npf, node_id, "value"));
+                                        return {};
+                                    },
+                                });
 }

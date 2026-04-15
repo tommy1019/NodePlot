@@ -1,4 +1,5 @@
 #include <fstream>
+#include <string>
 #include <variant>
 
 #include <nodeplot/error.h>
@@ -7,21 +8,32 @@
 int main(int argc, char** argv) {
 
     if (argc != 2)
-        REQUIRE_NOT_REACHED("Error: Incorrect number of arguments. Exactly two required");
+        REQUIRE_NOT_REACHED("Error: Incorrect number of arguments. Exactly one required");
 
-    EvaluatedNodeGraph eng = {
-        .node_file = MUST(NodePlotFile::read(argv[1])),
-    };
+    std::ifstream ifs(argv[1]);
+    if (!ifs)
+        REQUIRE_NOT_REACHED("Could not open input file");
 
-    for (auto& n : eng.node_file.node_graph("main").nodes) {
-        if (std::holds_alternative<OutputNode>(n.second)) {
-            auto& node = std::get<OutputNode>(n.second);
+    NodePlot::NodeRegistry::init();
 
-            std::string filename = MUST(eng.get_input("main", node.i_output_filename));
+    NodePlot::NodePlotFile npf = MUST(NodePlot::NodePlotFile::from_json(nlohmann::json::parse(ifs), argv[1]));
+    auto main_graph = npf.graphs.find("main");
+    if (main_graph == npf.graphs.end())
+        REQUIRE_NOT_REACHED("Input file missing main graph");
+
+    NodePlot::EvaluatedNodeGraph eng{.graph_id = "main"};
+
+    for (auto& n : main_graph->second.nodes) {
+        if (n.second.type_id == "output") {
+            std::string filename = MUST(eng.get_input_value<std::string>(&npf, n.first, "filename"));
+            auto svg = MUST(eng.get_output_data(&npf, n.first, "svg"));
+
+            if (!std::holds_alternative<std::string>(svg))
+                REQUIRE_NOT_REACHED("SVG is not a string type");
 
             std::ofstream out(filename);
             REQUIRE(out, "Failed to open output file: {}", filename);
-            out << MUST(node.get_svg(&eng));
+            out << std::get<std::string>(svg);
             out.close();
         }
     }

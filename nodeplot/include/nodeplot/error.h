@@ -2,7 +2,6 @@
 
 #include <expected>
 #include <optional>
-#include <print>
 #include <string>
 
 #ifdef SIG_INT_ON_ERROR
@@ -10,10 +9,7 @@
 #endif
 
 template <typename T>
-using ErrorOr = std::expected<T, const char*>;
-
-template <typename T>
-using DetailedErrorOr = std::expected<T, std::string>;
+using ErrorOr = std::expected<T, std::string>;
 
 template <typename T>
 std::optional<T> to_optional(ErrorOr<T> v) {
@@ -72,16 +68,6 @@ std::optional<T> to_optional(ErrorOr<T> v) {
         if (!RESULT.has_value()) {                                                                                                                                                                     \
             auto error = std::move(RESULT.error());                                                                                                                                                    \
             ABORT(error);                                                                                                                                                                              \
-        }                                                                                                                                                                                              \
-        *std::move(RESULT);                                                                                                                                                                            \
-    })
-
-#define MUST_DETAILED(...)                                                                                                                                                                             \
-    ({                                                                                                                                                                                                 \
-        auto RESULT = __VA_ARGS__;                                                                                                                                                                     \
-        if (!RESULT.has_value()) {                                                                                                                                                                     \
-            auto error = std::move(RESULT.error());                                                                                                                                                    \
-            ABORT(error.c_str());                                                                                                                                                                      \
         }                                                                                                                                                                                              \
         *std::move(RESULT);                                                                                                                                                                            \
     })

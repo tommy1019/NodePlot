@@ -2,7 +2,7 @@
 
 #include <memory>
 
-DetailedErrorOr<void> Window::global_init() {
+ErrorOr<void> Window::global_init() {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0)
         return ERR(std::string("Could not init SDL: ") + SDL_GetError());
 
@@ -19,11 +19,11 @@ DetailedErrorOr<void> Window::global_init() {
 
     return {};
 }
-DetailedErrorOr<void> Window::global_deinit() {
+ErrorOr<void> Window::global_deinit() {
     SDL_Quit();
     return {};
 }
-DetailedErrorOr<std::shared_ptr<Window>> Window::create(CreateWindowParams params) {
+ErrorOr<std::shared_ptr<Window>> Window::create(CreateWindowParams params) {
     std::shared_ptr<Window> res(new Window);
 
     res->m_scale = ImGui_ImplSDL2_GetContentScaleForDisplay(0);

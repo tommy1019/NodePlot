@@ -3,10 +3,8 @@ cmake_minimum_required(VERSION 3.25)
 set(SOURCES
     src/main.cpp
     src/window.cpp
-    src/render_node_graph.cpp
     src/svg_renderer.cpp
-
-    src/node_impl/output.cpp
+    src/node_renderer.cpp
 )
 
 add_executable(nodeplot-gui ${SOURCES})

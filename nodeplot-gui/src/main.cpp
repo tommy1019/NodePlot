@@ -1,62 +1,51 @@
+#include <filesystem>
+#include <fstream>
 #include <memory>
+#include <optional>
 #include <string>
-#include <variant>
 
 #include <imgui.h>
+
+#include <portable-file-dialogs.h>
 
 #include <nodeplot/error.h>
 #include <nodeplot/nodeplot.h>
 
-#include <portable-file-dialogs.h>
-
-#include "render_node.h"
-#include "render_node_graph.h"
-#include "style.h"
+#include "node_renderer.h"
 #include "svg_renderer.h"
 #include "window.h"
 
-auto SideBySide = [](auto A_id, auto A, auto B_id, auto B, float inital_seperation = 0.5f) {
-    ImGui::SetNextWindowBgAlpha(0.0f);
-    ImGui::BeginChild(A_id,
-                      ImVec2(ImGui::GetContentRegionAvail().x * inital_seperation, 0),
-                      ImGuiChildFlags_ResizeX | ImGuiChildFlags_Borders,
-                      ImGuiWindowFlags_None | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-    A();
-    ImGui::EndChild();
-    ImGui::SameLine();
-    ImGui::BeginChild(B_id, ImVec2(0, 0), ImGuiChildFlags_None, ImGuiWindowFlags_None);
-    B();
-    ImGui::EndChild();
-};
-
 int main(int argc, char** argv) {
+
+    NodePlot::NodeRegistry::init();
 
     // TODO: Check for infinite loops
 
-    RenderNodeGraph render_node_graph = [&]() {
+    NodePlot::NodePlotFile npf = [&]() {
         if (argc == 3) {
             if (strcmp("--new", argv[1]) == 0) {
-                return RenderNodeGraph {
-                    .eval_node_graph = EvaluatedNodeGraph{
-                        .node_file = MUST(NodePlotFile::create(argv[2])),
-                    },
-                };
+                return MUST(NodePlot::NodePlotFile::create(argv[2]));
             } else {
-                REQUIRE_NOT_REACHED("Too many arguments");
+                REQUIRE_NOT_REACHED("Too many arguments")
             }
-        } else if (argc == 2) {
-            return RenderNodeGraph {
-                .eval_node_graph = EvaluatedNodeGraph{
-                    .node_file = MUST(NodePlotFile::read(argv[1])),
-                },
-            };
         } else {
-            REQUIRE_NOT_REACHED("Too few arguments");
+            std::ifstream ifs(argv[1]);
+            if (!ifs)
+                REQUIRE_NOT_REACHED("Could not open input file: '{}'", argv[1]);
+            return MUST(NodePlot::NodePlotFile::from_json(nlohmann::json::parse(ifs), argv[1]));
         }
     }();
 
-    MUST_DETAILED(Window::global_init());
-    auto window = MUST_DETAILED(Window::create({
+    auto save = [&](std::optional<std::filesystem::path> filename = {}) {
+        std::ofstream ofs(filename.value_or(npf.path));
+        if (!ofs)
+            REQUIRE_NOT_REACHED("Failed to open file for writing");
+
+        ofs << MUST(npf.to_json()).dump(4);
+    };
+
+    MUST(Window::global_init());
+    auto window = MUST(Window::create({
         .width = 1600,
         .height = 1200,
     }));
@@ -70,8 +59,42 @@ int main(int argc, char** argv) {
     ImGuiStyle& style = ImGui::GetStyle();
     style.FrameBorderSize = 1.0f;
 
-    render_node_graph.svg_renderer = MUST(SVGRenderer::create({-1, -1}, R"SVG(<svg width="400" height="400" xmlns="http://www.w3.org/2000/svg"></svg>)SVG"));
-    render_node_graph.update_target();
+    auto svg_renderer = MUST(SVGRenderer::create({-1, -1}, R"SVG(<svg width="400" height="400" xmlns="http://www.w3.org/2000/svg"></svg>)SVG"));
+
+    NodePlot::GraphId current_graph = "main";
+
+    auto cur_ng = [&]() -> NodePlot::NodeGraph& {
+        auto cur = npf.graphs.find(current_graph);
+        if (cur == npf.graphs.end()) {
+            REQUIRE_NOT_REACHED("Invalid current graph");
+        }
+        return cur->second;
+    };
+
+    auto create_eng = [&](NodePlot::GraphId gid) -> NodePlot::EvaluatedNodeGraph {
+        auto cur = npf.graphs.find(gid);
+        if (cur == npf.graphs.end()) {
+            REQUIRE_NOT_REACHED("Invalid current graph");
+        }
+        return NodePlot::EvaluatedNodeGraph{.graph_id = current_graph};
+    };
+
+    NodePlot::EvaluatedNodeGraph cur_eng = create_eng(current_graph);
+    NodeRenderer node_renderer(&npf, &cur_eng);
+
+    auto update_svg = [&]() {
+        for (auto& n : MUST(cur_eng.node_graph(&npf)).get().nodes) {
+            if (n.second.type_id == "output") {
+                auto svg_or_err = cur_eng.get_output_data(&npf, n.first, "svg");
+                if (!svg_or_err.has_value())
+                    continue;
+                if (!std::holds_alternative<std::string>(svg_or_err.value()))
+                    REQUIRE_NOT_REACHED("SVG is not a string type");
+                svg_renderer->set_svg(std::get<std::string>(svg_or_err.value()));
+            }
+        }
+    };
+    update_svg();
 
     window->event_loop(overloaded{[&](Window::RenderEvent) -> ErrorOr<void> {
         ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -86,13 +109,13 @@ int main(int argc, char** argv) {
         ImGui::PopStyleVar();
 
         if (ImGui::IsKeyPressed(ImGuiKey_S) && ImGui::GetIO().KeyCtrl) {
-            render_node_graph.eval_node_graph.node_file.save();
+            save();
         }
 
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("File")) {
                 if (ImGui::MenuItem("Save", "Ctrl+S")) {
-                    render_node_graph.eval_node_graph.node_file.save();
+                    save();
                 }
                 if (ImGui::MenuItem("Save-As")) {
                     auto selection = pfd::save_file("Save Nodeplot File As", "", {"Json File", "*.json"}, pfd::opt::none).result();
@@ -100,7 +123,8 @@ int main(int argc, char** argv) {
                         std::string filename = selection;
                         if (!filename.ends_with(".json"))
                             filename += ".json";
-                        render_node_graph.eval_node_graph.node_file.save(filename);
+
+                        save(filename);
                     }
                 }
                 ImGui::EndMenu();
@@ -108,16 +132,13 @@ int main(int argc, char** argv) {
 
             if (ImGui::BeginMenu("NodeGraph")) {
                 if (ImGui::BeginMenu("Add")) {
-                    for_each_type<Node>([&]<typename T>() {
-                        if (ImGui::MenuItem(T::name().c_str())) {
+                    for (auto n : NodePlot::NodeRegistry::node_map) {
+                        if (ImGui::MenuItem(n.second.display_name.c_str())) {
                             auto win_size = ImGui::GetWindowSize();
-                            auto placement_pos = render_node_graph.screen_to_world(ImVec2(win_size.x, win_size.y));
-
-                            T new_node{};
-                            new_node.pos = {placement_pos.x, placement_pos.y};
-                            render_node_graph.eval_node_graph.node_file.add_node(render_node_graph.current_graph_index, new_node);
+                            auto placement_pos = node_renderer.screen_to_world(ImVec2(win_size.x, win_size.y));
+                            cur_ng().create_node(&npf, &cur_eng, n.second.type_id, placement_pos.x, placement_pos.y);
                         }
-                    });
+                    }
                     ImGui::EndMenu();
                 }
                 ImGui::EndMenu();
@@ -126,253 +147,159 @@ int main(int argc, char** argv) {
             ImGui::EndMainMenuBar();
         }
 
-        SideBySide(
-            "NodeEditor",
-            [&]() {
-                auto& nodes = render_node_graph.eval_node_graph.node_file.node_graph(render_node_graph.current_graph_index).nodes;
+        ImGui::SetNextWindowBgAlpha(0.0f);
+        ImGui::BeginChild("NodeEditor",
+                          ImVec2(ImGui::GetContentRegionAvail().x * 0.75, 0),
+                          ImGuiChildFlags_ResizeX | ImGuiChildFlags_Borders,
+                          ImGuiWindowFlags_None | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+        {
+            auto& nodes = cur_ng().nodes;
 
-                auto render_node_editor_position = ImGui::GetCursorScreenPos();
-                auto render_node_editor_size = ImGui::GetWindowSize();
+            auto render_node_editor_position = ImGui::GetCursorScreenPos();
+            auto render_node_editor_size = ImGui::GetWindowSize();
 
-                ImVec2 clip_start = {
-                    render_node_editor_position.x - ImGui::GetStyle().WindowPadding.x,
-                    render_node_editor_position.y - ImGui::GetStyle().WindowPadding.y,
-                };
-                ImVec2 clip_end = {
-                    render_node_editor_position.x - ImGui::GetStyle().WindowPadding.x + render_node_editor_size.x,
-                    render_node_editor_position.y - ImGui::GetStyle().WindowPadding.y + render_node_editor_size.y,
-                };
-                ImGui::GetForegroundDrawList()->PushClipRect(clip_start, clip_end, true);
-                ImGui::GetBackgroundDrawList()->PushClipRect(clip_start, clip_end, true);
+            ImVec2 clip_start = {
+                render_node_editor_position.x - ImGui::GetStyle().WindowPadding.x,
+                render_node_editor_position.y - ImGui::GetStyle().WindowPadding.y,
+            };
+            ImVec2 clip_end = {
+                render_node_editor_position.x - ImGui::GetStyle().WindowPadding.x + render_node_editor_size.x,
+                render_node_editor_position.y - ImGui::GetStyle().WindowPadding.y + render_node_editor_size.y,
+            };
+            ImGui::GetForegroundDrawList()->PushClipRect(clip_start, clip_end, true);
+            ImGui::GetBackgroundDrawList()->PushClipRect(clip_start, clip_end, true);
 
-                // Grid Lines
-                if (true) {
-                    constexpr float GRID_COLOR = 0.85f;
-                    auto color = ImGui::GetColorU32(ImVec4(GRID_COLOR, GRID_COLOR, GRID_COLOR, 1.0f));
+            // Grid Lines
+            if (true) {
+                constexpr float GRID_COLOR = 0.85f;
+                auto color = ImGui::GetColorU32(ImVec4(GRID_COLOR, GRID_COLOR, GRID_COLOR, 1.0f));
 
-                    auto render_list = ImGui::GetBackgroundDrawList();
+                auto render_list = ImGui::GetBackgroundDrawList();
 
-                    ImVec2 grid_size = ImVec2(100, 100);
+                ImVec2 grid_size = ImVec2(100, 100);
 
-                    ImVec2 grid_size_screen = ImVec2(render_node_graph.world_to_screen(grid_size).x - render_node_graph.world_to_screen(ImVec2(0, 0)).x,
-                                                     render_node_graph.world_to_screen(grid_size).y - render_node_graph.world_to_screen(ImVec2(0, 0)).y);
+                ImVec2 grid_size_screen = ImVec2(node_renderer.world_to_screen(grid_size).x - node_renderer.world_to_screen(ImVec2(0, 0)).x,
+                                                 node_renderer.world_to_screen(grid_size).y - node_renderer.world_to_screen(ImVec2(0, 0)).y);
 
-                    ImVec2 start = render_node_graph.screen_to_world(render_node_editor_position);
-                    ImVec2 end = render_node_graph.screen_to_world(render_node_editor_size);
+                ImVec2 start = node_renderer.screen_to_world(render_node_editor_position);
+                ImVec2 end = node_renderer.screen_to_world(render_node_editor_size);
 
-                    start.x = std::floor(start.x / 100.0f) * 100.0f;
-                    start.y = std::floor(start.y / 100.0f) * 100.0f;
+                start.x = std::floor(start.x / 100.0f) * 100.0f;
+                start.y = std::floor(start.y / 100.0f) * 100.0f;
 
-                    end.x = std::ceil(end.x / 100.0f) * 100.0f;
-                    end.y = std::ceil(end.y / 100.0f) * 100.0f;
+                end.x = std::ceil(end.x / 100.0f) * 100.0f;
+                end.y = std::ceil(end.y / 100.0f) * 100.0f;
 
-                    start = render_node_graph.world_to_screen(start);
-                    end = render_node_graph.world_to_screen(end);
+                start = node_renderer.world_to_screen(start);
+                end = node_renderer.world_to_screen(end);
 
-                    for (float x = start.x; x <= end.x; x += grid_size_screen.x) {
-                        render_list->AddLine({x, start.y}, {x, end.y}, color);
+                for (float x = start.x; x <= end.x; x += grid_size_screen.x) {
+                    render_list->AddLine({x, start.y}, {x, end.y}, color);
+                }
+
+                for (float y = start.y; y <= end.y; y += grid_size_screen.y) {
+                    render_list->AddLine({start.x, y}, {end.x, y}, color);
+                }
+            }
+
+            for (auto& [id, storage] : nodes) {
+                node_renderer.render_input_paths(id, storage);
+            }
+
+            auto old_style = ImGui::GetStyle();
+            ImGui::GetStyle().ScaleAllSizes(node_renderer.scene_scale);
+            ImGui::PushFont(NULL, node_renderer.scene_scale * 13);
+            ImGui::GetStyle().SeparatorSize = 1.0f;
+
+            std::set<NodePlot::NodeId> nodes_to_delete;
+
+            bool did_update = false;
+
+            for (auto& [id, storage] : nodes) {
+
+                auto out_cache = cur_eng.cache[id];
+
+                if (out_cache.error.has_value()) {
+                    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(1.0f, 0.7f, 0.7f, 1.0f));
+                }
+
+                ImGui::SetNextWindowPos(node_renderer.world_to_screen(ImVec2(storage.pos.x, storage.pos.y)), ImGuiCond_Always);
+                if (ImGui::BeginChild(std::to_string(id).c_str(),
+                                      {0, 0},
+                                      ImGuiChildFlags_FrameStyle | ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY,
+                                      ImGuiWindowFlags_None | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
+                    did_update |= MUST(node_renderer.render_node(id, storage));
+
+                    if (out_cache.error.has_value()) {
+                        ImGui::Separator();
+                        ImGui::Text("%s", out_cache.error.value().c_str());
                     }
 
-                    for (float y = start.y; y <= end.y; y += grid_size_screen.y) {
-                        render_list->AddLine({start.x, y}, {end.x, y}, color);
+                    if (ImGui::IsWindowHovered()) {
+                        if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+                            storage.pos.x += io.MouseDelta.x / node_renderer.scene_scale;
+                            storage.pos.y += io.MouseDelta.y / node_renderer.scene_scale;
+                        }
+                    }
+
+                    if (ImGui::BeginPopupContextWindow()) {
+                        if (ImGui::MenuItem("Delete")) {
+                            nodes_to_delete.insert(id);
+                        }
+                        ImGui::EndPopup();
                     }
                 }
+                ImGui::EndChild();
 
-                // Draw node connection lines
-                {
-                    for (auto& id_node : nodes) {
-                        std::visit(
-                            [&](auto& node) {
-                                auto window_pos = render_node_graph.world_to_screen(ImVec2(node.pos.first, node.pos.second));
-
-                                size_t y_pos = 0;
-                                y_pos += NODE_ELEMENT_HEIGHT / 2;
-
-                                auto render_pin = [&]<typename T>(InputPin<T> pin) {
-                                    auto other_node = nodes.find(pin.node);
-                                    if (other_node == nodes.end())
-                                        return;
-
-                                    auto other_node_pos = render_node_graph.world_to_screen(std::visit([](auto node) { return ImVec2{node.pos.first, node.pos.second}; }, other_node->second));
-
-                                    auto pin_offset = std::visit(
-                                        [&](auto node) {
-                                            size_t height = render_node_graph.get_header_height(node) + render_node_graph.get_input_height(node);
-                                            bool found = false;
-                                            for_each_tuple(
-                                                [&](auto output) {
-                                                    if (!found)
-                                                        height += NODE_ELEMENT_HEIGHT;
-                                                    if (std::get<NODE_OUTPUT_INDEX_ID>(output) == pin.output_index) {
-                                                        found = true;
-                                                    }
-                                                },
-                                                node.outputs());
-                                            return height;
-                                        },
-                                        other_node->second);
-
-                                    render_node_graph.draw_node_path(
-                                        {
-                                            other_node_pos.x + (NODE_WIDTH - NODE_LEFT_PADDING) * render_node_graph.scene_scale,
-                                            other_node_pos.y + (pin_offset + NODE_IO_CIRCLE_RADIUS) * render_node_graph.scene_scale,
-                                        },
-                                        {
-                                            window_pos.x + (NODE_LEFT_PADDING + NODE_IO_CIRCLE_RADIUS) * render_node_graph.scene_scale,
-                                            window_pos.y + (y_pos + NODE_IO_CIRCLE_RADIUS) * render_node_graph.scene_scale,
-                                        });
-                                };
-
-                                for_each_tuple(
-                                    [&](auto input_tuple) {
-                                        overloaded{
-                                            [&]<typename T>(std::vector<Input<T>>& v) {
-                                                y_pos += NODE_ELEMENT_HEIGHT;
-                                                for (auto& a : v) {
-                                                    y_pos += NODE_ELEMENT_HEIGHT;
-                                                    if (std::holds_alternative<InputPin<T>>(a))
-                                                        render_pin(std::get<InputPin<T>>(a));
-                                                }
-                                            },
-                                            [&]<typename T>(std::vector<InputPin<T>>& v) {
-                                                y_pos += NODE_ELEMENT_HEIGHT;
-                                                for (auto& a : v) {
-                                                    y_pos += NODE_ELEMENT_HEIGHT;
-                                                    render_pin(a);
-                                                }
-                                            },
-                                            [&]<typename T>(Input<T>& v) {
-                                                y_pos += NODE_ELEMENT_HEIGHT;
-                                                if (std::holds_alternative<InputPin<T>>(v))
-                                                    render_pin(std::get<InputPin<T>>(v));
-                                            },
-                                            [&]<typename T>(InputPin<T>& v) {
-                                                y_pos += NODE_ELEMENT_HEIGHT;
-                                                render_pin(v);
-                                            },
-                                            [&](auto&) { y_pos += NODE_ELEMENT_HEIGHT; },
-                                        }(std::get<NODE_INPUT_INDEX_STORAGE>(input_tuple));
-                                    },
-                                    node.inputs());
-                            },
-                            id_node.second);
-                    }
+                if (out_cache.error.has_value()) {
+                    ImGui::PopStyleColor();
                 }
+            }
 
-                auto old_style = ImGui::GetStyle();
-                ImGui::GetStyle().ScaleAllSizes(render_node_graph.scene_scale);
-                ImGui::PushFont(NULL, render_node_graph.scene_scale * 13);
-                ImGui::GetStyle().SeparatorSize = 1.0f;
+            if (did_update) {
+                update_svg();
+            }
 
-                std::set<LocalNodeId> nodes_to_delete;
+            if (nodes_to_delete.size() > 0) {
+                for (auto& n : nodes_to_delete)
+                    nodes.erase(n);
+            }
 
-                for (auto& base_node : nodes) {
-                    std::visit(
-                        [&](auto& node) {
-                            EvaluatedNodeGraph::LoadedNode& eval_node = render_node_graph.eval_node_graph.loaded_nodes[GlobalNodeId{node.id, render_node_graph.current_graph_index}];
-
-                            auto node_error = eval_node.error_message;
-
-                            if (node_error.has_value())
-                                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(1.0f, 0.7f, 0.7f, 1.0f));
-
-                            ImGui::SetNextWindowPos(render_node_graph.world_to_screen(ImVec2(node.pos.first, node.pos.second)), ImGuiCond_Always);
-
-                            size_t node_height = 0;
-                            {
-                                node_height += render_node_graph.get_header_height(node);
-                                node_height += render_node_graph.get_input_height(node);
-                                node_height += render_node_graph.get_output_height(node);
-                                if (node_error.has_value()) {
-                                    node_height += NODE_ELEMENT_HEIGHT;
-                                    node_height += NODE_ELEMENT_HEIGHT / 2;
-                                }
-                                node_height += NODE_ELEMENT_HEIGHT;
-                            }
-
-                            ImGui::SetNextWindowSize({NODE_WIDTH * render_node_graph.scene_scale, node_height * render_node_graph.scene_scale});
-                            if (ImGui::BeginChild(std::to_string(node.id).c_str(),
-                                                  {0, 0},
-                                                  ImGuiChildFlags_FrameStyle | ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY,
-                                                  ImGuiWindowFlags_None | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
-
-                                ImGui::Dummy({300 * render_node_graph.scene_scale, node_height * render_node_graph.scene_scale});
-
-                                if (ImGui::IsWindowHovered()) {
-                                    if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
-                                        node.pos.first += io.MouseDelta.x / render_node_graph.scene_scale;
-                                        node.pos.second += io.MouseDelta.y / render_node_graph.scene_scale;
-                                    }
-                                }
-
-                                node_render(&render_node_graph, node);
-
-                                if (node_error.has_value()) {
-                                    ImGui::SetCursorPos(
-                                        {NODE_LEFT_PADDING * render_node_graph.scene_scale, (node_height - NODE_ELEMENT_HEIGHT - NODE_ELEMENT_HEIGHT / 2) * render_node_graph.scene_scale});
-                                    ImGui::Separator();
-                                    ImGui::SetCursorPos({NODE_LEFT_PADDING * render_node_graph.scene_scale, (node_height - NODE_ELEMENT_HEIGHT) * render_node_graph.scene_scale});
-                                    ImGui::Text("%s", node_error.value().c_str());
-                                }
-
-                                if (ImGui::BeginPopupContextWindow()) {
-                                    if (node.id != NODE_ID_INPUT && node.id != NODE_ID_OUTPUT)
-                                        if (ImGui::MenuItem("Delete")) {
-                                            nodes_to_delete.insert(node.id);
-                                            render_node_graph.update_target({.id = node.id, .graph_name = render_node_graph.current_graph_index});
-                                        }
-                                    ImGui::EndPopup();
-                                }
-                            }
-                            ImGui::EndChild();
-
-                            if (node_error.has_value())
-                                ImGui::PopStyleColor();
-                        },
-                        base_node.second);
+            if (ImGui::IsWindowHovered()) {
+                if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+                    node_renderer.scene_translation.x -= io.MouseDelta.x / node_renderer.scene_scale;
+                    node_renderer.scene_translation.y -= io.MouseDelta.y / node_renderer.scene_scale;
                 }
+            }
 
-                if (nodes_to_delete.size() > 0) {
-                    for (auto& n : nodes_to_delete)
-                        nodes.erase(n);
-                    render_node_graph.update_target();
-                }
+            ImGui::GetStyle() = old_style;
+            ImGui::PopFont();
 
-                if (ImGui::IsWindowHovered()) {
-                    if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
-                        render_node_graph.scene_translation.x -= io.MouseDelta.x / render_node_graph.scene_scale;
-                        render_node_graph.scene_translation.y -= io.MouseDelta.y / render_node_graph.scene_scale;
-                    }
-                }
+            if (ImGui::GetIO().MouseWheel != 0.0) {
+                ImVec2 mouse_pos = ImVec2(ImGui::GetIO().MousePos.x - ImGui::GetWindowPos().x, ImGui::GetIO().MousePos.y - ImGui::GetWindowPos().y);
 
-                ImGui::GetStyle() = old_style;
-                ImGui::PopFont();
+                auto pre = node_renderer.screen_to_world(mouse_pos);
 
-                if (ImGui::GetIO().MouseWheel != 0.0) {
+                float scale_delta = (ImGui::GetIO().MouseWheel > 0.0f) ? 1.1f : 0.9f;
+                node_renderer.scene_scale *= scale_delta;
 
-                    ImVec2 mouse_pos = ImVec2(ImGui::GetIO().MousePos.x - ImGui::GetWindowPos().x, ImGui::GetIO().MousePos.y - ImGui::GetWindowPos().y);
+                auto post = node_renderer.screen_to_world(mouse_pos);
 
-                    auto pre = render_node_graph.screen_to_world(mouse_pos);
+                node_renderer.scene_translation.x += pre.x - post.x;
+                node_renderer.scene_translation.y += pre.y - post.y;
+            }
 
-                    float scale_delta = (ImGui::GetIO().MouseWheel > 0.0f) ? 1.1f : 0.9f;
-                    render_node_graph.scene_scale *= scale_delta;
-
-                    auto post = render_node_graph.screen_to_world(mouse_pos);
-
-                    render_node_graph.scene_translation.x += pre.x - post.x;
-                    render_node_graph.scene_translation.y += pre.y - post.y;
-                }
-
-                ImGui::GetForegroundDrawList()->PopClipRect();
-                ImGui::GetBackgroundDrawList()->PopClipRect();
-            },
-            "PlotViewer",
-            [&]() {
-                MAYBE(render_node_graph.svg_renderer->set_size({ImGui::GetWindowSize().x, ImGui::GetWindowSize().y}));
-                render_node_graph.svg_renderer->draw();
-            },
-            0.75f);
-
+            ImGui::GetForegroundDrawList()->PopClipRect();
+            ImGui::GetBackgroundDrawList()->PopClipRect();
+        }
+        ImGui::EndChild();
+        ImGui::SameLine();
+        ImGui::BeginChild("PlotViewer", ImVec2(0, 0), ImGuiChildFlags_None, ImGuiWindowFlags_None);
+        {
+            MAYBE(svg_renderer->set_size({ImGui::GetWindowSize().x, ImGui::GetWindowSize().y}));
+            svg_renderer->draw();
+        }
+        ImGui::EndChild();
         // ImGui::ShowDemoWindow();
 
         ImGui::End();
@@ -381,5 +308,5 @@ int main(int argc, char** argv) {
     }});
 
     window.reset();
-    MUST_DETAILED(Window::global_deinit());
+    MUST(Window::global_deinit());
 }

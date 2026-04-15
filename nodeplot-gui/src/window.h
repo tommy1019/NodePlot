@@ -8,15 +8,15 @@
 
 struct Window {
   public:
-    static DetailedErrorOr<void> global_init();
-    static DetailedErrorOr<void> global_deinit();
+    static ErrorOr<void> global_init();
+    static ErrorOr<void> global_deinit();
 
     struct CreateWindowParams {
         size_t width = 800;
         size_t height = 600;
     };
 
-    static DetailedErrorOr<std::shared_ptr<Window>> create(CreateWindowParams params);
+    static ErrorOr<std::shared_ptr<Window>> create(CreateWindowParams params);
 
     ~Window();
 
