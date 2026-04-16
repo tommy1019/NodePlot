@@ -12,6 +12,9 @@
 #include <nodeplot/nodeplot.h>
 
 #include "node_renderer.h"
+#include "nodeplot/node_graph.h"
+#include "nodeplot/types.h"
+#include "nodeplot/utils.h"
 #include "svg_renderer.h"
 #include "window.h"
 
@@ -95,6 +98,10 @@ int main(int argc, char** argv) {
         }
     };
     update_svg();
+
+    std::optional<ImVec2> left_drag_start = std::nullopt;
+    std::set<NodePlot::NodeId> dragged_windows = {};
+    std::set<NodePlot::NodeId> selected_windows;
 
     window->event_loop(NodePlot::Utils::overloaded{[&](Window::RenderEvent) -> ErrorOr<void> {
         ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -215,12 +222,57 @@ int main(int argc, char** argv) {
 
             bool did_update = false;
 
-            for (auto& [id, storage] : nodes) {
+            if (left_drag_start.has_value()) {
+                if (dragged_windows.empty()) {
+                    auto cur_mouse = ImGui::GetIO().MousePos;
+                    ImGui::GetForegroundDrawList()->AddRect(
+                        {
+                            std::min(cur_mouse.x, left_drag_start->x),
+                            std::min(cur_mouse.y, left_drag_start->y),
+                        },
+                        {
+                            std::max(cur_mouse.x, left_drag_start->x),
+                            std::max(cur_mouse.y, left_drag_start->y),
+                        },
+                        ImColor(150, 150, 150, 255));
+                } else {
+                    for (auto& id : dragged_windows) {
+                        NodePlot::Utils::try_find(nodes, id, "Invalid dragged window").and_then([&](NodePlot::NodeGraph::NodeStorage& storage) -> ErrorOr<void> {
+                            storage.pos.x += io.MouseDelta.x / node_renderer.scene_scale;
+                            storage.pos.y += io.MouseDelta.y / node_renderer.scene_scale;
+                            return {};
+                        });
+                    }
+                }
 
+                if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+                    if (dragged_windows.empty()) {
+                        if (!ImGui::GetIO().KeyShift)
+                            selected_windows.clear();
+                        auto cur_mouse = ImGui::GetIO().MousePos;
+                        for (auto& [id, storage] : nodes) {
+                            auto screen_pos = node_renderer.world_to_screen({storage.pos.x, storage.pos.y});
+                            if (std::min(cur_mouse.x, left_drag_start->x) < screen_pos.x && screen_pos.x < std::max(cur_mouse.x, left_drag_start->x)
+                                && std::min(cur_mouse.y, left_drag_start->y) < screen_pos.y && screen_pos.y < std::max(cur_mouse.y, left_drag_start->y)) {
+                                selected_windows.insert(id);
+                            }
+                        }
+                    } else {
+                        dragged_windows.clear();
+                    }
+                    left_drag_start = std::nullopt;
+                }
+            }
+
+            for (auto& [id, storage] : nodes) {
                 auto out_cache = cur_eng.cache[id];
 
                 if (out_cache.error.has_value()) {
                     ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(1.0f, 0.7f, 0.7f, 1.0f));
+                }
+
+                if (selected_windows.contains(id)) {
+                    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.9f, 0.9f, 1.0f, 1.0f));
                 }
 
                 ImGui::SetNextWindowPos(node_renderer.world_to_screen(ImVec2(storage.pos.x, storage.pos.y)), ImGuiCond_Always);
@@ -235,10 +287,13 @@ int main(int argc, char** argv) {
                         ImGui::Text("%s", out_cache.error.value().c_str());
                     }
 
-                    if (ImGui::IsWindowHovered()) {
-                        if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
-                            storage.pos.x += io.MouseDelta.x / node_renderer.scene_scale;
-                            storage.pos.y += io.MouseDelta.y / node_renderer.scene_scale;
+                    if (!left_drag_start.has_value() && ImGui::IsWindowHovered() && ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+                        left_drag_start = ImGui::GetIO().MousePos;
+                        if (selected_windows.empty()) {
+                            dragged_windows.clear();
+                            dragged_windows.insert(id);
+                        } else {
+                            dragged_windows = selected_windows;
                         }
                     }
 
@@ -250,6 +305,10 @@ int main(int argc, char** argv) {
                     }
                 }
                 ImGui::EndChild();
+
+                if (selected_windows.contains(id)) {
+                    ImGui::PopStyleColor();
+                }
 
                 if (out_cache.error.has_value()) {
                     ImGui::PopStyleColor();
@@ -266,28 +325,44 @@ int main(int argc, char** argv) {
             }
 
             if (ImGui::IsWindowHovered()) {
-                if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+
+                if (!left_drag_start.has_value() && ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+                    left_drag_start = ImGui::GetIO().MousePos;
+                }
+
+                if (ImGui::IsMouseDragging(ImGuiMouseButton_Middle)) {
                     node_renderer.scene_translation.x -= io.MouseDelta.x / node_renderer.scene_scale;
                     node_renderer.scene_translation.y -= io.MouseDelta.y / node_renderer.scene_scale;
+                }
+
+                if (ImGui::GetIO().KeyShift) {
+                    if (ImGui::GetIO().MouseWheel != 0.0 || ImGui::GetIO().MouseWheelH != 0.0) {
+                        ImVec2 mouse_pos = ImVec2(ImGui::GetIO().MousePos.x - ImGui::GetWindowPos().x, ImGui::GetIO().MousePos.y - ImGui::GetWindowPos().y);
+
+                        auto pre = node_renderer.screen_to_world(mouse_pos);
+
+                        float scroll = ImGui::GetIO().MouseWheel + ImGui::GetIO().MouseWheelH;
+                        float scale_delta = (scroll > 0.0f) ? 1.1f : 0.9f;
+                        node_renderer.scene_scale *= scale_delta;
+
+                        auto post = node_renderer.screen_to_world(mouse_pos);
+
+                        node_renderer.scene_translation.x += pre.x - post.x;
+                        node_renderer.scene_translation.y += pre.y - post.y;
+                    }
+                } else {
+                    constexpr float SCROLL_SPEED = 5;
+                    if (ImGui::GetIO().MouseWheel != 0.0) {
+                        node_renderer.scene_translation.y -= ImGui::GetIO().MouseWheel * SCROLL_SPEED;
+                    }
+                    if (ImGui::GetIO().MouseWheelH != 0.0) {
+                        node_renderer.scene_translation.x -= ImGui::GetIO().MouseWheelH * SCROLL_SPEED;
+                    }
                 }
             }
 
             ImGui::GetStyle() = old_style;
             ImGui::PopFont();
-
-            if (ImGui::GetIO().MouseWheel != 0.0) {
-                ImVec2 mouse_pos = ImVec2(ImGui::GetIO().MousePos.x - ImGui::GetWindowPos().x, ImGui::GetIO().MousePos.y - ImGui::GetWindowPos().y);
-
-                auto pre = node_renderer.screen_to_world(mouse_pos);
-
-                float scale_delta = (ImGui::GetIO().MouseWheel > 0.0f) ? 1.1f : 0.9f;
-                node_renderer.scene_scale *= scale_delta;
-
-                auto post = node_renderer.screen_to_world(mouse_pos);
-
-                node_renderer.scene_translation.x += pre.x - post.x;
-                node_renderer.scene_translation.y += pre.y - post.y;
-            }
 
             ImGui::GetForegroundDrawList()->PopClipRect();
             ImGui::GetBackgroundDrawList()->PopClipRect();
