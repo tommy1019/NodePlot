@@ -20,7 +20,7 @@ void register_binary_operation() {
                                             {"result", Node::Output{.id = "result", .display_name = "Result", .valid_data_types = {DataType::NUMBER, DataType::STRING, DataType::COLUMN}}},
                                         };
                                     },
-                                    .evalulate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
+                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
                                         std::string operation = TRY(eng->get_input_value<std::string>(npf, node_id, "operation"));
 
                                         auto a_val = TRY(eng->get_input_value_variant<double, std::string, Column>(npf, node_id, "a"));

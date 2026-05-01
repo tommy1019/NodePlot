@@ -17,7 +17,7 @@ void register_value() {
                                             {"value", Node::Output{.id = "value", .display_name = "Value", .valid_data_types = {DataType::NUMBER}}},
                                         };
                                     },
-                                    .evalulate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
+                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
                                         cache.computed_outputs["value"] = TRY(eng->get_input_value<double>(npf, node_id, "value"));
                                         return {};
                                     },
@@ -37,7 +37,7 @@ void register_value() {
                                             {"value", Node::Output{.id = "value", .display_name = "Value", .valid_data_types = {DataType::STRING}}},
                                         };
                                     },
-                                    .evalulate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
+                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
                                         cache.computed_outputs["value"] = TRY(eng->get_input_value<std::string>(npf, node_id, "value"));
                                         return {};
                                     },

@@ -82,7 +82,7 @@ void register_create_plot() {
                                             {"style", Node::Output{.id = "style", .display_name = "Plot Style", .valid_data_types = {DataType::PLOT_STYLE}}},
                                         };
                                     },
-                                    .evalulate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
+                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
                                         PlotStyle res;
                                         res.plot_margines = TRY(eng->get_input_value<Margins>(npf, node_id, "plot_margines"));
                                         res.internal_plot_margines = TRY(eng->get_input_value<Margins>(npf, node_id, "internal_plot_margines"));
@@ -132,7 +132,7 @@ void register_create_plot() {
                                             {"plot", Node::Output{.id = "plot", .display_name = "Plot", .valid_data_types = {DataType::PLOT}}},
                                         };
                                     },
-                                    .evalulate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
+                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
                                         Plot res;
                                         res.title = TRY(eng->get_input_value<std::string>(npf, node_id, "title"));
 

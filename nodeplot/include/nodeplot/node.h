@@ -37,7 +37,7 @@ struct Node {
     std::function<ErrorOr<std::vector<std::pair<InputId, Input>>>(NodePlotFile*, EvaluatedNodeGraph*, NodeId)> inputs;
     std::function<ErrorOr<std::vector<std::pair<OutputId, Output>>>(NodePlotFile*, EvaluatedNodeGraph*, NodeId)> outputs;
 
-    std::function<ErrorOr<void>(NodePlotFile*, EvaluatedNodeGraph*, NodeId, EvaluatedNodeGraph::OutputCache&)> evalulate;
+    std::function<ErrorOr<void>(NodePlotFile*, EvaluatedNodeGraph*, NodeId, EvaluatedNodeGraph::OutputCache&)> evaluate;
 };
 
 } // namespace NodePlot

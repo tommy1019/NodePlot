@@ -44,7 +44,7 @@ void register_output() {
                     {"svg", Node::Output{.id = "svg", .display_name = "SVG", .valid_data_types = {DataType::STRING}}},
                 };
             },
-            .evalulate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
+            .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
                 auto get_internal_svg = [](Plot graph, double width, double height, double x_offset, double y_offset) -> ErrorOr<std::string> {
                     std::pair<double, double> x_lims = {std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity()};
                     std::pair<double, double> y_lims = {std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity()};

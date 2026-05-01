@@ -23,7 +23,7 @@ ErrorOr<Data> EvaluatedNodeGraph::get_output_data(NodePlotFile* npf, NodeId node
     NodeGraph::NodeStorage& node_input_storage = TRY(Utils::try_find(ng.nodes, node_id, "Invalid NodeID")).get();
     Node& node = TRY(Utils::try_find(NodeRegistry::node_map, node_input_storage.type_id, "Invalid NodeTypeId")).get();
 
-    auto eval_err = node.evalulate(npf, this, node_id, output_cache);
+    auto eval_err = node.evaluate(npf, this, node_id, output_cache);
     if (!eval_err.has_value()) {
         output_cache.error = eval_err.error();
     }

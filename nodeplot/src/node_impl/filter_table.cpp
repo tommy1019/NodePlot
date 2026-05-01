@@ -35,7 +35,7 @@ void register_filter_table() {
                     {"table", Node::Output{.id = "table", .display_name = "Table", .valid_data_types = {DataType::TABLE}}},
                 };
             },
-            .evalulate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
+            .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
                 Table table = TRY(eng->get_input_value<Table>(npf, node_id, "table"));
                 std::string column_name = TRY(eng->get_input_value<std::string>(npf, node_id, "column_name"));
                 std::string compare_type = TRY(eng->get_input_value<std::string>(npf, node_id, "compare_type"));
