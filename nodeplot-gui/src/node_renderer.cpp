@@ -40,7 +40,6 @@ NodeRenderer::RenderFunction NodeRenderer::default_renderer = [](Renderer& rnd, 
         float cur_y = y_pos += INPUT_HEIGHT + 6 * rs;
 
         if (rnd.input_pin(ctx, {PADDING, cur_y + 2 * rs}, PIN_SIZE, input.id)) {
-            ctx.eng->node_inputs_changed(ctx.npf, ctx.node_id);
             updated = true;
         }
 
@@ -64,6 +63,7 @@ NodeRenderer::RenderFunction NodeRenderer::default_renderer = [](Renderer& rnd, 
                                 if (!selection.empty()) {
                                     auto& data = std::get<NodePlot::Data>(input_storage);
                                     data = std::filesystem::relative(std::filesystem::path(selection.front()), ctx.npf->path.parent_path()).string();
+                                    updated = true;
                                 }
                             }
                         }
@@ -84,6 +84,7 @@ NodeRenderer::RenderFunction NodeRenderer::default_renderer = [](Renderer& rnd, 
                                 if (!is_pin_set) {
                                     auto& data = std::get<NodePlot::Data>(input_storage);
                                     data = res.value();
+                                    updated = true;
                                 }
                             }
                         }
@@ -99,7 +100,6 @@ NodeRenderer::RenderFunction NodeRenderer::default_renderer = [](Renderer& rnd, 
                         data = std::string();
                     if (rnd.string_input(
                             ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH + ATTR_OFFSET, cur_y}, {INPUT_ELEMENT_WIDTH - ATTR_OFFSET, INPUT_HEIGHT}, std::get<std::string>(data), true)) {
-                        ctx.eng->node_inputs_changed(ctx.npf, ctx.node_id);
                         updated = true;
                     }
                 }
@@ -110,10 +110,11 @@ NodeRenderer::RenderFunction NodeRenderer::default_renderer = [](Renderer& rnd, 
                     rnd.boolean_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, disabled_bool, false);
                 } else {
                     auto& data = std::get<NodePlot::Data>(input_storage);
-                    if (!std::holds_alternative<bool>(data))
+                    if (!std::holds_alternative<bool>(data)) {
                         data = false;
+                        updated = true;
+                    }
                     if (rnd.boolean_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, std::get<bool>(data), true)) {
-                        ctx.eng->node_inputs_changed(ctx.npf, ctx.node_id);
                         updated = true;
                     }
                 }
@@ -124,10 +125,11 @@ NodeRenderer::RenderFunction NodeRenderer::default_renderer = [](Renderer& rnd, 
                     rnd.number_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, disabled_double, false);
                 } else {
                     auto& data = std::get<NodePlot::Data>(input_storage);
-                    if (!std::holds_alternative<double>(data))
+                    if (!std::holds_alternative<double>(data)) {
                         data = 0.0;
+                        updated = true;
+                    }
                     if (rnd.number_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, std::get<double>(data), true)) {
-                        ctx.eng->node_inputs_changed(ctx.npf, ctx.node_id);
                         updated = true;
                     }
                 }
@@ -138,10 +140,11 @@ NodeRenderer::RenderFunction NodeRenderer::default_renderer = [](Renderer& rnd, 
                     rnd.integer_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, disabled_int, false);
                 } else {
                     auto& data = std::get<NodePlot::Data>(input_storage);
-                    if (!std::holds_alternative<int64_t>(data))
+                    if (!std::holds_alternative<int64_t>(data)) {
                         data = 0;
+                        updated = true;
+                    }
                     if (rnd.integer_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, std::get<int64_t>(data), true)) {
-                        ctx.eng->node_inputs_changed(ctx.npf, ctx.node_id);
                         updated = true;
                     }
                 }
@@ -152,10 +155,11 @@ NodeRenderer::RenderFunction NodeRenderer::default_renderer = [](Renderer& rnd, 
                     rnd.color_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, disabled_color, false);
                 } else {
                     auto& data = std::get<NodePlot::Data>(input_storage);
-                    if (!std::holds_alternative<NodePlot::Color>(data))
+                    if (!std::holds_alternative<NodePlot::Color>(data)) {
                         data = NodePlot::Color{};
+                        updated = true;
+                    }
                     if (rnd.color_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, std::get<NodePlot::Color>(data), true)) {
-                        ctx.eng->node_inputs_changed(ctx.npf, ctx.node_id);
                         updated = true;
                     }
                 }
@@ -166,10 +170,11 @@ NodeRenderer::RenderFunction NodeRenderer::default_renderer = [](Renderer& rnd, 
                     rnd.margin_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, disabled_margin, false);
                 } else {
                     auto& data = std::get<NodePlot::Data>(input_storage);
-                    if (!std::holds_alternative<NodePlot::Margins>(data))
+                    if (!std::holds_alternative<NodePlot::Margins>(data)) {
                         data = NodePlot::Margins{};
+                        updated = true;
+                    }
                     if (rnd.margin_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, std::get<NodePlot::Margins>(data), true)) {
-                        ctx.eng->node_inputs_changed(ctx.npf, ctx.node_id);
                         updated = true;
                     }
                 }

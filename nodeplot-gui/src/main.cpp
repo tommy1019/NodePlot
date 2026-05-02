@@ -280,7 +280,10 @@ int main(int argc, char** argv) {
                                       {0, 0},
                                       ImGuiChildFlags_FrameStyle | ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY,
                                       ImGuiWindowFlags_None | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
-                    did_update |= MUST(node_renderer.render_node(id, storage));
+                    if (MUST(node_renderer.render_node(id, storage))) {
+                        did_update = true;
+                        cur_eng.node_inputs_changed(&npf, id);
+                    }
 
                     if (out_cache.error.has_value()) {
                         ImGui::Separator();
@@ -375,7 +378,6 @@ int main(int argc, char** argv) {
             svg_renderer->draw();
         }
         ImGui::EndChild();
-        // ImGui::ShowDemoWindow();
 
         ImGui::End();
 
