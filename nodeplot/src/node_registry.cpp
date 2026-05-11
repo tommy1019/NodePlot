@@ -7,6 +7,7 @@ extern void register_column_select();
 extern void register_create_plot();
 extern void register_csv_import();
 extern void register_filter_table();
+extern void register_function();
 extern void register_sampled_property_extract();
 extern void register_series_create();
 extern void register_value();
@@ -21,6 +22,7 @@ void NodeRegistry::init() {
     register_create_plot();
     register_csv_import();
     register_filter_table();
+    register_function();
     register_sampled_property_extract();
     register_series_create();
     register_value();

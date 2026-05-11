@@ -8,14 +8,19 @@
 namespace NodePlot {
 
 namespace InputAttribute {
+
 struct FilePath {};
+
 struct AutoFillsFromTable {
     InputId id;
 };
+
+struct FunctionName {};
+
 } // namespace InputAttribute
 
 struct Node {
-    using InputAttribute = std::variant<InputAttribute::FilePath, InputAttribute::AutoFillsFromTable>;
+    using InputAttribute = std::variant<InputAttribute::FilePath, InputAttribute::AutoFillsFromTable, InputAttribute::FunctionName>;
 
     struct Input {
         InputId id;

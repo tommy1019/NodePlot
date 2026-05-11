@@ -1,6 +1,9 @@
 #include "node_renderer.h"
 #include "imgui.h"
+#include "nodeplot/node.h"
+#include "nodeplot/node_graph.h"
 #include "nodeplot/nodeplot.h"
+#include "nodeplot/types.h"
 
 #include <optional>
 #include <string>
@@ -45,142 +48,206 @@ NodeRenderer::RenderFunction NodeRenderer::default_renderer = [](Renderer& rnd, 
 
         rnd.text(ctx, {PADDING + 15 * rs, cur_y}, input.display_name);
 
-        std::variant<NodePlot::Data, NodePlot::NodeGraph::InputPin>& input_storage = ctx.node_storage.input_storage[id];
-        bool is_pin_set = std::holds_alternative<NodePlot::NodeGraph::InputPin>(input_storage);
-
         if (input.valid_data_types.size() > 0) {
             auto input_type = input.valid_data_types.front();
-            switch (input_type) {
-            case NodePlot::DataType::STRING: {
-                float ATTR_OFFSET = 0;
 
-                for (auto& att : input.attributes) {
-                    if (std::holds_alternative<NodePlot::InputAttribute::FilePath>(att)) {
-                        ATTR_OFFSET += INPUT_HEIGHT;
-                        if (rnd.button(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_HEIGHT, INPUT_HEIGHT}, "...")) {
-                            if (!is_pin_set) {
-                                auto selection = pfd::open_file("Choose CSV File", ctx.npf->path.parent_path(), {"CSV Files", "*.csv", "All Files", "*"}, pfd::opt::none).result();
-                                if (!selection.empty()) {
-                                    auto& data = std::get<NodePlot::Data>(input_storage);
-                                    data = std::filesystem::relative(std::filesystem::path(selection.front()), ctx.npf->path.parent_path()).string();
-                                    updated = true;
+            // For these types we must create the input storage if it doesn't exist to use for the imgui gui elements. Otherwise we do not create storage so the error messages are better
+
+            switch (input_type) {
+            case NodePlot::DataType::STRING:
+            case NodePlot::DataType::BOOLEAN:
+            case NodePlot::DataType::NUMBER:
+            case NodePlot::DataType::INTEGER:
+            case NodePlot::DataType::COLOR:
+            case NodePlot::DataType::MARGINES: {
+
+                std::variant<NodePlot::Data, NodePlot::NodeGraph::InputPin>& input_storage = ctx.node_storage.input_storage[id];
+                bool is_pin_set = std::holds_alternative<NodePlot::NodeGraph::InputPin>(input_storage);
+
+                switch (input_type) {
+                case NodePlot::DataType::STRING: {
+                    float ATTR_OFFSET = 0;
+
+                    for (auto& att : input.attributes) {
+                        if (std::holds_alternative<NodePlot::InputAttribute::FilePath>(att)) {
+                            ATTR_OFFSET += INPUT_HEIGHT;
+                            if (rnd.button(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_HEIGHT, INPUT_HEIGHT}, "...")) {
+                                if (!is_pin_set) {
+                                    auto selection = pfd::open_file("Choose CSV File", ctx.npf->path.parent_path(), {"CSV Files", "*.csv", "All Files", "*"}, pfd::opt::none).result();
+                                    if (!selection.empty()) {
+                                        auto& data = std::get<NodePlot::Data>(input_storage);
+                                        data = std::filesystem::relative(std::filesystem::path(selection.front()), ctx.npf->path.parent_path()).string();
+                                        updated = true;
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    if (std::holds_alternative<NodePlot::InputAttribute::AutoFillsFromTable>(att)) {
-                        auto table = ctx.eng->get_input_value<NodePlot::Table>(ctx.npf, ctx.node_id, std::get<NodePlot::InputAttribute::AutoFillsFromTable>(att).id);
-                        if (table.has_value()) {
+                        if (std::holds_alternative<NodePlot::InputAttribute::AutoFillsFromTable>(att)) {
+                            auto table = ctx.eng->get_input_value<NodePlot::Table>(ctx.npf, ctx.node_id, std::get<NodePlot::InputAttribute::AutoFillsFromTable>(att).id);
+                            if (table.has_value()) {
+                                ATTR_OFFSET += INPUT_HEIGHT;
+
+                                std::vector<std::pair<std::string, std::string>> options;
+                                options.reserve(table->column_names.size());
+                                for (auto& h : table->column_names)
+                                    options.emplace_back(h, h);
+
+                                auto res = rnd.dropdown(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_HEIGHT, INPUT_HEIGHT}, "\\/", options);
+                                if (res.has_value()) {
+                                    if (!is_pin_set) {
+                                        auto& data = std::get<NodePlot::Data>(input_storage);
+                                        data = res.value();
+                                        updated = true;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (std::holds_alternative<NodePlot::InputAttribute::FunctionName>(att)) {
+                            ATTR_OFFSET += INPUT_HEIGHT;
+                            ATTR_OFFSET += INPUT_HEIGHT;
                             ATTR_OFFSET += INPUT_HEIGHT;
 
                             std::vector<std::pair<std::string, std::string>> options;
-                            options.reserve(table->column_names.size());
-                            for (auto& h : table->column_names)
-                                options.emplace_back(h, h);
+                            for (auto [key, graph] : ctx.npf->graphs) {
+                                if (key == "main")
+                                    continue;
+                                options.emplace_back(key, key);
+                            }
 
-                            auto res = rnd.dropdown(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_HEIGHT, INPUT_HEIGHT}, "\\/", options);
-                            if (res.has_value()) {
+                            if (rnd.button(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_HEIGHT, INPUT_HEIGHT}, "+")) {
                                 if (!is_pin_set) {
                                     auto& data = std::get<NodePlot::Data>(input_storage);
-                                    data = res.value();
-                                    updated = true;
+                                    if (std::holds_alternative<std::string>(data)) {
+                                        auto fn_name = std::get<std::string>(data);
+                                        if (!ctx.npf->graphs.contains(fn_name)) {
+                                            NodePlot::NodeGraph new_graph;
+
+                                            new_graph.function_input_id = TRY(new_graph.create_node(ctx.npf, ctx.eng->graph_id, "function_input", 100, 100));
+                                            new_graph.function_output_id = TRY(new_graph.create_node(ctx.npf, ctx.eng->graph_id, "function_output", 600, 100));
+
+                                            ctx.npf->graphs.insert({fn_name, new_graph});
+                                            updated = true;
+                                        }
+                                    }
+                                }
+                            }
+
+                            auto res = rnd.dropdown(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH + INPUT_HEIGHT, cur_y}, {INPUT_HEIGHT, INPUT_HEIGHT}, "##existing_functions", options);
+                            if (res.has_value()) {
+                                input_storage = NodePlot::Data{res.value()};
+                                updated = true;
+                            }
+
+                            if (rnd.button(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH + INPUT_HEIGHT * 2, cur_y}, {INPUT_HEIGHT, INPUT_HEIGHT}, "->")) {
+                                if (!is_pin_set) {
+                                    auto& data = std::get<NodePlot::Data>(input_storage);
+                                    if (std::holds_alternative<std::string>(data)) {
+                                        auto fn_name = std::get<std::string>(data);
+                                        if (ctx.npf->graphs.contains(fn_name)) {
+                                            ctx.node_renderer.set_current_graph_id(fn_name);
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
+
+                    if (is_pin_set) {
+                        static std::string disabled_str = "";
+                        rnd.string_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH + ATTR_OFFSET, cur_y}, {INPUT_ELEMENT_WIDTH - ATTR_OFFSET, INPUT_HEIGHT}, disabled_str, false);
+                    } else {
+                        auto& data = std::get<NodePlot::Data>(input_storage);
+                        if (!std::holds_alternative<std::string>(data))
+                            data = std::string();
+                        if (rnd.string_input(
+                                ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH + ATTR_OFFSET, cur_y}, {INPUT_ELEMENT_WIDTH - ATTR_OFFSET, INPUT_HEIGHT}, std::get<std::string>(data), true)) {
+                            updated = true;
+                        }
+                    }
+                } break;
+                case NodePlot::DataType::BOOLEAN:
+                    if (is_pin_set) {
+                        static bool disabled_bool = false;
+                        rnd.boolean_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, disabled_bool, false);
+                    } else {
+                        auto& data = std::get<NodePlot::Data>(input_storage);
+                        if (!std::holds_alternative<bool>(data)) {
+                            data = false;
+                            updated = true;
+                        }
+                        if (rnd.boolean_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, std::get<bool>(data), true)) {
+                            updated = true;
+                        }
+                    }
+                    break;
+                case NodePlot::DataType::NUMBER:
+                    if (is_pin_set) {
+                        static double disabled_double = 0.0;
+                        rnd.number_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, disabled_double, false);
+                    } else {
+                        auto& data = std::get<NodePlot::Data>(input_storage);
+                        if (!std::holds_alternative<double>(data)) {
+                            data = 0.0;
+                            updated = true;
+                        }
+                        if (rnd.number_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, std::get<double>(data), true)) {
+                            updated = true;
+                        }
+                    }
+                    break;
+                case NodePlot::DataType::INTEGER:
+                    if (is_pin_set) {
+                        static int64_t disabled_int = 0.0;
+                        rnd.integer_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, disabled_int, false);
+                    } else {
+                        auto& data = std::get<NodePlot::Data>(input_storage);
+                        if (!std::holds_alternative<int64_t>(data)) {
+                            data = 0;
+                            updated = true;
+                        }
+                        if (rnd.integer_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, std::get<int64_t>(data), true)) {
+                            updated = true;
+                        }
+                    }
+                    break;
+                case NodePlot::DataType::COLOR:
+                    if (is_pin_set) {
+                        static NodePlot::Color disabled_color = {};
+                        rnd.color_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, disabled_color, false);
+                    } else {
+                        auto& data = std::get<NodePlot::Data>(input_storage);
+                        if (!std::holds_alternative<NodePlot::Color>(data)) {
+                            data = NodePlot::Color{};
+                            updated = true;
+                        }
+                        if (rnd.color_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, std::get<NodePlot::Color>(data), true)) {
+                            updated = true;
+                        }
+                    }
+                    break;
+                case NodePlot::DataType::MARGINES:
+                    if (is_pin_set) {
+                        static NodePlot::Margins disabled_margin = {};
+                        rnd.margin_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, disabled_margin, false);
+                    } else {
+                        auto& data = std::get<NodePlot::Data>(input_storage);
+                        if (!std::holds_alternative<NodePlot::Margins>(data)) {
+                            data = NodePlot::Margins{};
+                            updated = true;
+                        }
+                        if (rnd.margin_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, std::get<NodePlot::Margins>(data), true)) {
+                            updated = true;
+                        }
+                    }
+                    break;
+                default:
+                    break;
                 }
 
-                if (is_pin_set) {
-                    static std::string disabled_str = "";
-                    rnd.string_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH + ATTR_OFFSET, cur_y}, {INPUT_ELEMENT_WIDTH - ATTR_OFFSET, INPUT_HEIGHT}, disabled_str, false);
-                } else {
-                    auto& data = std::get<NodePlot::Data>(input_storage);
-                    if (!std::holds_alternative<std::string>(data))
-                        data = std::string();
-                    if (rnd.string_input(
-                            ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH + ATTR_OFFSET, cur_y}, {INPUT_ELEMENT_WIDTH - ATTR_OFFSET, INPUT_HEIGHT}, std::get<std::string>(data), true)) {
-                        updated = true;
-                    }
-                }
             } break;
-            case NodePlot::DataType::BOOLEAN:
-                if (is_pin_set) {
-                    static bool disabled_bool = false;
-                    rnd.boolean_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, disabled_bool, false);
-                } else {
-                    auto& data = std::get<NodePlot::Data>(input_storage);
-                    if (!std::holds_alternative<bool>(data)) {
-                        data = false;
-                        updated = true;
-                    }
-                    if (rnd.boolean_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, std::get<bool>(data), true)) {
-                        updated = true;
-                    }
-                }
-                break;
-            case NodePlot::DataType::NUMBER:
-                if (is_pin_set) {
-                    static double disabled_double = 0.0;
-                    rnd.number_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, disabled_double, false);
-                } else {
-                    auto& data = std::get<NodePlot::Data>(input_storage);
-                    if (!std::holds_alternative<double>(data)) {
-                        data = 0.0;
-                        updated = true;
-                    }
-                    if (rnd.number_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, std::get<double>(data), true)) {
-                        updated = true;
-                    }
-                }
-                break;
-            case NodePlot::DataType::INTEGER:
-                if (is_pin_set) {
-                    static int64_t disabled_int = 0.0;
-                    rnd.integer_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, disabled_int, false);
-                } else {
-                    auto& data = std::get<NodePlot::Data>(input_storage);
-                    if (!std::holds_alternative<int64_t>(data)) {
-                        data = 0;
-                        updated = true;
-                    }
-                    if (rnd.integer_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, std::get<int64_t>(data), true)) {
-                        updated = true;
-                    }
-                }
-                break;
-            case NodePlot::DataType::COLOR:
-                if (is_pin_set) {
-                    static NodePlot::Color disabled_color = {};
-                    rnd.color_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, disabled_color, false);
-                } else {
-                    auto& data = std::get<NodePlot::Data>(input_storage);
-                    if (!std::holds_alternative<NodePlot::Color>(data)) {
-                        data = NodePlot::Color{};
-                        updated = true;
-                    }
-                    if (rnd.color_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, std::get<NodePlot::Color>(data), true)) {
-                        updated = true;
-                    }
-                }
-                break;
-            case NodePlot::DataType::MARGINES:
-                if (is_pin_set) {
-                    static NodePlot::Margins disabled_margin = {};
-                    rnd.margin_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, disabled_margin, false);
-                } else {
-                    auto& data = std::get<NodePlot::Data>(input_storage);
-                    if (!std::holds_alternative<NodePlot::Margins>(data)) {
-                        data = NodePlot::Margins{};
-                        updated = true;
-                    }
-                    if (rnd.margin_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, std::get<NodePlot::Margins>(data), true)) {
-                        updated = true;
-                    }
-                }
-                break;
             default:
-                break;
             }
         }
 
@@ -318,7 +385,7 @@ ErrorOr<bool> NodeRenderer::render_node(NodePlot::NodeId node_id, NodePlot::Node
                 if (default_val.has_value()) {
                     ctx.node_storage.input_storage[id] = default_val.value();
                 } else {
-                    ctx.node_storage.input_storage[id] = {};
+                    ctx.node_storage.input_storage.erase(id);
                 }
 
                 updated = true;
@@ -435,11 +502,13 @@ ErrorOr<bool> NodeRenderer::render_node(NodePlot::NodeId node_id, NodePlot::Node
 ErrorOr<void> NodeRenderer::render_input_paths(NodePlot::NodeId node_id, NodePlot::NodeGraph::NodeStorage& storage) {
     Renderer input_pin_renderer{
         .input_pin = [&](RenderContext& ctx, ImVec2 pos, float size, NodePlot::InputId id) -> bool {
-            auto& input = ctx.node_storage.input_storage[id];
-            if (std::holds_alternative<NodePlot::NodeGraph::InputPin>(input)) {
+            auto input = ctx.node_storage.input_storage.find(id);
+            if (input == ctx.node_storage.input_storage.end())
+                return false;
+            if (std::holds_alternative<NodePlot::NodeGraph::InputPin>(input->second)) {
                 pos.x += size;
                 pos.y += size;
-                auto& pin = std::get<NodePlot::NodeGraph::InputPin>(input);
+                auto& pin = std::get<NodePlot::NodeGraph::InputPin>(input->second);
 
                 auto output_ng = eng->node_graph(ctx.npf);
                 if (!output_ng.has_value())

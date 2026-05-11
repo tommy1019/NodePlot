@@ -3,6 +3,7 @@
 #include "types.h"
 
 #include <nlohmann/json.hpp>
+#include <optional>
 
 namespace NodePlot {
 
@@ -26,11 +27,14 @@ struct NodeGraph {
     std::map<NodeId, NodeStorage> nodes;
     NodeId next_free_node_id = 0;
 
+    std::optional<NodeId> function_input_id = std::nullopt;
+    std::optional<NodeId> function_output_id = std::nullopt;
+
     static ErrorOr<NodeGraph> from_json(nlohmann::json json);
 
     ErrorOr<nlohmann::json> to_json();
 
-    ErrorOr<NodeId> create_node(NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeTypeId type, float x, float y);
+    ErrorOr<NodeId> create_node(NodePlotFile* npf, GraphId graph_id, NodeTypeId type, float x, float y);
 };
 
 } // namespace NodePlot

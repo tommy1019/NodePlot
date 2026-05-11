@@ -1,5 +1,6 @@
 #pragma once
 
+#include "nodeplot/types.h"
 #include <nodeplot/nodeplot.h>
 
 #include <imgui.h>
@@ -59,6 +60,9 @@ struct NodeRenderer {
 
     NodePlot::NodePlotFile* npf;
     NodePlot::EvaluatedNodeGraph* eng;
+
+    // TODO: this is a bad way to do a callback, refractor this
+    std::function<void(NodePlot::GraphId)> set_current_graph_id = [](NodePlot::GraphId) {};
 
     NodeRenderer(NodePlot::NodePlotFile* npf, NodePlot::EvaluatedNodeGraph* eng) : npf(npf), eng(eng) {}
 

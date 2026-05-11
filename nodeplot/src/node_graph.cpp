@@ -1,6 +1,8 @@
 #include "node_graph.h"
 
+#include "eval_node_graph.h"
 #include "node_registry.h"
+#include "types.h"
 
 namespace NodePlot {
 
@@ -22,6 +24,14 @@ ErrorOr<NodeGraph> NodeGraph::from_json(nlohmann::json json) {
     };
 
     NodeGraph res;
+
+    if (json.contains("function_input_id"))
+        if (json["function_input_id"].is_number_integer())
+            res.function_input_id = json["function_input_id"].get<NodeId>();
+
+    if (json.contains("function_output_id"))
+        if (json["function_output_id"].is_number_integer())
+            res.function_output_id = json["function_output_id"].get<NodeId>();
 
     nlohmann::json nodes_json = TRY(get(json, "nodes", "Missing nodes data"));
     for (auto nodes_it = nodes_json.begin(); nodes_it != nodes_json.end(); nodes_it++) {
@@ -92,7 +102,7 @@ ErrorOr<NodeGraph> NodeGraph::from_json(nlohmann::json json) {
                 }
             }());
 
-            node_storage.input_storage[inputs_it.key()] = input_val;
+            node_storage.input_storage.insert({inputs_it.key(), input_val});
         }
 
         res.nodes[node_id] = node_storage;
@@ -168,10 +178,16 @@ ErrorOr<nlohmann::json> NodeGraph::to_json() {
     nlohmann::json res;
     res["nodes"] = nodes_json;
 
+    if (function_input_id.has_value())
+        res["function_input_id"] = function_input_id.value();
+
+    if (function_output_id.has_value())
+        res["function_output_id"] = function_output_id.value();
+
     return res;
 }
 
-ErrorOr<NodeId> NodeGraph::create_node(NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeTypeId type, float x, float y) {
+ErrorOr<NodeId> NodeGraph::create_node(NodePlotFile* npf, GraphId graph_id, NodeTypeId type, float x, float y) {
     auto node = TRY(Utils::try_find(NodeRegistry::node_map, type, "Invalid node type id")).get();
 
     NodeId id = next_free_node_id++;
@@ -182,7 +198,8 @@ ErrorOr<NodeId> NodeGraph::create_node(NodePlotFile* npf, EvaluatedNodeGraph* en
         .pos = {.x = x, .y = y},
     };
 
-    auto inputs = node.inputs(npf, eng, id);
+    EvaluatedNodeGraph tmp_eng{.graph_id = graph_id};
+    auto inputs = node.inputs(npf, &tmp_eng, id);
     if (inputs.has_value()) {
         for (auto& i : inputs.value()) {
             if (i.second.default_value.has_value())
