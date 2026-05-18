@@ -399,10 +399,10 @@ int main(int argc, char** argv) {
                 } else {
                     constexpr float SCROLL_SPEED = 8;
                     if (ImGui::GetIO().MouseWheel != 0.0) {
-                        node_renderer->scene_translation.y -= ImGui::GetIO().MouseWheel * SCROLL_SPEED;
+                        node_renderer->scene_translation.y -= ImGui::GetIO().MouseWheel * SCROLL_SPEED / node_renderer->scene_scale;
                     }
                     if (ImGui::GetIO().MouseWheelH != 0.0) {
-                        node_renderer->scene_translation.x -= ImGui::GetIO().MouseWheelH * SCROLL_SPEED;
+                        node_renderer->scene_translation.x -= ImGui::GetIO().MouseWheelH * SCROLL_SPEED / node_renderer->scene_scale;
                     }
                 }
             }
