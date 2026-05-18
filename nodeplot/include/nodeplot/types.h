@@ -118,6 +118,11 @@ struct Table {
     std::vector<std::string> column_names;
 };
 
+struct Pos {
+    float x;
+    float y;
+};
+
 struct Margins {
     float left;
     float right;
@@ -131,13 +136,18 @@ struct PlotStyle {
 
     double x_axis_tick_mark_font_size;
     double x_axis_tick_mark_size;
+    Pos x_axis_tick_mark_offset;
     double x_axis_label_font_size;
+    Pos x_axis_label_offset;
 
     double y_axis_tick_mark_font_size;
     double y_axis_tick_mark_size;
+    Pos y_axis_tick_mark_offset;
     double y_axis_label_font_size;
+    Pos y_axis_label_offset;
 
     double title_font_size;
+    Pos title_offset;
 };
 
 struct Plot {
@@ -148,6 +158,39 @@ struct Plot {
     bool x_axis_log_scale;
     bool y_axis_log_scale;
     PlotStyle style;
+};
+
+namespace DrawCommands {
+struct Line {
+    Pos start;
+    Pos end;
+    Color color;
+    double stroke_width;
+};
+struct Circle {
+    Pos pos;
+    double r;
+    Color color;
+};
+struct Polygon {
+    std::vector<Pos> points;
+    Color stroke_color;
+    Color fill_color;
+    double stroke_width;
+};
+struct Text {
+    Pos pos;
+    std::string text;
+    enum { LEFT, MIDDLE, RIGHT } anchor;
+    double font_size;
+    double rotate = 0;
+};
+} // namespace DrawCommands
+
+using DrawCommand = std::variant<DrawCommands::Line, DrawCommands::Circle, DrawCommands::Polygon, DrawCommands::Text>;
+
+struct Figure {
+    std::vector<DrawCommand> commands;
 };
 
 enum class DataType {
@@ -163,12 +206,15 @@ enum class DataType {
     SERIES,
     PLOT,
 
+    FIGURE,
+
+    POSITION,
     MARGINES,
     COLOR,
 
     PLOT_STYLE,
 };
 
-using Data = std::variant<double, int64_t, std::string, bool, Table, Column, Series, Plot, Margins, Color, PlotStyle>;
+using Data = std::variant<double, int64_t, std::string, bool, Table, Column, Series, Plot, Figure, Pos, Margins, Color, PlotStyle>;
 
 } // namespace NodePlot

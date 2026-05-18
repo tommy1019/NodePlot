@@ -116,7 +116,7 @@ int main(int argc, char** argv) {
                     continue;
                 if (!std::holds_alternative<std::string>(svg_or_err.value()))
                     REQUIRE_NOT_REACHED("SVG is not a string type");
-                svg_renderer->set_svg(std::get<std::string>(svg_or_err.value()));
+                MAYBE(svg_renderer->set_svg(std::get<std::string>(svg_or_err.value())));
             }
         }
     };
@@ -126,7 +126,7 @@ int main(int argc, char** argv) {
     std::set<NodePlot::NodeId> dragged_windows = {};
     std::set<NodePlot::NodeId> selected_windows;
 
-    window->event_loop(NodePlot::Utils::overloaded{[&](Window::RenderEvent) -> ErrorOr<void> {
+    MUST(window->event_loop(NodePlot::Utils::overloaded{[&](Window::RenderEvent) -> ErrorOr<void> {
         ImGuiViewport* viewport = ImGui::GetMainViewport();
         ImGui::SetNextWindowPos(viewport->WorkPos);
         ImGui::SetNextWindowSize(viewport->WorkSize);
@@ -271,11 +271,11 @@ int main(int argc, char** argv) {
                         ImColor(150, 150, 150, 255));
                 } else {
                     for (auto& id : dragged_windows) {
-                        NodePlot::Utils::try_find(nodes, id, "Invalid dragged window").and_then([&](NodePlot::NodeGraph::NodeStorage& storage) -> ErrorOr<void> {
+                        MAYBE(NodePlot::Utils::try_find(nodes, id, "Invalid dragged window").and_then([&](NodePlot::NodeGraph::NodeStorage& storage) -> ErrorOr<void> {
                             storage.pos.x += io.MouseDelta.x / node_renderer->scene_scale;
                             storage.pos.y += io.MouseDelta.y / node_renderer->scene_scale;
                             return {};
-                        });
+                        }));
                     }
                 }
 
@@ -316,13 +316,13 @@ int main(int argc, char** argv) {
                                       ImGuiWindowFlags_None | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
                     if (MUST(node_renderer->render_node(id, storage))) {
                         did_update = true;
-                        cur_eng().node_inputs_changed(&npf, id);
+                        MUST(cur_eng().node_inputs_changed(&npf, id));
 
                         if (current_graph != "main") {
                             auto& ng = npf.graphs.at("main");
                             for (auto n : ng.nodes) {
                                 if (n.second.type_id == "function") {
-                                    main_eng.node_inputs_changed(&npf, n.first);
+                                    MUST(main_eng.node_inputs_changed(&npf, n.first));
                                 }
                             }
                         }
@@ -361,13 +361,29 @@ int main(int argc, char** argv) {
                 }
             }
 
-            if (did_update) {
-                update_svg();
+            if (nodes_to_delete.size() > 0) {
+                did_update = true;
+
+                if (current_graph == "main") {
+                    for (auto& n : nodes_to_delete) {
+                        MAYBE(main_eng.node_inputs_changed(&npf, n));
+                    }
+                } else {
+                    auto& ng = npf.graphs.at("main");
+                    for (auto n : ng.nodes) {
+                        if (n.second.type_id == "function") {
+                            MUST(main_eng.node_inputs_changed(&npf, n.first));
+                        }
+                    }
+                }
+
+                for (auto& n : nodes_to_delete) {
+                    nodes.erase(n);
+                }
             }
 
-            if (nodes_to_delete.size() > 0) {
-                for (auto& n : nodes_to_delete)
-                    nodes.erase(n);
+            if (did_update) {
+                update_svg();
             }
 
             if (ImGui::IsWindowHovered()) {
@@ -425,7 +441,7 @@ int main(int argc, char** argv) {
         ImGui::End();
 
         return {};
-    }});
+    }}));
 
     window.reset();
     MUST(Window::global_deinit());

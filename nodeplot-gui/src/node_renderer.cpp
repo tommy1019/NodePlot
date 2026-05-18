@@ -27,9 +27,9 @@ NodeRenderer::RenderFunction NodeRenderer::default_renderer = [](Renderer& rnd, 
 
     float INPUT_PIN_WIDTH = 15 * rs;
     float INPUT_TEXT_WIDTH = 150 * rs;
-    float INPUT_ELEMENT_WIDTH = 150 * rs;
+    float INPUT_ELEMENT_WIDTH = 200 * rs;
 
-    float OUTPUT_PIN_X = INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH + INPUT_ELEMENT_WIDTH + PADDING + 75 * rs;
+    float OUTPUT_PIN_X = INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH + INPUT_ELEMENT_WIDTH + PADDING;
 
     float y_pos = -INPUT_HEIGHT + PADDING;
 
@@ -59,7 +59,8 @@ NodeRenderer::RenderFunction NodeRenderer::default_renderer = [](Renderer& rnd, 
             case NodePlot::DataType::NUMBER:
             case NodePlot::DataType::INTEGER:
             case NodePlot::DataType::COLOR:
-            case NodePlot::DataType::MARGINES: {
+            case NodePlot::DataType::MARGINES:
+            case NodePlot::DataType::POSITION: {
 
                 std::variant<NodePlot::Data, NodePlot::NodeGraph::InputPin>& input_storage = ctx.node_storage.input_storage[id];
                 bool is_pin_set = std::holds_alternative<NodePlot::NodeGraph::InputPin>(input_storage);
@@ -242,10 +243,24 @@ NodeRenderer::RenderFunction NodeRenderer::default_renderer = [](Renderer& rnd, 
                         }
                     }
                     break;
+                case NodePlot::DataType::POSITION:
+                    if (is_pin_set) {
+                        static NodePlot::Pos disabled_pos = {};
+                        rnd.position_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, disabled_pos, false);
+                    } else {
+                        auto& data = std::get<NodePlot::Data>(input_storage);
+                        if (!std::holds_alternative<NodePlot::Pos>(data)) {
+                            data = NodePlot::Pos{};
+                            updated = true;
+                        }
+                        if (rnd.position_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, std::get<NodePlot::Pos>(data), true)) {
+                            updated = true;
+                        }
+                    }
+                    break;
                 default:
                     break;
                 }
-
             } break;
             default:
             }
@@ -280,9 +295,11 @@ void NodeRenderer::draw_node_path(ImVec2 start, ImVec2 end) {
 
     float PATH_X_ESCAPE = 20.0f * scene_scale;
 
+    float OVERLAP_MUL = 0.02f;
+
     fg_draw_list->AddLine(start,
                           {
-                              start.x + PATH_X_ESCAPE,
+                              start.x + PATH_X_ESCAPE * (1.0f + OVERLAP_MUL),
                               start.y,
                           },
                           color_32,
@@ -290,19 +307,19 @@ void NodeRenderer::draw_node_path(ImVec2 start, ImVec2 end) {
 
     fg_draw_list->AddLine(end,
                           {
-                              end.x - PATH_X_ESCAPE,
+                              end.x - PATH_X_ESCAPE * (1.0f + OVERLAP_MUL),
                               end.y,
                           },
                           color_32,
                           3);
 
     start = {
-        start.x + PATH_X_ESCAPE,
+        start.x + PATH_X_ESCAPE * (1.0f - OVERLAP_MUL),
         start.y,
     };
 
     end = {
-        end.x - PATH_X_ESCAPE,
+        end.x - PATH_X_ESCAPE * (1.0f - OVERLAP_MUL),
         end.y,
     };
 
@@ -423,6 +440,7 @@ ErrorOr<bool> NodeRenderer::render_node(NodePlot::NodeId node_id, NodePlot::Node
             ImGui::SetCursorPos(pos);
             if (!enabled)
                 ImGui::BeginDisabled(true);
+            ImGui::SetNextItemWidth(size.x);
             bool res = ImGui::InputText("##string_input", &storage, ImGuiInputTextFlags_None);
             if (!enabled)
                 ImGui::EndDisabled();
@@ -441,6 +459,7 @@ ErrorOr<bool> NodeRenderer::render_node(NodePlot::NodeId node_id, NodePlot::Node
             ImGui::SetCursorPos(pos);
             if (!enabled)
                 ImGui::BeginDisabled(true);
+            ImGui::SetNextItemWidth(size.x);
             bool res = ImGui::InputDouble("##number_input", &storage, ImGuiInputTextFlags_None);
             if (!enabled)
                 ImGui::EndDisabled();
@@ -450,6 +469,7 @@ ErrorOr<bool> NodeRenderer::render_node(NodePlot::NodeId node_id, NodePlot::Node
             ImGui::SetCursorPos(pos);
             if (!enabled)
                 ImGui::BeginDisabled(true);
+            ImGui::SetNextItemWidth(size.x);
             bool res = ImGui::InputScalar("##number_input", ImGuiDataType_S64, &storage);
             if (!enabled)
                 ImGui::EndDisabled();
@@ -459,6 +479,7 @@ ErrorOr<bool> NodeRenderer::render_node(NodePlot::NodeId node_id, NodePlot::Node
             ImGui::SetCursorPos(pos);
             if (!enabled)
                 ImGui::BeginDisabled(true);
+            ImGui::SetNextItemWidth(size.x);
             bool res = ImGui::ColorEdit4("##number_input", (float*)&storage);
             if (!enabled)
                 ImGui::EndDisabled();
@@ -468,7 +489,18 @@ ErrorOr<bool> NodeRenderer::render_node(NodePlot::NodeId node_id, NodePlot::Node
             ImGui::SetCursorPos(pos);
             if (!enabled)
                 ImGui::BeginDisabled(true);
+            ImGui::SetNextItemWidth(size.x);
             bool res = ImGui::InputFloat4("##number_input", (float*)&storage);
+            if (!enabled)
+                ImGui::EndDisabled();
+            return res;
+        },
+        .position_input = [](RenderContext&, ImVec2 pos, ImVec2 size, NodePlot::Pos& storage, bool enabled) -> bool {
+            ImGui::SetCursorPos(pos);
+            if (!enabled)
+                ImGui::BeginDisabled(true);
+            ImGui::SetNextItemWidth(size.x);
+            bool res = ImGui::InputFloat2("##number_input", (float*)&storage);
             if (!enabled)
                 ImGui::EndDisabled();
             return res;

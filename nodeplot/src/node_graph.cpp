@@ -95,6 +95,11 @@ ErrorOr<NodeGraph> NodeGraph::from_json(nlohmann::json json) {
                         if (margin_arr.size() != 4)
                             return ERR(err_str() + "Invalid margin data");
                         return Data(NodePlot::Margins{margin_arr[0], margin_arr[1], margin_arr[2], margin_arr[3]});
+                    } else if (data_type == "position") {
+                        std::vector<float> position_arr = TRY(get_typed(std::type_identity<std::vector<float>>{}, input_json, "value", err_str() + "Missing input data value color"));
+                        if (position_arr.size() != 2)
+                            return ERR(err_str() + "Invalid position data");
+                        return Data(NodePlot::Pos{position_arr[0], position_arr[1]});
                     } else
                         return ERR(err_str() + "Invalid data type for input");
                 } else {
@@ -150,6 +155,11 @@ ErrorOr<nlohmann::json> NodeGraph::to_json() {
                                                                                             [&](Margins v) -> ErrorOr<void> {
                                                                                                 res["data_type"] = "margin";
                                                                                                 res["value"] = std::vector<float>{v.left, v.right, v.top, v.bottom};
+                                                                                                return {};
+                                                                                            },
+                                                                                            [&](Pos p) -> ErrorOr<void> {
+                                                                                                res["data_type"] = "position";
+                                                                                                res["value"] = std::vector<float>{p.x, p.y};
                                                                                                 return {};
                                                                                             },
                                                                                             [&](auto) -> ErrorOr<void> { return ERR("Cannot encode input value"); }},

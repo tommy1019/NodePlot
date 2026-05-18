@@ -11,10 +11,12 @@ set(SOURCES
 
     src/node_impl/binary_operation.cpp
     src/node_impl/column_select.cpp
-    src/node_impl/create_plot.cpp
+    src/node_impl/create_plot_style.cpp
     src/node_impl/csv_import.cpp
+    src/node_impl/figure.cpp
     src/node_impl/filter_table.cpp
     src/node_impl/function.cpp
+    src/node_impl/grid_layout.cpp
     src/node_impl/sampled_property_extract.cpp
     src/node_impl/series_create.cpp
     src/node_impl/value.cpp

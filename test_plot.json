@@ -64,8 +64,8 @@
                         }
                     },
                     "pos": [
-                        1503.6217041015625,
-                        839.3847045898438
+                        1488.6217041015625,
+                        814.3847045898438
                     ],
                     "type_id": "function"
                 },
@@ -106,6 +106,208 @@
                         975.0
                     ],
                     "type_id": "color_value"
+                },
+                "16": {
+                    "inputs": {
+                        "num_series": {
+                            "data_type": "integer",
+                            "type": "data",
+                            "value": 3
+                        },
+                        "series_0": {
+                            "node": 3,
+                            "output": "series",
+                            "type": "pin"
+                        },
+                        "series_1": {
+                            "node": 13,
+                            "output": "output_0",
+                            "type": "pin"
+                        },
+                        "series_2": {
+                            "node": 13,
+                            "output": "output_1",
+                            "type": "pin"
+                        },
+                        "style": {
+                            "node": 19,
+                            "output": "style",
+                            "type": "pin"
+                        },
+                        "title": {
+                            "data_type": "string",
+                            "type": "data",
+                            "value": "Title"
+                        },
+                        "x_axis_log_scale": {
+                            "data_type": "boolean",
+                            "type": "data",
+                            "value": false
+                        },
+                        "x_label": {
+                            "data_type": "string",
+                            "type": "data",
+                            "value": "X Label"
+                        },
+                        "y_axis_log_scale": {
+                            "data_type": "boolean",
+                            "type": "data",
+                            "value": false
+                        },
+                        "y_label": {
+                            "data_type": "string",
+                            "type": "data",
+                            "value": "Y Label"
+                        }
+                    },
+                    "pos": [
+                        2163.903564453125,
+                        391.73809814453125
+                    ],
+                    "type_id": "plot_figure"
+                },
+                "18": {
+                    "inputs": {
+                        "cols": {
+                            "data_type": "integer",
+                            "type": "data",
+                            "value": 2
+                        },
+                        "figure_0_0": {
+                            "node": 16,
+                            "output": "figure",
+                            "type": "pin"
+                        },
+                        "figure_0_1": {
+                            "node": 16,
+                            "output": "figure",
+                            "type": "pin"
+                        },
+                        "figure_1_0": {
+                            "node": 16,
+                            "output": "figure",
+                            "type": "pin"
+                        },
+                        "figure_1_1": {
+                            "node": 16,
+                            "output": "figure",
+                            "type": "pin"
+                        },
+                        "rows": {
+                            "data_type": "integer",
+                            "type": "data",
+                            "value": 2
+                        }
+                    },
+                    "pos": [
+                        2668.80224609375,
+                        425.6007080078125
+                    ],
+                    "type_id": "grid_layout"
+                },
+                "19": {
+                    "inputs": {
+                        "internal_plot_margines": {
+                            "data_type": "margin",
+                            "type": "data",
+                            "value": [
+                                0.0,
+                                0.0,
+                                0.0,
+                                0.0
+                            ]
+                        },
+                        "plot_margines": {
+                            "data_type": "margin",
+                            "type": "data",
+                            "value": [
+                                0.1599999964237213,
+                                0.05000000074505806,
+                                0.14000000059604645,
+                                0.15000000596046448
+                            ]
+                        },
+                        "title_font_size": {
+                            "data_type": "number",
+                            "type": "data",
+                            "value": 16.0
+                        },
+                        "title_offset": {
+                            "data_type": "position",
+                            "type": "data",
+                            "value": [
+                                0.0,
+                                0.10000000149011612
+                            ]
+                        },
+                        "x_axis_label_font_size": {
+                            "data_type": "number",
+                            "type": "data",
+                            "value": 12.0
+                        },
+                        "x_axis_label_offset": {
+                            "data_type": "position",
+                            "type": "data",
+                            "value": [
+                                0.0,
+                                0.0
+                            ]
+                        },
+                        "x_axis_tick_mark_font_size": {
+                            "data_type": "number",
+                            "type": "data",
+                            "value": 12.0
+                        },
+                        "x_axis_tick_mark_offset": {
+                            "data_type": "position",
+                            "type": "data",
+                            "value": [
+                                0.0,
+                                0.03999999910593033
+                            ]
+                        },
+                        "x_axis_tick_mark_size": {
+                            "data_type": "number",
+                            "type": "data",
+                            "value": 0.019999999552965164
+                        },
+                        "y_axis_label_font_size": {
+                            "data_type": "number",
+                            "type": "data",
+                            "value": 12.0
+                        },
+                        "y_axis_label_offset": {
+                            "data_type": "position",
+                            "type": "data",
+                            "value": [
+                                0.05999999865889549,
+                                0.0
+                            ]
+                        },
+                        "y_axis_tick_mark_font_size": {
+                            "data_type": "number",
+                            "type": "data",
+                            "value": 12.0
+                        },
+                        "y_axis_tick_mark_offset": {
+                            "data_type": "position",
+                            "type": "data",
+                            "value": [
+                                -0.009999999776482582,
+                                0.014999999664723873
+                            ]
+                        },
+                        "y_axis_tick_mark_size": {
+                            "data_type": "number",
+                            "type": "data",
+                            "value": 0.02
+                        }
+                    },
+                    "pos": [
+                        1492.201171875,
+                        -77.200927734375
+                    ],
+                    "type_id": "create_plot_style"
                 },
                 "2": {
                     "inputs": {
@@ -160,72 +362,13 @@
                     ],
                     "type_id": "scatter_series_create"
                 },
-                "4": {
-                    "inputs": {
-                        "num_series": {
-                            "data_type": "integer",
-                            "type": "data",
-                            "value": 3
-                        },
-                        "series_0": {
-                            "node": 13,
-                            "output": "output_0",
-                            "type": "pin"
-                        },
-                        "series_1": {
-                            "node": 13,
-                            "output": "output_1",
-                            "type": "pin"
-                        },
-                        "series_2": {
-                            "node": 3,
-                            "output": "series",
-                            "type": "pin"
-                        },
-                        "style": {
-                            "node": 8,
-                            "output": "style",
-                            "type": "pin"
-                        },
-                        "title": {
-                            "data_type": "string",
-                            "type": "data",
-                            "value": ""
-                        },
-                        "x_axis_log_scale": {
-                            "data_type": "boolean",
-                            "type": "data",
-                            "value": false
-                        },
-                        "x_axis_tick_mark_size": {
-                            "data_type": "number",
-                            "type": "data",
-                            "value": 0.0
-                        },
-                        "x_label": {
-                            "data_type": "string",
-                            "type": "data",
-                            "value": ""
-                        },
-                        "y_axis_log_scale": {
-                            "data_type": "boolean",
-                            "type": "data",
-                            "value": false
-                        },
-                        "y_label": {
-                            "data_type": "string",
-                            "type": "data",
-                            "value": ""
-                        }
-                    },
-                    "pos": [
-                        2125.191162109375,
-                        358.4552307128906
-                    ],
-                    "type_id": "create_plot"
-                },
                 "6": {
                     "inputs": {
+                        "figure": {
+                            "node": 18,
+                            "output": "figure",
+                            "type": "pin"
+                        },
                         "filename": {
                             "data_type": "string",
                             "type": "data",
@@ -244,7 +387,7 @@
                         "height": {
                             "data_type": "number",
                             "type": "data",
-                            "value": 300.0
+                            "value": 600.0
                         },
                         "plot_0_0": {
                             "node": 4,
@@ -254,78 +397,14 @@
                         "width": {
                             "data_type": "number",
                             "type": "data",
-                            "value": 300.0
+                            "value": 600.0
                         }
                     },
                     "pos": [
-                        2621.525146484375,
-                        437.1049499511719
+                        3113.525146484375,
+                        421.1049499511719
                     ],
                     "type_id": "output"
-                },
-                "8": {
-                    "inputs": {
-                        "internal_plot_margines": {
-                            "data_type": "margin",
-                            "type": "data",
-                            "value": [
-                                0.0,
-                                0.0,
-                                0.0,
-                                0.0
-                            ]
-                        },
-                        "plot_margines": {
-                            "data_type": "margin",
-                            "type": "data",
-                            "value": [
-                                30.0,
-                                30.0,
-                                20.0,
-                                30.0
-                            ]
-                        },
-                        "title_font_size": {
-                            "data_type": "number",
-                            "type": "data",
-                            "value": 12.0
-                        },
-                        "x_axis_label_font_size": {
-                            "data_type": "number",
-                            "type": "data",
-                            "value": 12.0
-                        },
-                        "x_axis_tick_mark_font_size": {
-                            "data_type": "number",
-                            "type": "data",
-                            "value": 12.0
-                        },
-                        "x_axis_tick_mark_size": {
-                            "data_type": "number",
-                            "type": "data",
-                            "value": 5.0
-                        },
-                        "y_axis_label_font_size": {
-                            "data_type": "number",
-                            "type": "data",
-                            "value": 12.0
-                        },
-                        "y_axis_tick_mark_font_size": {
-                            "data_type": "number",
-                            "type": "data",
-                            "value": 12.0
-                        },
-                        "y_axis_tick_mark_size": {
-                            "data_type": "number",
-                            "type": "data",
-                            "value": 5.0
-                        }
-                    },
-                    "pos": [
-                        1422.9908447265625,
-                        -68.49856567382813
-                    ],
-                    "type_id": "create_plot_style"
                 }
             }
         },

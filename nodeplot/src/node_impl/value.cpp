@@ -62,4 +62,58 @@ void register_value() {
                                         return {};
                                     },
                                 });
+
+    NodeRegistry::register_node("color_compose",
+                                Node{
+                                    .type_id = "color_compose",
+                                    .display_name = "Color Compose",
+                                    .inputs = [](NodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::vector<std::pair<InputId, Node::Input>> {
+                                        return {
+                                            {"red", Node::Input{.id = "red", .display_name = "Red", .valid_data_types = {DataType::NUMBER}}},
+                                            {"green", Node::Input{.id = "green", .display_name = "Green", .valid_data_types = {DataType::NUMBER}}},
+                                            {"blue", Node::Input{.id = "blue", .display_name = "Blue", .valid_data_types = {DataType::NUMBER}}},
+                                            {"alpha", Node::Input{.id = "alpha", .display_name = "alpha", .valid_data_types = {DataType::NUMBER}}},
+                                        };
+                                    },
+                                    .outputs = [](NodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::vector<std::pair<OutputId, Node::Output>> {
+                                        return {
+                                            {"color", Node::Output{.id = "color", .display_name = "Color", .valid_data_types = {DataType::COLOR}}},
+                                        };
+                                    },
+                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
+                                        cache.computed_outputs["value"] = Color{
+                                            .r = TRY(eng->get_input_value<float>(npf, node_id, "red")),
+                                            .g = TRY(eng->get_input_value<float>(npf, node_id, "green")),
+                                            .b = TRY(eng->get_input_value<float>(npf, node_id, "blue")),
+                                            .a = TRY(eng->get_input_value<float>(npf, node_id, "alpha")),
+                                        };
+                                        return {};
+                                    },
+                                });
+    NodeRegistry::register_node("color_decompose",
+                                Node{
+                                    .type_id = "color_decompose",
+                                    .display_name = "Color Decompose",
+                                    .inputs = [](NodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::vector<std::pair<InputId, Node::Input>> {
+                                        return {
+                                            {"color", Node::Input{.id = "color", .display_name = "Color", .valid_data_types = {DataType::COLOR}}},
+                                        };
+                                    },
+                                    .outputs = [](NodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::vector<std::pair<OutputId, Node::Output>> {
+                                        return {
+                                            {"red", Node::Output{.id = "red", .display_name = "Red", .valid_data_types = {DataType::NUMBER}}},
+                                            {"green", Node::Output{.id = "green", .display_name = "Green", .valid_data_types = {DataType::NUMBER}}},
+                                            {"blue", Node::Output{.id = "blue", .display_name = "Blue", .valid_data_types = {DataType::NUMBER}}},
+                                            {"alpha", Node::Output{.id = "alpha", .display_name = "alpha", .valid_data_types = {DataType::NUMBER}}},
+                                        };
+                                    },
+                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
+                                        Color c = TRY(eng->get_input_value<Color>(npf, node_id, "color"));
+                                        cache.computed_outputs["red"] = c.r;
+                                        cache.computed_outputs["green"] = c.g;
+                                        cache.computed_outputs["blue"] = c.b;
+                                        cache.computed_outputs["alpha"] = c.a;
+                                        return {};
+                                    },
+                                });
 }

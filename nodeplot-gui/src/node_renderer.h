@@ -39,6 +39,7 @@ struct NodeRenderer {
         std::function<bool(RenderContext&, ImVec2, ImVec2, int64_t&, bool)> integer_input = [](RenderContext&, ImVec2, ImVec2, int64_t&, bool) { return false; };
         std::function<bool(RenderContext&, ImVec2, ImVec2, NodePlot::Color&, bool)> color_input = [](RenderContext&, ImVec2, ImVec2, NodePlot::Color&, bool) { return false; };
         std::function<bool(RenderContext&, ImVec2, ImVec2, NodePlot::Margins&, bool)> margin_input = [](RenderContext&, ImVec2, ImVec2, NodePlot::Margins&, bool) { return false; };
+        std::function<bool(RenderContext&, ImVec2, ImVec2, NodePlot::Pos&, bool)> position_input = [](RenderContext&, ImVec2, ImVec2, NodePlot::Pos&, bool) { return false; };
     };
 
     using RenderFunction = std::function<ErrorOr<bool>(Renderer&, RenderContext&)>;
