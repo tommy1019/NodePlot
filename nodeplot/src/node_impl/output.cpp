@@ -115,11 +115,11 @@ void register_output() {
                         return x * 10.0;
                     };
 
-                    double x_tick_interval = tick_interval(x_range, 5);
+                    double x_tick_interval = tick_interval(x_range, 3);
                     double x_tick_start = std::floor(x_lims.first / x_tick_interval) * x_tick_interval;
                     double x_tick_end = std::ceil(x_lims.second / x_tick_interval) * x_tick_interval;
 
-                    double y_tick_interval = tick_interval(y_range, 5);
+                    double y_tick_interval = tick_interval(y_range, 3);
                     double y_tick_start = std::floor(y_lims.first / y_tick_interval) * y_tick_interval;
                     double y_tick_end = std::ceil(y_lims.second / y_tick_interval) * y_tick_interval;
 
@@ -253,7 +253,7 @@ void register_output() {
 
                     auto format_tick_number = [](double v) {
                         bool e_format = false;
-                        if (std::log10(v) >= 4) {
+                        if (std::log10(v) >= 5) {
                             e_format = true;
                             v = std::log10(v);
                         }

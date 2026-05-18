@@ -397,7 +397,7 @@ int main(int argc, char** argv) {
                         node_renderer->scene_translation.y += pre.y - post.y;
                     }
                 } else {
-                    constexpr float SCROLL_SPEED = 5;
+                    constexpr float SCROLL_SPEED = 8;
                     if (ImGui::GetIO().MouseWheel != 0.0) {
                         node_renderer->scene_translation.y -= ImGui::GetIO().MouseWheel * SCROLL_SPEED;
                     }

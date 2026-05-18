@@ -99,4 +99,53 @@ void register_sampled_property_extract() {
                                         return {};
                                     },
                                 });
+
+    NodeRegistry::register_node("distribution_properties",
+                                Node{
+                                    .type_id = "distribution_properties",
+                                    .display_name = "Distribution Properties",
+                                    .inputs = [](NodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::vector<std::pair<InputId, Node::Input>> {
+                                        return {
+                                            {"values", Node::Input{.id = "values", .display_name = "Values", .valid_data_types = {DataType::COLUMN}}},
+                                        };
+                                    },
+                                    .outputs = [](NodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::vector<std::pair<OutputId, Node::Output>> {
+                                        return {
+                                            {"min", Node::Output{.id = "min", .display_name = "Minimum", .valid_data_types = {DataType::NUMBER}}},
+                                            {"avg", Node::Output{.id = "avg", .display_name = "Average", .valid_data_types = {DataType::NUMBER}}},
+                                            {"stdev", Node::Output{.id = "stdev", .display_name = "Standard Deviation", .valid_data_types = {DataType::NUMBER}}},
+                                            {"max", Node::Output{.id = "max", .display_name = "Maximum", .valid_data_types = {DataType::NUMBER}}},
+                                            {"sample_count", Node::Output{.id = "sample_count", .display_name = "Sample Count", .valid_data_types = {DataType::NUMBER}}},
+                                        };
+                                    },
+                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
+                                        Column::Numeric v = TRY(TRY(eng->get_input_value<Column>(npf, node_id, "values")).as_numeric_column());
+
+                                        double sum = 0;
+                                        double min = v.values.size() > 0 ? v.values.front() : 0.0;
+                                        double max = v.values.size() > 0 ? v.values.front() : 0.0;
+
+                                        for (auto& v : v.values) {
+                                            sum += v;
+                                            min = std::min(min, v);
+                                            max = std::max(max, v);
+                                        }
+
+                                        double avg = sum / v.values.size();
+
+                                        sum = 0;
+                                        for (auto& v : v.values) {
+                                            sum += std::pow(v - avg, 2);
+                                        }
+                                        double stdev = std::sqrt(sum / v.values.size());
+
+                                        cache.computed_outputs["min"] = min;
+                                        cache.computed_outputs["avg"] = max;
+                                        cache.computed_outputs["stdev"] = stdev;
+                                        cache.computed_outputs["max"] = max;
+                                        cache.computed_outputs["sample_count"] = (double)v.values.size();
+
+                                        return {};
+                                    },
+                                });
 }
