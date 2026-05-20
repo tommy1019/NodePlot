@@ -90,7 +90,7 @@ void register_output() {
 
                                         ss << "</svg>\n";
 
-                                        std::println("{}", ss.str());
+                                        // std::println("{}", ss.str());
 
                                         cache.computed_outputs["svg"] = ss.str();
 
