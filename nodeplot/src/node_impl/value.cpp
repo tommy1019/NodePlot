@@ -81,11 +81,11 @@ void register_value() {
                                         };
                                     },
                                     .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
-                                        cache.computed_outputs["value"] = Color{
-                                            .r = TRY(eng->get_input_value<float>(npf, node_id, "red")),
-                                            .g = TRY(eng->get_input_value<float>(npf, node_id, "green")),
-                                            .b = TRY(eng->get_input_value<float>(npf, node_id, "blue")),
-                                            .a = TRY(eng->get_input_value<float>(npf, node_id, "alpha")),
+                                        cache.computed_outputs["color"] = Color{
+                                            .r = (float)TRY(eng->get_input_value<double>(npf, node_id, "red")),
+                                            .g = (float)TRY(eng->get_input_value<double>(npf, node_id, "green")),
+                                            .b = (float)TRY(eng->get_input_value<double>(npf, node_id, "blue")),
+                                            .a = (float)TRY(eng->get_input_value<double>(npf, node_id, "alpha")),
                                         };
                                         return {};
                                     },
