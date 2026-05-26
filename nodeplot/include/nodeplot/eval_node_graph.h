@@ -94,7 +94,10 @@ struct EvaluatedNodeGraph {
         return convert.value();
     }
 
-    bool validate_data_type(Data& data, DataType type) { return true; }
+    bool validate_data_type(Data& data, DataType type) {
+        // TODO: Actually validate data type here
+        return true;
+    }
     bool validate_data_types(Data& data, std::vector<DataType> types) {
         bool success = false;
         for (auto& t : types)
