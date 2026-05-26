@@ -3,8 +3,10 @@
 #include <filesystem>
 #include <set>
 #include <stack>
+#include <vector>
 
 #include "node_graph.h"
+#include "types.h"
 
 namespace NodePlot {
 
@@ -41,6 +43,27 @@ struct EvaluatedNodeGraph {
                           data);
     }
 
+    template <typename... Ts>
+    ErrorOr<std::variant<Ts...>> try_data_type_conversion_variant(Data data) {
+        std::array<ErrorOr<std::variant<Ts...>>, sizeof...(Ts)> res;
+        size_t i = 0;
+        (
+            [&]() {
+                auto val = try_data_type_conversion<Ts>(data);
+                if (val.has_value())
+                    res[i++] = val.value();
+                else
+                    res[i++] = std::unexpected(val.error());
+            }(),
+            ...);
+
+        for (size_t i = 0; i < sizeof...(Ts); i++)
+            if (res[i].has_value())
+                return res[i];
+
+        return ERR("Invalid type");
+    }
+
     template <typename T>
     ErrorOr<T> get_input_value(NodePlotFile* npf, NodeId node_id, InputId input_id) {
         auto data = get_input_data(npf, node_id, input_id);
@@ -63,23 +86,20 @@ struct EvaluatedNodeGraph {
             return ERR(input_id + ": " + data.error());
         }
 
-        std::array<ErrorOr<std::variant<Ts...>>, sizeof...(Ts)> res;
-        size_t i = 0;
-        (
-            [&]() {
-                auto val = try_data_type_conversion<Ts>(data.value());
-                if (val.has_value())
-                    res[i++] = val.value();
-                else
-                    res[i++] = std::unexpected(val.error());
-            }(),
-            ...);
+        auto convert = try_data_type_conversion_variant<Ts...>(data.value());
+        if (!convert.has_value()) {
+            return ERR(input_id + ": Invalid type");
+        }
 
-        for (size_t i = 0; i < sizeof...(Ts); i++)
-            if (res[i].has_value())
-                return res[i];
+        return convert.value();
+    }
 
-        return ERR(input_id + ": Invalid type");
+    bool validate_data_type(Data& data, DataType type) { return true; }
+    bool validate_data_types(Data& data, std::vector<DataType> types) {
+        bool success = false;
+        for (auto& t : types)
+            success |= validate_data_type(data, t);
+        return success;
     }
 
     ErrorOr<void> node_inputs_changed(NodePlotFile* npf, NodeId id) {

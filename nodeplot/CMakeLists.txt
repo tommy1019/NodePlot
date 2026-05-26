@@ -6,6 +6,7 @@ set(SOURCES
     src/node_registry.cpp
     src/types.cpp
     src/node_graph.cpp
+    src/utils.cpp
 
     src/node_impl/output.cpp
 

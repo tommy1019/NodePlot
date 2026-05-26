@@ -60,7 +60,7 @@ ErrorOr<NodeGraph> NodeGraph::from_json(nlohmann::json json) {
         }
 
         if (!NodeRegistry::node_map.contains(node_storage.type_id))
-            return ERR("Invalid NodeTypeId for node " + std::to_string(node_id));
+            return ERR("Invalid NodeTypeId for node " + std::to_string(node_id) + ": " + node_storage.type_id);
 
         auto inputs_json = TRY(get(nodes_it.value(), "inputs", "Missing Node Inputs for node " + std::to_string(node_id)));
         for (auto inputs_it = inputs_json.begin(); inputs_it != inputs_json.end(); inputs_it++) {

@@ -15,6 +15,7 @@ namespace NodePlot {
 using GraphId = std::string;
 
 using NodeTypeId = std::string;
+using SeriesTypeId = std::string;
 
 using InputId = std::string;
 using OutputId = std::string;
@@ -87,32 +88,6 @@ struct Column {
     }
 };
 
-struct ScatterSeries {
-    Column x;
-    Column y;
-
-    NodePlot::Color color;
-    double point_size = 1;
-};
-
-struct LineSeries {
-    Column x;
-    Column y;
-
-    NodePlot::Color color;
-    double stroke_width = 1;
-};
-
-struct RibbonSeries {
-    Column x;
-    Column y_min;
-    Column y_max;
-
-    NodePlot::Color color;
-};
-
-using Series = std::variant<ScatterSeries, LineSeries, RibbonSeries>;
-
 struct Table {
     std::map<std::string, Column> columns;
     std::vector<std::string> column_names;
@@ -121,6 +96,10 @@ struct Table {
 struct Pos {
     float x;
     float y;
+};
+
+struct Limits {
+    double x_low, x_high, y_low, y_high;
 };
 
 struct Margins {
@@ -148,16 +127,6 @@ struct PlotStyle {
 
     double title_font_size;
     Pos title_offset;
-};
-
-struct Plot {
-    std::vector<Series> series;
-    std::string title;
-    std::string x_label;
-    std::string y_label;
-    bool x_axis_log_scale;
-    bool y_axis_log_scale;
-    PlotStyle style;
 };
 
 namespace DrawCommands {
@@ -192,6 +161,21 @@ using DrawCommand = std::variant<DrawCommands::Line, DrawCommands::Circle, DrawC
 struct Figure {
     std::vector<DrawCommand> commands;
 };
+struct FigureBounds {
+    bool x_axis_log_scale;
+    bool y_axis_log_scale;
+
+    double x_transform_pre;
+    double y_transform_pre;
+
+    double x_scale;
+    double y_scale;
+
+    double x_transform_post;
+    double y_transform_post;
+
+    Pos normalize(Pos p) const;
+};
 
 enum class DataType {
     NUMBER,
@@ -204,7 +188,6 @@ enum class DataType {
     COLUMN,
 
     SERIES,
-    PLOT,
 
     FIGURE,
 
@@ -215,6 +198,13 @@ enum class DataType {
     PLOT_STYLE,
 };
 
-using Data = std::variant<double, int64_t, std::string, bool, Table, Column, Series, Plot, Figure, Pos, Margins, Color, PlotStyle>;
+struct GenericSeries;
+
+using Data = std::variant<double, int64_t, std::string, bool, Table, Column, GenericSeries, Figure, Pos, Margins, Color, PlotStyle>;
+
+struct GenericSeries {
+    SeriesTypeId type_id;
+    std::map<InputId, Data> data;
+};
 
 } // namespace NodePlot

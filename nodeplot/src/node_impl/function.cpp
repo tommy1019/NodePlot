@@ -25,8 +25,6 @@ ErrorOr<DataType> parse_data_type(std::string s) {
 
     if (s == "series")
         return DataType::SERIES;
-    if (s == "plot")
-        return DataType::PLOT;
 
     if (s == "margines")
         return DataType::MARGINES;

@@ -39,8 +39,11 @@ struct Node {
     NodeTypeId type_id;
     std::string display_name;
 
-    std::function<ErrorOr<std::vector<std::pair<InputId, Input>>>(NodePlotFile*, EvaluatedNodeGraph*, NodeId)> inputs;
-    std::function<ErrorOr<std::vector<std::pair<OutputId, Output>>>(NodePlotFile*, EvaluatedNodeGraph*, NodeId)> outputs;
+    using InputGenerator = std::function<ErrorOr<std::vector<std::pair<InputId, Input>>>(NodePlotFile*, EvaluatedNodeGraph*, NodeId)>;
+    using OutputGenerator = std::function<ErrorOr<std::vector<std::pair<OutputId, Output>>>(NodePlotFile*, EvaluatedNodeGraph*, NodeId)>;
+
+    InputGenerator inputs;
+    OutputGenerator outputs;
 
     std::function<ErrorOr<void>(NodePlotFile*, EvaluatedNodeGraph*, NodeId, EvaluatedNodeGraph::OutputCache&)> evaluate;
 };
