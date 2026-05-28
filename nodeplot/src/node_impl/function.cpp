@@ -10,18 +10,23 @@ using namespace NodePlot;
 ErrorOr<DataType> parse_data_type(std::string s) {
     if (s == "number")
         return DataType::NUMBER;
+    if (s == "number_column")
+        return DataType::NUMBER_COLUMN;
     if (s == "integer")
         return DataType::INTEGER;
+    if (s == "integer_column")
+        return DataType::INTEGER_COLUMN;
     if (s == "string")
         return DataType::STRING;
+    if (s == "string_column")
+        return DataType::STRING_COLUMN;
     if (s == "bool")
         return DataType::BOOLEAN;
+    if (s == "bool_column")
+        return DataType::BOOLEAN_COLUMN;
 
     if (s == "table")
         return DataType::TABLE;
-
-    if (s == "column")
-        return DataType::COLUMN;
 
     if (s == "series")
         return DataType::SERIES;
@@ -30,6 +35,8 @@ ErrorOr<DataType> parse_data_type(std::string s) {
         return DataType::MARGINES;
     if (s == "color")
         return DataType::COLOR;
+    if (s == "color_column")
+        return DataType::COLOR_COLUMN;
 
     if (s == "plot_style")
         return DataType::PLOT_STYLE;

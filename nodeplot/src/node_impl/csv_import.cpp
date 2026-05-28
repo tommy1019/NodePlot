@@ -104,7 +104,7 @@ void register_csv_import() {
                                                 res.column_names.emplace_back(s);
                                         }
 
-                                        std::vector<std::vector<std::string_view>> extracted_values;
+                                        std::vector<std::vector<std::string>> extracted_values;
 
                                         size_t rows_loaded = 0;
 
@@ -112,11 +112,11 @@ void register_csv_import() {
                                             auto l = extract_csv_elements(extract_line(cur));
 
                                             if (l.size() > extracted_values.size()) {
-                                                extracted_values.resize(l.size(), std::vector<std::string_view>(rows_loaded, std::string_view{}));
+                                                extracted_values.resize(l.size(), std::vector<std::string>(rows_loaded, std::string{}));
                                             }
 
                                             for (size_t i = 0; i < l.size(); i++) {
-                                                extracted_values[i].push_back(l[i]);
+                                                extracted_values[i].push_back(std::string(l[i]));
                                             }
                                             for (size_t i = l.size(); i < extracted_values.size(); i++) {
                                                 extracted_values[i].emplace_back();
@@ -129,11 +129,7 @@ void register_csv_import() {
                                             res.column_names.push_back(std::to_string(i));
 
                                         for (size_t i = 0; i < res.column_names.size(); i++)
-                                            res.columns.emplace(res.column_names[i],
-                                                                Column{Column::CSVImported{
-                                                                    .mapped_file = mapped_file,
-                                                                    .values = std::move(extracted_values[i]),
-                                                                }});
+                                            res.columns.emplace(res.column_names[i], extracted_values[i]);
 
                                         printf("Loaded CSV file with %zu columns and %zu rows\n", res.columns.size(), rows_loaded);
 

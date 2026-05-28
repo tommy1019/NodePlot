@@ -7,6 +7,7 @@
 
 #include "node_graph.h"
 #include "types.h"
+#include "utils.h"
 
 namespace NodePlot {
 
@@ -27,19 +28,33 @@ struct EvaluatedNodeGraph {
 
     template <typename T>
     ErrorOr<T> try_data_type_conversion(Data data) {
-        return std::visit(Utils::overloaded{[](std::string v) -> ErrorOr<T> {
-                                                if constexpr (std::is_same_v<T, std::string>)
-                                                    return v;
-                                                if constexpr (std::is_same_v<T, std::filesystem::path>)
-                                                    return std::filesystem::path(v);
-                                                return ERR("Invalid type, cannot convert from string. Value: '" + v + "'");
-                                            },
-                                            [](auto v) -> ErrorOr<T> {
-                                                if constexpr (std::is_same_v<decltype(v), T>)
-                                                    return v;
+        return std::visit(Utils::overloaded{
+                              [](std::vector<std::string> str_vec) -> ErrorOr<T> {
+                                  if constexpr (std::is_same_v<T, std::vector<std::string>>)
+                                      return str_vec;
+                                  if constexpr (std::is_same_v<T, std::vector<double>>) {
+                                      std::vector<double> res;
+                                      res.reserve(str_vec.size());
+                                      for (auto& s : str_vec)
+                                          res.push_back(Utils::string_to_double_with_nan(s));
+                                      return res;
+                                  }
+                                  return ERR("Invalid type, cannot convert from string_column.");
+                              },
+                              [](std::string v) -> ErrorOr<T> {
+                                  if constexpr (std::is_same_v<T, std::string>)
+                                      return v;
+                                  if constexpr (std::is_same_v<T, std::filesystem::path>)
+                                      return std::filesystem::path(v);
+                                  return ERR("Invalid type, cannot convert from string. Value: '" + v + "'");
+                              },
+                              [](auto v) -> ErrorOr<T> {
+                                  if constexpr (std::is_same_v<decltype(v), T>)
+                                      return v;
 
-                                                return ERR("Invalid type, unknown source type");
-                                            }},
+                                  return ERR("Invalid type, unknown source type");
+                              },
+                          },
                           data);
     }
 

@@ -16,8 +16,8 @@
                         }
                     },
                     "pos": [
-                        316.0,
-                        387.0
+                        -267.21636962890625,
+                        402.3479309082031
                     ],
                     "type_id": "csv_import"
                 },
@@ -35,8 +35,8 @@
                         }
                     },
                     "pos": [
-                        773.0414428710938,
-                        335.7124328613281
+                        189.8251190185547,
+                        351.0603942871094
                     ],
                     "type_id": "column_select"
                 },
@@ -133,8 +133,8 @@
                         }
                     },
                     "pos": [
-                        2668.80224609375,
-                        425.6007080078125
+                        2851.80224609375,
+                        427.6007080078125
                     ],
                     "type_id": "grid_layout"
                 },
@@ -256,27 +256,22 @@
                         }
                     },
                     "pos": [
-                        771.0,
-                        478.0
+                        187.78367614746094,
+                        493.3478698730469
                     ],
                     "type_id": "column_select"
                 },
                 "22": {
                     "inputs": {
                         "color": {
-                            "data_type": "color",
-                            "type": "data",
-                            "value": [
-                                1.0,
-                                0.0,
-                                0.0,
-                                1.0
-                            ]
+                            "node": 28,
+                            "output": "color",
+                            "type": "pin"
                         },
                         "point_size": {
-                            "data_type": "number",
-                            "type": "data",
-                            "value": 3.0
+                            "node": 27,
+                            "output": "result",
+                            "type": "pin"
                         },
                         "x": {
                             "node": 1,
@@ -290,8 +285,8 @@
                         }
                     },
                     "pos": [
-                        1336.001708984375,
-                        333.199951171875
+                        1772.001708984375,
+                        373.199951171875
                     ],
                     "type_id": "series_create_scatter"
                 },
@@ -309,8 +304,8 @@
                         }
                     },
                     "pos": [
-                        1302.001220703125,
-                        547.400634765625
+                        1298.001220703125,
+                        718.400634765625
                     ],
                     "type_id": "sampled_property_extract"
                 },
@@ -381,6 +376,83 @@
                         777.6021728515625
                     ],
                     "type_id": "series_create_line"
+                },
+                "27": {
+                    "inputs": {
+                        "a": {
+                            "node": 2,
+                            "output": "column",
+                            "type": "pin"
+                        },
+                        "b": {
+                            "data_type": "number",
+                            "type": "data",
+                            "value": 5.0
+                        },
+                        "operation": {
+                            "data_type": "string",
+                            "type": "data",
+                            "value": "*"
+                        }
+                    },
+                    "pos": [
+                        1261.6014404296875,
+                        536.600830078125
+                    ],
+                    "type_id": "binary_operation"
+                },
+                "28": {
+                    "inputs": {
+                        "alpha": {
+                            "data_type": "number",
+                            "type": "data",
+                            "value": 1.0
+                        },
+                        "hue": {
+                            "node": 29,
+                            "output": "result",
+                            "type": "pin"
+                        },
+                        "saturation": {
+                            "data_type": "number",
+                            "type": "data",
+                            "value": 1.0
+                        },
+                        "value": {
+                            "data_type": "number",
+                            "type": "data",
+                            "value": 1.0
+                        }
+                    },
+                    "pos": [
+                        1324.2010498046875,
+                        271.00048828125
+                    ],
+                    "type_id": "color_compose_hsv"
+                },
+                "29": {
+                    "inputs": {
+                        "a": {
+                            "data_type": "number",
+                            "type": "data",
+                            "value": 900.0
+                        },
+                        "b": {
+                            "node": 2,
+                            "output": "column",
+                            "type": "pin"
+                        },
+                        "operation": {
+                            "data_type": "string",
+                            "type": "data",
+                            "value": "*"
+                        }
+                    },
+                    "pos": [
+                        741.300048828125,
+                        226.7179718017578
+                    ],
+                    "type_id": "binary_operation"
                 },
                 "6": {
                     "inputs": {

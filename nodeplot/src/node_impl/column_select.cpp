@@ -18,7 +18,7 @@ void register_column_select() {
             },
             .outputs = [](NodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::vector<std::pair<OutputId, Node::Output>> {
                 return {
-                    {"column", Node::Output{.id = "column", .display_name = "Column", .valid_data_types = {DataType::COLUMN}}},
+                    {"column", Node::Output{.id = "column", .display_name = "Column", .valid_data_types = {DataType::STRING_COLUMN}}},
                 };
             },
             .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {

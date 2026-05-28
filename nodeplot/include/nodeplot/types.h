@@ -1,14 +1,11 @@
 #pragma once
 
-#include <charconv>
 #include <map>
-#include <memory>
 #include <string>
 #include <variant>
 #include <vector>
 
 #include "error.h"
-#include "utils.h"
 
 namespace NodePlot {
 
@@ -37,59 +34,8 @@ struct Color {
     float r, g, b, a;
 };
 
-struct Column {
-    struct CSVImported {
-        std::shared_ptr<MappedFile> mapped_file;
-        std::vector<std::string_view> values;
-    };
-
-    struct Numeric {
-        std::vector<double> values;
-    };
-
-    using ValueType = std::variant<std::string_view, double>;
-    std::variant<CSVImported, Numeric> raw_column;
-
-    size_t size() {
-        return std::visit([](auto c) { return c.values.size(); }, raw_column);
-    }
-
-    ValueType operator[](size_t index) {
-        return std::visit([&](auto c) -> ValueType { return c.values[index]; }, raw_column);
-    }
-
-    ErrorOr<Column::Numeric> as_numeric_column() {
-        if (std::holds_alternative<Numeric>(raw_column))
-            return std::get<Numeric>(raw_column);
-
-        return std::visit(Utils::overloaded{
-                              [](CSVImported& col) -> ErrorOr<Column::Numeric> {
-                                  std::vector<double> res;
-                                  res.reserve(col.values.size());
-
-                                  for (auto& s : col.values) {
-                                      float value;
-                                      auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), value);
-
-                                      if (ec == std::errc()) {
-                                          res.push_back(value);
-                                      } else if (ec == std::errc::invalid_argument) {
-                                          res.push_back(std::numeric_limits<float>::quiet_NaN());
-                                      } else if (ec == std::errc::result_out_of_range) {
-                                          res.push_back(std::numeric_limits<float>::quiet_NaN());
-                                      }
-                                  }
-
-                                  return Column::Numeric{res};
-                              },
-                              [](Numeric& col) -> ErrorOr<Column::Numeric> { return col; },
-                          },
-                          raw_column);
-    }
-};
-
 struct Table {
-    std::map<std::string, Column> columns;
+    std::map<std::string, std::vector<std::string>> columns;
     std::vector<std::string> column_names;
 };
 
@@ -179,13 +125,15 @@ struct FigureBounds {
 
 enum class DataType {
     NUMBER,
+    NUMBER_COLUMN,
     INTEGER,
+    INTEGER_COLUMN,
     STRING,
+    STRING_COLUMN,
     BOOLEAN,
+    BOOLEAN_COLUMN,
 
     TABLE,
-
-    COLUMN,
 
     SERIES,
 
@@ -194,13 +142,29 @@ enum class DataType {
     POSITION,
     MARGINES,
     COLOR,
+    COLOR_COLUMN,
 
     PLOT_STYLE,
 };
 
 struct GenericSeries;
 
-using Data = std::variant<double, int64_t, std::string, bool, Table, Column, GenericSeries, Figure, Pos, Margins, Color, PlotStyle>;
+using Data = std::variant<double,
+                          std::vector<double>,
+                          int64_t,
+                          std::vector<int64_t>,
+                          std::string,
+                          std::vector<std::string>,
+                          bool,
+                          std::vector<bool>,
+                          Table,
+                          GenericSeries,
+                          Figure,
+                          Pos,
+                          Margins,
+                          Color,
+                          std::vector<Color>,
+                          PlotStyle>;
 
 struct GenericSeries {
     SeriesTypeId type_id;

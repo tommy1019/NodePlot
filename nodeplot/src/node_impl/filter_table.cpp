@@ -1,5 +1,6 @@
 #include "error.h"
 #include "nodeplot.h"
+#include "utils.h"
 #include <string>
 #include <variant>
 #include <vector>
@@ -41,49 +42,54 @@ void register_filter_table() {
                 std::string compare_type = TRY(eng->get_input_value<std::string>(npf, node_id, "compare_type"));
                 bool numeric_compare = TRY(eng->get_input_value<bool>(npf, node_id, "numeric_compare"));
 
-                auto column = table.columns.find(column_name);
-                if (column == table.columns.end())
-                    return ERR("No column by the specified name found");
+                auto& column = TRY(Utils::try_find(table.columns, column_name, "No column by the specified name found")).get();
 
-                auto comparision_check = [&](auto col, auto compare_val) -> ErrorOr<std::vector<bool>> {
-                    std::vector<bool> res;
-                    res.reserve(col.values.size());
-                    for (auto& v : col.values) {
+                std::vector<bool> compared_column;
+                compared_column.reserve(column.size());
+
+                if (numeric_compare) {
+                    double compare_val = TRY(eng->get_input_value<double>(npf, node_id, "compare_value"));
+                    for (auto v : column) {
+                        double num_v = Utils::string_to_double_with_nan(v);
                         if (compare_type == "<") {
-                            res.push_back(v < compare_val);
+                            compared_column.push_back(num_v < compare_val);
                         } else if (compare_type == "<=") {
-                            res.push_back(v <= compare_val);
+                            compared_column.push_back(num_v <= compare_val);
                         } else if (compare_type == "==") {
-                            res.push_back(v == compare_val);
+                            compared_column.push_back(num_v == compare_val);
                         } else if (compare_type == "!=") {
-                            res.push_back(v != compare_val);
+                            compared_column.push_back(num_v != compare_val);
                         } else if (compare_type == ">=") {
-                            res.push_back(v >= compare_val);
+                            compared_column.push_back(num_v >= compare_val);
                         } else if (compare_type == ">") {
-                            res.push_back(v > compare_val);
+                            compared_column.push_back(num_v > compare_val);
                         } else {
                             return ERR("Invalid comparision type");
                         }
                     }
-                    return res;
-                };
-
-                auto compare_vals = TRY([&]() -> ErrorOr<std::vector<bool>> {
-                    if (numeric_compare) {
-                        return comparision_check(TRY(column->second.as_numeric_column()), TRY(eng->get_input_value<double>(npf, node_id, "compare_value")));
-                    } else {
-                        return std::visit(
-                            Utils::overloaded{
-                                [&](Column::CSVImported col) -> ErrorOr<std::vector<bool>> { return comparision_check(col, TRY(eng->get_input_value<std::string>(npf, node_id, "compare_value"))); },
-                                [](Column::Numeric col) -> ErrorOr<std::vector<bool>> { return ERR("Cannot compare a numeric column with a string"); },
-                            },
-                            column->second.raw_column);
-                        return comparision_check(TRY(column->second.as_numeric_column()), TRY(eng->get_input_value<double>(npf, node_id, "compare_value")));
+                } else {
+                    std::string compare_val = TRY(eng->get_input_value<std::string>(npf, node_id, "compare_value"));
+                    for (auto v : column) {
+                        if (compare_type == "<") {
+                            compared_column.push_back(v < compare_val);
+                        } else if (compare_type == "<=") {
+                            compared_column.push_back(v <= compare_val);
+                        } else if (compare_type == "==") {
+                            compared_column.push_back(v == compare_val);
+                        } else if (compare_type == "!=") {
+                            compared_column.push_back(v != compare_val);
+                        } else if (compare_type == ">=") {
+                            compared_column.push_back(v >= compare_val);
+                        } else if (compare_type == ">") {
+                            compared_column.push_back(v > compare_val);
+                        } else {
+                            return ERR("Invalid comparision type");
+                        }
                     }
-                }());
+                }
 
                 size_t retain_amt = 0;
-                for (auto v : compare_vals)
+                for (auto v : compared_column)
                     if (v)
                         retain_amt++;
 
@@ -91,17 +97,16 @@ void register_filter_table() {
                 res.column_names = table.column_names;
 
                 for (auto& c : table.columns) {
-                    res.columns[c.first] = std::visit(
-                        [&](auto raw_col) {
-                            decltype(raw_col) res;
-                            res.values.reserve(retain_amt);
+                    res.columns[c.first] = [&](std::vector<std::string> col) {
+                        std::vector<std::string> res;
+                        res.reserve(retain_amt);
 
-                            for (size_t i = 0; i < compare_vals.size(); i++)
-                                if (compare_vals[i])
-                                    res.values.push_back(raw_col.values[i]);
-                            return Column{res};
-                        },
-                        c.second.raw_column);
+                        for (size_t i = 0; i < compared_column.size(); i++)
+                            if (compared_column[i])
+                                res.push_back(col[i]);
+
+                        return res;
+                    }(c.second);
                 }
 
                 cache.computed_outputs["table"] = res;
