@@ -1,17 +1,17 @@
-#include "node_renderer.h"
-#include "imgui.h"
-#include "nodeplot/node.h"
-#include "nodeplot/node_graph.h"
-#include "nodeplot/nodeplot.h"
-#include "nodeplot/types.h"
-
 #include <optional>
 #include <string>
 #include <utility>
 #include <variant>
-
-#include <portable-file-dialogs.h>
 #include <vector>
+
+#include <nfd.h>
+
+#include "imgui.h"
+#include "node_renderer.h"
+#include "nodeplot/node.h"
+#include "nodeplot/node_graph.h"
+#include "nodeplot/nodeplot.h"
+#include "nodeplot/types.h"
 
 std::map<NodePlot::NodeTypeId, NodeRenderer::RenderFunction> NodeRenderer::render_override_map;
 
@@ -74,11 +74,18 @@ NodeRenderer::RenderFunction NodeRenderer::default_renderer = [](Renderer& rnd, 
                             ATTR_OFFSET += INPUT_HEIGHT;
                             if (rnd.button(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_HEIGHT, INPUT_HEIGHT}, "...")) {
                                 if (!is_pin_set) {
-                                    auto selection = pfd::open_file("Choose CSV File", ctx.npf->path.parent_path(), {"CSV Files", "*.csv", "All Files", "*"}, pfd::opt::none).result();
-                                    if (!selection.empty()) {
+                                    nfdu8char_t* out_path;
+                                    nfdopendialogu8args_t args = {0};
+                                    nfdu8filteritem_t filters[2] = {{"CSV Files", "csv"}, {"All Files", "*"}};
+                                    args.filterList = filters;
+                                    args.filterCount = 2;
+
+                                    nfdresult_t result = NFD_OpenDialogU8_With(&out_path, &args);
+                                    if (result == NFD_OKAY) {
                                         auto& data = std::get<NodePlot::Data>(input_storage);
-                                        data = std::filesystem::relative(std::filesystem::path(selection.front()), ctx.npf->path.parent_path()).string();
+                                        data = std::filesystem::relative(std::filesystem::path(std::string(out_path)), ctx.npf->path.parent_path()).string();
                                         updated = true;
+                                        NFD_FreePathU8(out_path);
                                     }
                                 }
                             }

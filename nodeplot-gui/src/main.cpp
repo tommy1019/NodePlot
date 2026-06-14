@@ -6,10 +6,10 @@
 
 #include <imgui.h>
 
-#include <portable-file-dialogs.h>
-
 #include <nodeplot/error.h>
 #include <nodeplot/nodeplot.h>
+
+#include <nfd.h>
 
 #include "node_renderer.h"
 #include "nodeplot/node_graph.h"
@@ -148,13 +148,20 @@ int main(int argc, char** argv) {
                     save();
                 }
                 if (ImGui::MenuItem("Save-As")) {
-                    auto selection = pfd::save_file("Save Nodeplot File As", "", {"Json File", "*.json"}, pfd::opt::none).result();
-                    if (!selection.empty()) {
-                        std::string filename = selection;
+                    nfdu8char_t* out_path;
+                    nfdsavedialogu8args_t args = {0};
+                    nfdu8filteritem_t filters[1] = {{"NodePlot File", "json"}};
+                    args.filterList = filters;
+                    args.filterCount = 1;
+
+                    nfdresult_t result = NFD_SaveDialogU8_With(&out_path, &args);
+                    if (result == NFD_OKAY) {
+                        std::string filename = out_path;
                         if (!filename.ends_with(".json"))
                             filename += ".json";
 
                         save(filename);
+                        NFD_FreePathU8(out_path);
                     }
                 }
                 ImGui::EndMenu();

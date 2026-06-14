@@ -46,11 +46,12 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(lunasvg)
 
 FetchContent_Declare(
-  portable_file_dialogs
-  GIT_REPOSITORY https://github.com/samhocevar/portable-file-dialogs
-  GIT_TAG        main
+    nativefiledialog
+    GIT_REPOSITORY https://github.com/btzy/nativefiledialog-extended
+    GIT_TAG        v1.3.0
 )
-FetchContent_MakeAvailable(portable_file_dialogs)
+FetchContent_MakeAvailable(nativefiledialog)
+
 
 add_subdirectory(nodeplot)
 add_subdirectory(nodeplot-gui)

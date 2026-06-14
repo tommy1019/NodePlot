@@ -9,4 +9,4 @@ set(SOURCES
 
 add_executable(nodeplot-gui ${SOURCES})
 
-target_link_libraries(nodeplot-gui PUBLIC nodeplot lunasvg::lunasvg imgui portable_file_dialogs)
+target_link_libraries(nodeplot-gui PUBLIC nodeplot lunasvg::lunasvg imgui nfd)
