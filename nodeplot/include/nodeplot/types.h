@@ -1,11 +1,10 @@
 #pragma once
 
 #include <map>
+#include <memory>
 #include <string>
 #include <variant>
 #include <vector>
-
-#include "error.h"
 
 namespace NodePlot {
 
@@ -34,10 +33,11 @@ struct Color {
     float r, g, b, a;
 };
 
-struct Table {
+struct TableData {
     std::map<std::string, std::vector<std::string>> columns;
     std::vector<std::string> column_names;
 };
+using Table = std::shared_ptr<TableData>;
 
 struct Pos {
     float x;

@@ -55,7 +55,7 @@ void register_csv_import() {
 
                                         auto mapped_file = std::shared_ptr<MappedFile>(new MappedFile{.data = map, .file_size = file_size});
 
-                                        Table res;
+                                        Table res(new TableData);
                                         auto full_string_view = std::string_view(mapped_file->data, mapped_file->file_size);
 
                                         auto extract_csv_elements = [](std::string_view line) {
@@ -101,7 +101,7 @@ void register_csv_import() {
                                         if (has_headers) {
                                             auto extracted_names = extract_csv_elements(extract_line(cur));
                                             for (auto& s : extracted_names)
-                                                res.column_names.emplace_back(s);
+                                                res->column_names.emplace_back(s);
                                         }
 
                                         std::vector<std::vector<std::string>> extracted_values;
@@ -125,13 +125,13 @@ void register_csv_import() {
                                             rows_loaded++;
                                         }
 
-                                        for (size_t i = res.column_names.size(); i < extracted_values.size(); i++)
-                                            res.column_names.push_back(std::to_string(i));
+                                        for (size_t i = res->column_names.size(); i < extracted_values.size(); i++)
+                                            res->column_names.push_back(std::to_string(i));
 
-                                        for (size_t i = 0; i < res.column_names.size(); i++)
-                                            res.columns.emplace(res.column_names[i], extracted_values[i]);
+                                        for (size_t i = 0; i < res->column_names.size(); i++)
+                                            res->columns.emplace(res->column_names[i], extracted_values[i]);
 
-                                        printf("Loaded CSV file with %zu columns and %zu rows\n", res.columns.size(), rows_loaded);
+                                        printf("Loaded CSV file with %zu columns and %zu rows\n", res->columns.size(), rows_loaded);
 
                                         cache.computed_outputs["table"] = res;
 

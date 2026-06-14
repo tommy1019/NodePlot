@@ -25,8 +25,8 @@ void register_column_select() {
                 Table table = TRY(eng->get_input_value<Table>(npf, node_id, "table"));
                 std::string column_name = TRY(eng->get_input_value<std::string>(npf, node_id, "column_name"));
 
-                auto res = table.columns.find(column_name);
-                if (res == table.columns.end())
+                auto res = table->columns.find(column_name);
+                if (res == table->columns.end())
                     return ERR("No column by the specified name found");
 
                 cache.computed_outputs["column"] = res->second;

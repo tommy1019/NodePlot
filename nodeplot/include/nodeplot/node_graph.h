@@ -1,9 +1,11 @@
 #pragma once
 
-#include "types.h"
+#include <optional>
 
 #include <nlohmann/json.hpp>
-#include <optional>
+
+#include "error.h"
+#include "types.h"
 
 namespace NodePlot {
 

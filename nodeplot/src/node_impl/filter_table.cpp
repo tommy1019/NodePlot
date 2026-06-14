@@ -42,7 +42,7 @@ void register_filter_table() {
                 std::string compare_type = TRY(eng->get_input_value<std::string>(npf, node_id, "compare_type"));
                 bool numeric_compare = TRY(eng->get_input_value<bool>(npf, node_id, "numeric_compare"));
 
-                auto& column = TRY(Utils::try_find(table.columns, column_name, "No column by the specified name found")).get();
+                auto& column = TRY(Utils::try_find(table->columns, column_name, "No column by the specified name found")).get();
 
                 std::vector<bool> compared_column;
                 compared_column.reserve(column.size());
@@ -93,11 +93,11 @@ void register_filter_table() {
                     if (v)
                         retain_amt++;
 
-                Table res;
-                res.column_names = table.column_names;
+                Table res(new TableData);
+                res->column_names = table->column_names;
 
-                for (auto& c : table.columns) {
-                    res.columns[c.first] = [&](std::vector<std::string> col) {
+                for (auto& c : table->columns) {
+                    res->columns[c.first] = [&](std::vector<std::string> col) {
                         std::vector<std::string> res;
                         res.reserve(retain_amt);
 

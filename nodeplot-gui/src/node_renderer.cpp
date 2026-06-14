@@ -4,9 +4,9 @@
 #include <variant>
 #include <vector>
 
+#include <imgui.h>
 #include <nfd.h>
 
-#include "imgui.h"
 #include "node_renderer.h"
 #include "nodeplot/node.h"
 #include "nodeplot/node_graph.h"
@@ -97,8 +97,8 @@ NodeRenderer::RenderFunction NodeRenderer::default_renderer = [](Renderer& rnd, 
                                 ATTR_OFFSET += INPUT_HEIGHT;
 
                                 std::vector<std::pair<std::string, std::string>> options;
-                                options.reserve(table->column_names.size());
-                                for (auto& h : table->column_names)
+                                options.reserve(table.value()->column_names.size());
+                                for (auto& h : table.value()->column_names)
                                     options.emplace_back(h, h);
 
                                 auto res = rnd.dropdown(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_HEIGHT, INPUT_HEIGHT}, "\\/", options);
