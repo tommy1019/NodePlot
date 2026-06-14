@@ -3,6 +3,7 @@
 #include "nodeplot.h"
 #include "types.h"
 #include "utils.h"
+#include <type_traits>
 #include <variant>
 #include <vector>
 
@@ -46,22 +47,33 @@ void register_series_create() {
                     if (x_col.size() != std::get<std::vector<double>>(point_size).size())
                         return ERR("Columns are not of the same size");
 
-                for (size_t i = 0; i < x_col.size(); i++) {
-                    auto [x, y] = bounds.normalize({(float)x_col[i], (float)y_col[i]});
-                    fig.commands.push_back(DrawCommands::Circle{
-                        .pos = Pos{(float)x, (float)y},
-                        .r = std::visit(Utils::overloaded{
-                                            [&](std::vector<double> vec) { return vec[i]; },
-                                            [](double c) { return c; },
-                                        },
-                                        point_size),
-                        .color = std::visit(Utils::overloaded{
-                                                [&](std::vector<Color> vec) { return vec[i]; },
-                                                [](Color c) { return c; },
-                                            },
-                                            color),
-                    });
-                }
+                std::visit(
+                    [&](auto point_size, auto color) {
+                        for (size_t i = 0; i < x_col.size(); i++) {
+                            auto [x, y] = bounds.normalize({(float)x_col[i], (float)y_col[i]});
+
+                            Color color_val;
+                            if constexpr (std::is_same_v<decltype(color), Color>)
+                                color_val = color;
+                            else
+                                color_val = color[i];
+
+                            double point_size_val;
+                            if constexpr (std::is_same_v<decltype(point_size), double>)
+                                point_size_val = point_size;
+                            else
+                                point_size_val = point_size[i];
+
+                            fig.commands.push_back(DrawCommands::Circle{
+                                .pos = Pos{(float)x, (float)y},
+                                .r = point_size_val,
+                                .color = color_val,
+                            });
+                        }
+                    },
+                    point_size,
+                    color);
+
                 return {};
             },
         });
