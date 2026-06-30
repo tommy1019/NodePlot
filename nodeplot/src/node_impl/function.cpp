@@ -28,6 +28,9 @@ ErrorOr<DataType> parse_data_type(std::string s) {
     if (s == "table")
         return DataType::TABLE;
 
+    if (s == "figure")
+        return DataType::FIGURE;
+
     if (s == "series")
         return DataType::SERIES;
 
