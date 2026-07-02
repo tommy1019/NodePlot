@@ -183,7 +183,7 @@ int main(int argc, char** argv) {
                         if (ImGui::MenuItem(n.second.display_name.c_str())) {
                             auto win_size = ImGui::GetWindowSize();
                             auto placement_pos = node_renderer->screen_to_world(ImVec2(win_size.x, win_size.y));
-                            cur_ng().create_node(&npf, current_graph, n.second.type_id, placement_pos.x, placement_pos.y);
+                            MUST(cur_ng().create_node(&npf, current_graph, n.second.type_id, placement_pos.x, placement_pos.y));
                         }
                     }
                     ImGui::EndMenu();
@@ -260,6 +260,7 @@ int main(int argc, char** argv) {
             ImGui::GetStyle().SeparatorSize = 1.0f;
 
             std::set<NodePlot::NodeId> nodes_to_delete;
+            std::set<NodePlot::NodeId> nodes_to_dupe;
 
             bool did_update = false;
 
@@ -358,6 +359,15 @@ int main(int argc, char** argv) {
                                 nodes_to_delete.insert(id);
                             }
                         }
+
+                        if (ImGui::MenuItem("Duplicate")) {
+                            if (selected_windows.contains(id)) {
+                                nodes_to_dupe.insert_range(selected_windows);
+                            } else {
+                                nodes_to_dupe.insert(id);
+                            }
+                        }
+
                         ImGui::EndPopup();
                     }
                 }
@@ -390,6 +400,42 @@ int main(int argc, char** argv) {
 
                 for (auto& n : nodes_to_delete) {
                     nodes.erase(n);
+                }
+            }
+
+            if (nodes_to_dupe.size() > 0) {
+                std::map<NodePlot::NodeId, NodePlot::NodeId> created_map;
+
+                for (auto& src_id : nodes_to_dupe) {
+                    auto src = MUST(NodePlot::Utils::try_find(nodes, src_id, "Trying to dupe invalid node")).get();
+                    auto dst_id = MUST(cur_ng().create_node(&npf, current_graph, src.type_id, src.pos.x, src.pos.y));
+                    created_map[src_id] = dst_id;
+                }
+
+                nodes_to_dupe.clear();
+                selected_windows.clear();
+
+                for (auto [src_id, dst_id] : created_map) {
+                    selected_windows.insert(dst_id);
+
+                    auto& src = MUST(NodePlot::Utils::try_find(nodes, src_id, "Trying to dupe invalid node")).get();
+                    auto& dst = MUST(NodePlot::Utils::try_find(nodes, dst_id, "Failed to find created node")).get();
+
+                    auto& type = MUST(NodePlot::Utils::try_find(NodePlot::NodeRegistry::node_map, src.type_id, "Invalid type")).get();
+                    auto inputs = MUST(type.inputs(&npf, &cur_eng(), src_id));
+
+                    for (auto& i : inputs) {
+                        dst.input_storage[i.first] = src.input_storage[i.first];
+                        auto& input = dst.input_storage[i.first];
+                        if (std::holds_alternative<NodePlot::NodeGraph::InputPin>(input)) {
+                            if (auto f = created_map.find(std::get<NodePlot::NodeGraph::InputPin>(input).node_id); f != created_map.end()) {
+                                input = NodePlot::NodeGraph::InputPin{
+                                    .node_id = f->second,
+                                    .output_id = std::get<NodePlot::NodeGraph::InputPin>(input).output_id,
+                                };
+                            }
+                        }
+                    }
                 }
             }
 
