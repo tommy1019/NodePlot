@@ -103,6 +103,7 @@ void register_grid_layout() {
                                                                            .anchor = t.anchor,
                                                                            .font_size = t.font_size,
                                                                            .rotate = t.rotate,
+                                                                           .bold = t.bold,
                                                                        });
                                                                    },
                                                                },

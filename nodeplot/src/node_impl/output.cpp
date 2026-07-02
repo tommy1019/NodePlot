@@ -79,7 +79,7 @@ void register_output() {
                                                            },
                                                            [&](DrawCommands::Text& t) {
                                                                ss << "<g transform=\"translate(" << (t.pos.x * width) << ", " << (t.pos.y * height) << ")\">\n";
-                                                               ss << "<text font-family=\"sans-serif\" text-anchor=\"" + [&]() -> std::string {
+                                                               ss << "<text font-family=\"sans-serif\" font-weight=\"" << (t.bold ? "bold" : "normal") << "\" text-anchor=\"" + [&]() -> std::string {
                                                                    switch (t.anchor) {
                                                                    case NodePlot::DrawCommands::Text::LEFT:
                                                                        return "start";

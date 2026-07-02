@@ -106,6 +106,7 @@ struct Text {
     enum { LEFT, MIDDLE, RIGHT } anchor;
     double font_size;
     double rotate = 0;
+    bool bold = false;
 };
 } // namespace DrawCommands
 
