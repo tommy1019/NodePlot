@@ -407,8 +407,9 @@ int main(int argc, char** argv) {
                 std::map<NodePlot::NodeId, NodePlot::NodeId> created_map;
 
                 for (auto& src_id : nodes_to_dupe) {
+                    constexpr float offset = 20;
                     auto src = MUST(NodePlot::Utils::try_find(nodes, src_id, "Trying to dupe invalid node")).get();
-                    auto dst_id = MUST(cur_ng().create_node(&npf, current_graph, src.type_id, src.pos.x, src.pos.y));
+                    auto dst_id = MUST(cur_ng().create_node(&npf, current_graph, src.type_id, src.pos.x + offset, src.pos.y + offset));
                     created_map[src_id] = dst_id;
                 }
 
