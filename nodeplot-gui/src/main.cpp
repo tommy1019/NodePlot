@@ -251,7 +251,7 @@ int main(int argc, char** argv) {
             }
 
             for (auto& [id, storage] : nodes) {
-                node_renderer->render_input_paths(id, storage);
+                MAYBE(node_renderer->render_input_paths(id, storage));
             }
 
             auto old_style = ImGui::GetStyle();
@@ -352,7 +352,11 @@ int main(int argc, char** argv) {
 
                     if (ImGui::BeginPopupContextWindow()) {
                         if (ImGui::MenuItem("Delete")) {
-                            nodes_to_delete.insert(id);
+                            if (selected_windows.contains(id)) {
+                                nodes_to_delete.insert_range(selected_windows);
+                            } else {
+                                nodes_to_delete.insert(id);
+                            }
                         }
                         ImGui::EndPopup();
                     }
