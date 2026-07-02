@@ -26,7 +26,7 @@ void register_figure() {
                                         res.emplace_back("x_label", Node::Input{.id = "x_label", .display_name = "X Label", .valid_data_types = {DataType::STRING}});
                                         res.emplace_back("y_label", Node::Input{.id = "y_label", .display_name = "Y Label", .valid_data_types = {DataType::STRING}});
                                         res.emplace_back("x_axis_log_scale", Node::Input{.id = "x_axis_tick_mark_size", .display_name = "X Axis Log Scale", .valid_data_types = {DataType::BOOLEAN}});
-                                        res.emplace_back("y_axis_log_scale", Node::Input{.id = "y_axis_log_scale", .display_name = "X Axis Log Scale", .valid_data_types = {DataType::BOOLEAN}});
+                                        res.emplace_back("y_axis_log_scale", Node::Input{.id = "y_axis_log_scale", .display_name = "Y Axis Log Scale", .valid_data_types = {DataType::BOOLEAN}});
                                         res.emplace_back("style", Node::Input{.id = "style", .display_name = "Style", .valid_data_types = {DataType::PLOT_STYLE}});
 
                                         int64_t num_series = std::clamp(eng->get_input_value<int64_t>(npf, node_id, "num_series").value_or(0), int64_t{0}, int64_t{255});
@@ -258,6 +258,7 @@ void register_figure() {
                                             .text = title,
                                             .anchor = NodePlot::DrawCommands::Text::MIDDLE,
                                             .font_size = style.title_font_size,
+                                            .bold = true,
                                         });
 
                                         cache.computed_outputs["figure"] = res;
