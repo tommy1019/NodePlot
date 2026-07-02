@@ -12,7 +12,7 @@ ErrorOr<std::shared_ptr<SVGRenderer>> SVGRenderer::create(ImVec2 size, std::stri
     res->m_size = size;
     res->m_svg = svg;
 
-    res->recreate_texture();
+    TRY(res->recreate_texture());
 
     return res;
 }
@@ -20,6 +20,9 @@ ErrorOr<std::shared_ptr<SVGRenderer>> SVGRenderer::create(ImVec2 size, std::stri
 ErrorOr<void> SVGRenderer::recreate_texture() {
 
     auto document = lunasvg::Document::loadFromData(m_svg);
+    if (document == nullptr) {
+        return ERR("Failed to render SVG");
+    }
 
     ImVec2 intrinsic_size = {document->width(), document->height()};
 
