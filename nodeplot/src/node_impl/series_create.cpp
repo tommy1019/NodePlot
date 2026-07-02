@@ -177,4 +177,110 @@ void register_series_create() {
                 return {};
             },
         });
+
+    NodeRegistry::register_series(
+        "partitioned_bars",
+        [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id) -> std::vector<std::pair<InputId, Node::Input>> {
+            std::vector<std::pair<InputId, Node::Input>> res;
+
+            res.emplace_back("num_partitions", Node::Input{.id = "num_partitions", .display_name = "Number of Partitions", .valid_data_types = {DataType::INTEGER}});
+
+            res.emplace_back("width", Node::Input{.id = "width", .display_name = "Width", .valid_data_types = {DataType::NUMBER}});
+
+            res.emplace_back("x", Node::Input{.id = "x", .display_name = "X", .valid_data_types = {DataType::NUMBER_COLUMN}});
+
+            int64_t num_series = std::clamp(eng->get_input_value<int64_t>(npf, node_id, "num_partitions").value_or(0), int64_t{0}, int64_t{255});
+            for (int64_t i = 0; i < num_series; i++) {
+                std::string name = "partition_" + std::to_string(i);
+                std::string name_color = "partition_color_" + std::to_string(i);
+                res.emplace_back(name, Node::Input{.id = name, .display_name = "Partition " + std::to_string(i), .valid_data_types = {DataType::NUMBER_COLUMN}});
+                res.emplace_back(name_color,
+                                 Node::Input{.id = name_color, .display_name = "Partition " + std::to_string(i) + " Color", .valid_data_types = {DataType::COLOR}, .default_value = Color{1, 0, 0, 1}});
+            }
+
+            return res;
+        },
+        {
+            .display_name = "Partitioned Bars",
+            .get_limits = [](NodePlotFile*, EvaluatedNodeGraph* eng, const GenericSeries& s) -> ErrorOr<Limits> {
+                auto x_col = TRY(eng->try_data_type_conversion<std::vector<double>>(TRY(Utils::try_find(s.data, "x", "Missing"))));
+                auto x = Utils::find_limits(x_col);
+
+                int64_t num_series = std::clamp(eng->try_data_type_conversion<int64_t>(TRY(Utils::try_find(s.data, "num_partitions", "Missing"))).value_or(0), int64_t{0}, int64_t{255});
+
+                double width = TRY(eng->try_data_type_conversion<double>(TRY(Utils::try_find(s.data, "width", "Missing"))));
+
+                double low = std::numeric_limits<double>::infinity();
+                double high = -std::numeric_limits<double>::infinity();
+
+                std::vector<double> sum_col;
+                sum_col.resize(x_col.size());
+
+                for (int64_t i = 0; i < num_series; i++) {
+                    std::string name = "partition_" + std::to_string(i);
+                    auto col = TRY(eng->try_data_type_conversion<std::vector<double>>(TRY(Utils::try_find(s.data, name, "Missing Lim"))));
+
+                    if (col.size() != x_col.size())
+                        return ERR("Columns are not of the same size");
+
+                    for (size_t i = 0; i < x_col.size(); i++)
+                        sum_col[i] += col[i];
+                }
+
+                auto y = Utils::find_limits(sum_col);
+
+                return Limits{
+                    .x_low = x.first - width / 2,
+                    .x_high = x.second + width / 2,
+                    .y_low = 0,
+                    .y_high = y.second,
+                };
+            },
+            .evalulate = [](NodePlotFile*, EvaluatedNodeGraph* eng, const GenericSeries& s, Figure& fig, const FigureBounds& bounds) -> ErrorOr<void> {
+                auto x_col = TRY(eng->try_data_type_conversion<std::vector<double>>(TRY(Utils::try_find(s.data, "x", "Missing"))));
+
+                std::vector<std::vector<double>> cols;
+                std::vector<Color> colors;
+
+                int64_t num_series = std::clamp(eng->try_data_type_conversion<int64_t>(TRY(Utils::try_find(s.data, "num_partitions", "Missing"))).value_or(0), int64_t{0}, int64_t{255});
+
+                double width = TRY(eng->try_data_type_conversion<double>(TRY(Utils::try_find(s.data, "width", "Missing"))));
+
+                for (int64_t i = 0; i < num_series; i++) {
+                    std::string name = "partition_" + std::to_string(i);
+                    std::string name_color = "partition_color_" + std::to_string(i);
+                    cols.push_back(TRY(eng->try_data_type_conversion<std::vector<double>>(TRY(Utils::try_find(s.data, name, "Missing")))));
+                    colors.push_back(TRY(eng->try_data_type_conversion<Color>(TRY(Utils::try_find(s.data, name_color, "Missing Color")))));
+                }
+
+                for (auto& c : cols) {
+                    if (c.size() != x_col.size())
+                        return ERR("Columns are not of the same size");
+                }
+
+                for (auto& v : x_col)
+
+                    for (size_t i = 0; i < x_col.size(); i++) {
+                        auto x = x_col[i];
+
+                        double cur_sum = 0;
+
+                        for (size_t j = 0; j < cols.size(); j++) {
+                            auto v = cols[j][i];
+
+                            auto [x1, y1] = bounds.normalize({(float)(x - width / 2), (float)cur_sum});
+                            auto [x2, y2] = bounds.normalize({(float)(x + width / 2), (float)(cur_sum + v)});
+
+                            cur_sum += v;
+
+                            fig.commands.push_back(DrawCommands::Rect{
+                                .a = Pos{x1, y1},
+                                .b = Pos{x2, y2},
+                                .color = colors[j],
+                            });
+                        }
+                    }
+                return {};
+            },
+        });
 }

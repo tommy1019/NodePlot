@@ -72,6 +72,15 @@ void register_grid_layout() {
                                                                            .color = c.color,
                                                                        });
                                                                    },
+                                                                   [&](DrawCommands::Rect& r) {
+                                                                       res.commands.push_back(DrawCommands::Rect{
+                                                                           .a = transform_pos(r.a),
+                                                                           .b = transform_pos(r.b),
+                                                                           .color = r.color,
+                                                                           .stroke_color = r.stroke_color,
+                                                                           .stroke_width = r.stroke_width,
+                                                                       });
+                                                                   },
                                                                    [&](DrawCommands::Polygon& p) {
                                                                        std::vector<Pos> new_pos;
                                                                        new_pos.reserve(p.points.size());

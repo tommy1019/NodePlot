@@ -87,6 +87,13 @@ struct Circle {
     double r;
     Color color;
 };
+struct Rect {
+    Pos a;
+    Pos b;
+    Color color;
+    Color stroke_color = Color{0, 0, 0, 0};
+    double stroke_width = 0;
+};
 struct Polygon {
     std::vector<Pos> points;
     Color stroke_color;
@@ -102,7 +109,7 @@ struct Text {
 };
 } // namespace DrawCommands
 
-using DrawCommand = std::variant<DrawCommands::Line, DrawCommands::Circle, DrawCommands::Polygon, DrawCommands::Text>;
+using DrawCommand = std::variant<DrawCommands::Line, DrawCommands::Circle, DrawCommands::Rect, DrawCommands::Polygon, DrawCommands::Text>;
 
 struct Figure {
     std::vector<DrawCommand> commands;

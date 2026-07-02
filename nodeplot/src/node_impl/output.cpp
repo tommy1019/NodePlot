@@ -52,6 +52,15 @@ void register_output() {
                                                                ss << "<circle cx=\"" << (c.pos.x * width) << "\" cy=\"" << (c.pos.y * height) << "\" r=\"" << c.r << "\" fill=\""
                                                                   << color_to_svg(c.color) << "\" fill-opacity=\"" << c.color.a << "\" />\n";
                                                            },
+                                                           [&](DrawCommands::Rect& r) {
+                                                               float x = std::min(r.a.x, r.b.x);
+                                                               float y = std::min(r.a.y, r.b.y);
+                                                               float w = std::max(r.a.x, r.b.x) - x;
+                                                               float h = std::max(r.a.y, r.b.y) - y;
+                                                               ss << "<rect x=\"" << (x * width) << "\" y=\"" << (y * height) << "\" width=\"" << (w * width) << "\" height=\"" << (h * height)
+                                                                  << "\" fill=\"" << color_to_svg(r.color) << "\" fill-opacity=\"" << r.color.a << "\" stroke=\"" << color_to_svg(r.stroke_color)
+                                                                  << "\" stroke-opacity=\"" + std::to_string(r.stroke_color.a) + "\" stroke-width=\"" << r.stroke_width << "\" />\n";
+                                                           },
                                                            [&](DrawCommands::Polygon& p) {
                                                                ss << "<polygon points=\"";
 
