@@ -243,13 +243,13 @@ void register_figure() {
                                             .pos = Pos{0.5f + style.x_axis_label_offset.x, 1.0f + style.x_axis_label_offset.y},
                                             .text = x_label,
                                             .anchor = NodePlot::DrawCommands::Text::MIDDLE,
-                                            .font_size = style.title_font_size,
+                                            .font_size = style.x_axis_label_font_size,
                                         });
                                         res.commands.push_back(DrawCommands::Text{
                                             .pos = Pos{0.0f + style.y_axis_label_offset.x, 0.5f + style.y_axis_label_offset.y},
                                             .text = y_label,
                                             .anchor = NodePlot::DrawCommands::Text::MIDDLE,
-                                            .font_size = style.title_font_size,
+                                            .font_size = style.y_axis_label_font_size,
                                             .rotate = -90,
                                         });
 
