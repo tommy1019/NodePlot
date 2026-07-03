@@ -74,7 +74,7 @@ void register_value() {
                                             {"red", Node::Input{.id = "red", .display_name = "Red", .valid_data_types = {DataType::NUMBER, DataType::NUMBER_COLUMN}, .default_value = 1.0}},
                                             {"green", Node::Input{.id = "green", .display_name = "Green", .valid_data_types = {DataType::NUMBER, DataType::NUMBER_COLUMN}, .default_value = 0.0}},
                                             {"blue", Node::Input{.id = "blue", .display_name = "Blue", .valid_data_types = {DataType::NUMBER, DataType::NUMBER_COLUMN}, .default_value = 0.0}},
-                                            {"alpha", Node::Input{.id = "alpha", .display_name = "alpha", .valid_data_types = {DataType::NUMBER, DataType::NUMBER_COLUMN}, .default_value = 1.0}},
+                                            {"alpha", Node::Input{.id = "alpha", .display_name = "Alpha", .valid_data_types = {DataType::NUMBER, DataType::NUMBER_COLUMN}, .default_value = 1.0}},
                                         };
                                     },
                                     .outputs = [](NodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::vector<std::pair<OutputId, Node::Output>> {
@@ -183,7 +183,7 @@ void register_value() {
                                             {"red", Node::Output{.id = "red", .display_name = "Red", .valid_data_types = {DataType::NUMBER, DataType::NUMBER_COLUMN}}},
                                             {"green", Node::Output{.id = "green", .display_name = "Green", .valid_data_types = {DataType::NUMBER, DataType::NUMBER_COLUMN}}},
                                             {"blue", Node::Output{.id = "blue", .display_name = "Blue", .valid_data_types = {DataType::NUMBER, DataType::NUMBER_COLUMN}}},
-                                            {"alpha", Node::Output{.id = "alpha", .display_name = "alpha", .valid_data_types = {DataType::NUMBER, DataType::NUMBER_COLUMN}}},
+                                            {"alpha", Node::Output{.id = "alpha", .display_name = "Alpha", .valid_data_types = {DataType::NUMBER, DataType::NUMBER_COLUMN}}},
                                         };
                                     },
                                     .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
