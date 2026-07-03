@@ -385,6 +385,8 @@ int main(int argc, char** argv) {
             if (nodes_to_delete.size() > 0) {
                 did_update = true;
 
+                selected_windows.clear();
+
                 if (current_graph == "main") {
                     for (auto& n : nodes_to_delete) {
                         MAYBE(main_eng.node_inputs_changed(&npf, n));
@@ -404,6 +406,8 @@ int main(int argc, char** argv) {
             }
 
             if (nodes_to_dupe.size() > 0) {
+                did_update = true;
+
                 std::map<NodePlot::NodeId, NodePlot::NodeId> created_map;
 
                 for (auto& src_id : nodes_to_dupe) {
