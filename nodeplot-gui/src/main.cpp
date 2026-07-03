@@ -293,9 +293,18 @@ int main(int argc, char** argv) {
                             selected_windows.clear();
                         auto cur_mouse = ImGui::GetIO().MousePos;
                         for (auto& [id, storage] : nodes) {
-                            auto screen_pos = node_renderer->world_to_screen({storage.pos.x, storage.pos.y});
-                            if (std::min(cur_mouse.x, left_drag_start->x) < screen_pos.x && screen_pos.x < std::max(cur_mouse.x, left_drag_start->x)
-                                && std::min(cur_mouse.y, left_drag_start->y) < screen_pos.y && screen_pos.y < std::max(cur_mouse.y, left_drag_start->y)) {
+                            auto b_top_left = node_renderer->world_to_screen({storage.pos.x, storage.pos.y});
+                            auto b_bot_right = node_renderer->world_to_screen({storage.end_pos.x, storage.end_pos.y});
+
+                            ImVec2 a_top_left = {std::min(cur_mouse.x, left_drag_start->x), std::min(cur_mouse.y, left_drag_start->y)};
+                            ImVec2 a_bot_right = {std::max(cur_mouse.x, left_drag_start->x), std::max(cur_mouse.y, left_drag_start->y)};
+
+                            bool a_right_b = a_top_left.x > b_bot_right.x;
+                            bool a_left_b = a_bot_right.x < b_top_left.x;
+                            bool a_above_b = a_bot_right.y < b_top_left.y;
+                            bool a_below_b = a_top_left.y > b_bot_right.y;
+
+                            if (!(a_right_b || a_left_b || a_above_b || a_below_b)) {
                                 selected_windows.insert(id);
                             }
                         }
@@ -492,6 +501,10 @@ int main(int argc, char** argv) {
             ImGui::GetBackgroundDrawList()->PopClipRect();
         }
         ImGui::EndChild();
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
+            selected_windows.clear();
+        }
+
         ImGui::SameLine();
         ImGui::BeginChild("PlotViewer", ImVec2(0, 0), ImGuiChildFlags_None, ImGuiWindowFlags_None);
         {

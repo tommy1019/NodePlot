@@ -23,6 +23,11 @@ struct NodeGraph {
             float y = 0;
         } pos;
 
+        struct {
+            float x = 0;
+            float y = 0;
+        } end_pos;
+
         std::map<InputId, std::variant<Data, InputPin>> input_storage;
     };
 

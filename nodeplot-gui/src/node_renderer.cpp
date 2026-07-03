@@ -351,25 +351,26 @@ void NodeRenderer::draw_node_path(ImVec2 start, ImVec2 end) {
 }
 
 ErrorOr<bool> NodeRenderer::render_node(NodePlot::NodeId node_id, NodePlot::NodeGraph::NodeStorage& storage) {
+
     Renderer imgui_renderer{
         .text =
-            [](RenderContext&, ImVec2 pos, std::string str) {
+            [](RenderContext& ctx, ImVec2 pos, std::string str) {
                 ImGui::SetCursorPos(pos);
                 ImGui::Text("%s", str.c_str());
             },
         .separator =
-            [](RenderContext&, ImVec2 pos) {
+            [](RenderContext& ctx, ImVec2 pos) {
                 ImGui::SetCursorPos(pos);
                 ImGui::Separator();
             },
 
         .button =
-            [](RenderContext&, ImVec2 pos, ImVec2 size, std::string label) {
+            [](RenderContext& ctx, ImVec2 pos, ImVec2 size, std::string label) {
                 ImGui::SetCursorPos(pos);
                 return ImGui::Button(label.c_str(), size);
             },
 
-        .dropdown = [](RenderContext&, ImVec2 pos, ImVec2 size, std::string label, std::vector<std::pair<std::string, std::string>> options) -> std::optional<std::string> {
+        .dropdown = [](RenderContext& ctx, ImVec2 pos, ImVec2 size, std::string label, std::vector<std::pair<std::string, std::string>> options) -> std::optional<std::string> {
             ImGui::SetCursorPos(pos);
             ImGui::SetNextItemWidth(size.x); // Can only set width, ignore height
 
@@ -426,6 +427,7 @@ ErrorOr<bool> NodeRenderer::render_node(NodePlot::NodeId node_id, NodePlot::Node
 
                 ImGui::EndDragDropTarget();
             }
+
             return updated;
         },
         .output_pin = [](RenderContext& ctx, ImVec2 pos, float size, NodePlot::OutputId id) -> bool {
@@ -433,6 +435,7 @@ ErrorOr<bool> NodeRenderer::render_node(NodePlot::NodeId node_id, NodePlot::Node
             ImGui::GetForegroundDrawList()->AddCircle({win_pos.x + pos.x + size, win_pos.y + pos.y + size}, size, ImGui::GetColorU32(ImVec4(0.3f, 0.3f, 0.3f, 1.0f)), 0);
             ImGui::SetCursorPos(pos);
             ImGui::InvisibleButton("##output_pin", {size * 2, size * 2});
+
             if (ImGui::BeginDragDropSource()) {
                 std::pair<NodePlot::NodeId, NodePlot::OutputId> pin = {ctx.node_id, id};
                 ImGui::SetDragDropPayload("PIN", &pin, sizeof(pin));
@@ -443,7 +446,7 @@ ErrorOr<bool> NodeRenderer::render_node(NodePlot::NodeId node_id, NodePlot::Node
             return false;
         },
 
-        .string_input = [](RenderContext&, ImVec2 pos, ImVec2 size, std::string& storage, bool enabled) -> bool {
+        .string_input = [](RenderContext& ctx, ImVec2 pos, ImVec2 size, std::string& storage, bool enabled) -> bool {
             ImGui::SetCursorPos(pos);
             if (!enabled)
                 ImGui::BeginDisabled(true);
@@ -451,18 +454,20 @@ ErrorOr<bool> NodeRenderer::render_node(NodePlot::NodeId node_id, NodePlot::Node
             bool res = ImGui::InputText("##string_input", &storage, ImGuiInputTextFlags_None);
             if (!enabled)
                 ImGui::EndDisabled();
+
             return res;
         },
-        .boolean_input = [](RenderContext&, ImVec2 pos, bool& storage, bool enabled) -> bool {
+        .boolean_input = [](RenderContext& ctx, ImVec2 pos, bool& storage, bool enabled) -> bool {
             ImGui::SetCursorPos(pos);
             if (!enabled)
                 ImGui::BeginDisabled(true);
             bool res = ImGui::Checkbox("##boolean_input", &storage);
             if (!enabled)
                 ImGui::EndDisabled();
+
             return res;
         },
-        .number_input = [](RenderContext&, ImVec2 pos, ImVec2 size, double& storage, bool enabled) -> bool {
+        .number_input = [](RenderContext& ctx, ImVec2 pos, ImVec2 size, double& storage, bool enabled) -> bool {
             ImGui::SetCursorPos(pos);
             if (!enabled)
                 ImGui::BeginDisabled(true);
@@ -470,9 +475,10 @@ ErrorOr<bool> NodeRenderer::render_node(NodePlot::NodeId node_id, NodePlot::Node
             bool res = ImGui::InputDouble("##number_input", &storage, ImGuiInputTextFlags_None);
             if (!enabled)
                 ImGui::EndDisabled();
+
             return res;
         },
-        .integer_input = [](RenderContext&, ImVec2 pos, ImVec2 size, int64_t& storage, bool enabled) -> bool {
+        .integer_input = [](RenderContext& ctx, ImVec2 pos, ImVec2 size, int64_t& storage, bool enabled) -> bool {
             ImGui::SetCursorPos(pos);
             if (!enabled)
                 ImGui::BeginDisabled(true);
@@ -480,9 +486,10 @@ ErrorOr<bool> NodeRenderer::render_node(NodePlot::NodeId node_id, NodePlot::Node
             bool res = ImGui::InputScalar("##number_input", ImGuiDataType_S64, &storage);
             if (!enabled)
                 ImGui::EndDisabled();
+
             return res;
         },
-        .color_input = [](RenderContext&, ImVec2 pos, ImVec2 size, NodePlot::Color& storage, bool enabled) -> bool {
+        .color_input = [](RenderContext& ctx, ImVec2 pos, ImVec2 size, NodePlot::Color& storage, bool enabled) -> bool {
             ImGui::SetCursorPos(pos);
             if (!enabled)
                 ImGui::BeginDisabled(true);
@@ -490,9 +497,10 @@ ErrorOr<bool> NodeRenderer::render_node(NodePlot::NodeId node_id, NodePlot::Node
             bool res = ImGui::ColorEdit4("##number_input", (float*)&storage);
             if (!enabled)
                 ImGui::EndDisabled();
+
             return res;
         },
-        .margin_input = [](RenderContext&, ImVec2 pos, ImVec2 size, NodePlot::Margins& storage, bool enabled) -> bool {
+        .margin_input = [](RenderContext& ctx, ImVec2 pos, ImVec2 size, NodePlot::Margins& storage, bool enabled) -> bool {
             ImGui::SetCursorPos(pos);
             if (!enabled)
                 ImGui::BeginDisabled(true);
@@ -500,9 +508,10 @@ ErrorOr<bool> NodeRenderer::render_node(NodePlot::NodeId node_id, NodePlot::Node
             bool res = ImGui::InputFloat4("##number_input", (float*)&storage);
             if (!enabled)
                 ImGui::EndDisabled();
+
             return res;
         },
-        .position_input = [](RenderContext&, ImVec2 pos, ImVec2 size, NodePlot::Pos& storage, bool enabled) -> bool {
+        .position_input = [](RenderContext& ctx, ImVec2 pos, ImVec2 size, NodePlot::Pos& storage, bool enabled) -> bool {
             ImGui::SetCursorPos(pos);
             if (!enabled)
                 ImGui::BeginDisabled(true);
@@ -510,6 +519,7 @@ ErrorOr<bool> NodeRenderer::render_node(NodePlot::NodeId node_id, NodePlot::Node
             bool res = ImGui::InputFloat2("##number_input", (float*)&storage);
             if (!enabled)
                 ImGui::EndDisabled();
+
             return res;
         },
     };
@@ -530,12 +540,25 @@ ErrorOr<bool> NodeRenderer::render_node(NodePlot::NodeId node_id, NodePlot::Node
         .node = node->second,
     };
 
+    ctx.node_storage.end_pos = {-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max()};
+
     auto rnf = render_override_map.find(storage.type_id);
     if (rnf == render_override_map.end()) {
-        return TRY(default_renderer(imgui_renderer, ctx));
+        TRY(default_renderer(imgui_renderer, ctx));
+
+        auto win_size = ImGui::GetWindowSize();
+        auto end_pos = ctx.node_renderer.screen_to_world({ImGui::GetCursorScreenPos().x + win_size.x, ImGui::GetCursorScreenPos().y});
+        ctx.node_storage.end_pos.x = std::max(ctx.node_storage.end_pos.x, end_pos.x);
+        ctx.node_storage.end_pos.y = std::max(ctx.node_storage.end_pos.y, end_pos.y);
     } else {
-        return TRY((rnf->second)(imgui_renderer, ctx));
+        TRY((rnf->second)(imgui_renderer, ctx));
     }
+
+    // auto start = ctx.node_renderer.world_to_screen({ctx.node_storage.pos.x, ctx.node_storage.pos.y});
+    // auto end = ctx.node_renderer.world_to_screen({ctx.node_storage.end_pos.x, ctx.node_storage.end_pos.y});
+    // ImGui::GetForegroundDrawList()->AddRect(start, end, ImGui::GetColorU32(ImVec4(1.f, 0.3f, 0.3f, 1.0f)));
+
+    return {};
 }
 
 ErrorOr<void> NodeRenderer::render_input_paths(NodePlot::NodeId node_id, NodePlot::NodeGraph::NodeStorage& storage) {
