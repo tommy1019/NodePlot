@@ -542,23 +542,25 @@ ErrorOr<bool> NodeRenderer::render_node(NodePlot::NodeId node_id, NodePlot::Node
 
     ctx.node_storage.end_pos = {-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max()};
 
+    bool has_change = false;
+
     auto rnf = render_override_map.find(storage.type_id);
     if (rnf == render_override_map.end()) {
-        TRY(default_renderer(imgui_renderer, ctx));
+        has_change = TRY(default_renderer(imgui_renderer, ctx));
 
         auto win_size = ImGui::GetWindowSize();
         auto end_pos = ctx.node_renderer.screen_to_world({ImGui::GetCursorScreenPos().x + win_size.x, ImGui::GetCursorScreenPos().y});
         ctx.node_storage.end_pos.x = std::max(ctx.node_storage.end_pos.x, end_pos.x);
         ctx.node_storage.end_pos.y = std::max(ctx.node_storage.end_pos.y, end_pos.y);
     } else {
-        TRY((rnf->second)(imgui_renderer, ctx));
+        has_change = TRY((rnf->second)(imgui_renderer, ctx));
     }
 
     // auto start = ctx.node_renderer.world_to_screen({ctx.node_storage.pos.x, ctx.node_storage.pos.y});
     // auto end = ctx.node_renderer.world_to_screen({ctx.node_storage.end_pos.x, ctx.node_storage.end_pos.y});
     // ImGui::GetForegroundDrawList()->AddRect(start, end, ImGui::GetColorU32(ImVec4(1.f, 0.3f, 0.3f, 1.0f)));
 
-    return {};
+    return has_change;
 }
 
 ErrorOr<void> NodeRenderer::render_input_paths(NodePlot::NodeId node_id, NodePlot::NodeGraph::NodeStorage& storage) {
