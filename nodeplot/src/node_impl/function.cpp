@@ -34,8 +34,8 @@ ErrorOr<DataType> parse_data_type(std::string s) {
     if (s == "series")
         return DataType::SERIES;
 
-    if (s == "margines")
-        return DataType::MARGINES;
+    if (s == "margins")
+        return DataType::MARGINS;
     if (s == "color")
         return DataType::COLOR;
     if (s == "color_column")

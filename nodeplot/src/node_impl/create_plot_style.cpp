@@ -12,18 +12,18 @@ void register_create_plot_style() {
                                     .display_name = "Create Plot Style",
                                     .inputs = [](NodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::vector<std::pair<InputId, Node::Input>> {
                                         return {
-                                            {"plot_margines",
+                                            {"plot_margins",
                                              Node::Input{
-                                                 .id = "plot_margines",
-                                                 .display_name = "Plot Margines",
-                                                 .valid_data_types = {DataType::MARGINES},
+                                                 .id = "plot_margins",
+                                                 .display_name = "Plot Margins",
+                                                 .valid_data_types = {DataType::MARGINS},
                                                  .default_value = Margins{.left = 0.16f, .right = 0.05f, .top = 0.14f, .bottom = 0.15f},
                                              }},
-                                            {"internal_plot_margines",
+                                            {"internal_plot_margins",
                                              Node::Input{
-                                                 .id = "internal_plot_margines",
-                                                 .display_name = "Internal Plot Margines",
-                                                 .valid_data_types = {DataType::MARGINES},
+                                                 .id = "internal_plot_margins",
+                                                 .display_name = "Internal Plot Margins",
+                                                 .valid_data_types = {DataType::MARGINS},
                                                  .default_value = Margins{.left = 0, .right = 0, .top = 0, .bottom = 0},
                                              }},
                                             {"title_font_size",
@@ -119,8 +119,8 @@ void register_create_plot_style() {
                                     },
                                     .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
                                         PlotStyle res;
-                                        res.plot_margines = TRY(eng->get_input_value<Margins>(npf, node_id, "plot_margines"));
-                                        res.internal_plot_margines = TRY(eng->get_input_value<Margins>(npf, node_id, "internal_plot_margines"));
+                                        res.plot_margins = TRY(eng->get_input_value<Margins>(npf, node_id, "plot_margins"));
+                                        res.internal_plot_margins = TRY(eng->get_input_value<Margins>(npf, node_id, "internal_plot_margins"));
 
                                         res.title_font_size = TRY(eng->get_input_value<double>(npf, node_id, "title_font_size"));
                                         res.title_offset = TRY(eng->get_input_value<Pos>(npf, node_id, "title_offset"));

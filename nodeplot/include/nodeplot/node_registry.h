@@ -10,7 +10,7 @@ namespace NodePlot {
 struct SeriesDefinition {
     std::string display_name;
     std::function<ErrorOr<Limits>(NodePlotFile*, EvaluatedNodeGraph*, const GenericSeries& series)> get_limits;
-    std::function<ErrorOr<void>(NodePlotFile*, EvaluatedNodeGraph*, const GenericSeries& series, Figure& figure, const FigureBounds& bounds)> evalulate;
+    std::function<ErrorOr<void>(NodePlotFile*, EvaluatedNodeGraph*, const GenericSeries& series, Figure& figure, const FigureBounds& bounds)> evaluate;
 };
 
 struct NodeRegistry {

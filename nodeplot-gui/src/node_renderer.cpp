@@ -59,7 +59,7 @@ NodeRenderer::RenderFunction NodeRenderer::default_renderer = [](Renderer& rnd, 
             case NodePlot::DataType::NUMBER:
             case NodePlot::DataType::INTEGER:
             case NodePlot::DataType::COLOR:
-            case NodePlot::DataType::MARGINES:
+            case NodePlot::DataType::MARGINS:
             case NodePlot::DataType::POSITION: {
 
                 std::variant<NodePlot::Data, NodePlot::NodeGraph::InputPin>& input_storage = ctx.node_storage.input_storage[id];
@@ -235,7 +235,7 @@ NodeRenderer::RenderFunction NodeRenderer::default_renderer = [](Renderer& rnd, 
                         }
                     }
                     break;
-                case NodePlot::DataType::MARGINES:
+                case NodePlot::DataType::MARGINS:
                     if (is_pin_set) {
                         static NodePlot::Margins disabled_margin = {};
                         rnd.margin_input(ctx, {PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, disabled_margin, false);

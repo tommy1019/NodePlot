@@ -56,8 +56,8 @@ struct Margins {
 };
 
 struct PlotStyle {
-    Margins plot_margines;
-    Margins internal_plot_margines;
+    Margins plot_margins;
+    Margins internal_plot_margins;
 
     double x_axis_tick_mark_font_size;
     double x_axis_tick_mark_size;
@@ -148,7 +148,7 @@ enum class DataType {
     FIGURE,
 
     POSITION,
-    MARGINES,
+    MARGINS,
     COLOR,
     COLOR_COLUMN,
 

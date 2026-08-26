@@ -115,14 +115,14 @@ void register_figure() {
                                         struct {
                                             float x, y, w, h;
                                         } plot = {
-                                            .x = style.plot_margines.left,
-                                            .y = (float)1 - style.plot_margines.bottom,
-                                            .w = (float)1 - style.plot_margines.left - style.plot_margines.right,
-                                            .h = (float)1 - style.plot_margines.top - style.plot_margines.bottom,
+                                            .x = style.plot_margins.left,
+                                            .y = (float)1 - style.plot_margins.bottom,
+                                            .w = (float)1 - style.plot_margins.left - style.plot_margins.right,
+                                            .h = (float)1 - style.plot_margins.top - style.plot_margins.bottom,
                                         };
 
-                                        double plot_range_x = plot.w - style.internal_plot_margines.left - style.internal_plot_margines.right;
-                                        double plot_range_y = plot.h - style.internal_plot_margines.bottom - style.internal_plot_margines.top;
+                                        double plot_range_x = plot.w - style.internal_plot_margins.left - style.internal_plot_margins.right;
+                                        double plot_range_y = plot.h - style.internal_plot_margins.bottom - style.internal_plot_margins.top;
 
                                         auto normalize_coords = [&](std::pair<double, double> p) -> std::pair<double, double> {
                                             double x = p.first;
@@ -133,8 +133,8 @@ void register_figure() {
                                             if (y_axis_log_scale)
                                                 y = std::log10(y);
 
-                                            x = (x - x_lims.first) / x_range * plot_range_x + plot.x + style.internal_plot_margines.left;
-                                            y = plot.y - (y - y_lims.first) / y_range * plot_range_y - style.internal_plot_margines.bottom;
+                                            x = (x - x_lims.first) / x_range * plot_range_x + plot.x + style.internal_plot_margins.left;
+                                            y = plot.y - (y - y_lims.first) / y_range * plot_range_y - style.internal_plot_margins.bottom;
 
                                             return {x, y};
                                         };
@@ -146,13 +146,13 @@ void register_figure() {
                                             .y_transform_pre = -y_lims.first,
                                             .x_scale = 1.0f / x_range * plot_range_x,
                                             .y_scale = -1.0f / y_range * plot_range_y,
-                                            .x_transform_post = plot.x + style.internal_plot_margines.left,
-                                            .y_transform_post = plot.y - style.internal_plot_margines.bottom,
+                                            .x_transform_post = plot.x + style.internal_plot_margins.left,
+                                            .y_transform_post = plot.y - style.internal_plot_margins.bottom,
                                         };
 
                                         for (auto& series : all_series) {
                                             auto& series_def = TRY(Utils::try_find(NodeRegistry::series_map, series.type_id, "Invalid Series Type")).get();
-                                            auto err = series_def.evalulate(npf, eng, series, res, bounds);
+                                            auto err = series_def.evaluate(npf, eng, series, res, bounds);
                                             if (!err.has_value())
                                                 return ERR("Failed to plot series '" + series_def.display_name + "': " + err.error());
                                         }

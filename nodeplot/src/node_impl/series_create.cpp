@@ -32,7 +32,7 @@ void register_series_create() {
                     .y_high = y.second,
                 };
             },
-            .evalulate = [](NodePlotFile*, EvaluatedNodeGraph* eng, const GenericSeries& s, Figure& fig, const FigureBounds& bounds) -> ErrorOr<void> {
+            .evaluate = [](NodePlotFile*, EvaluatedNodeGraph* eng, const GenericSeries& s, Figure& fig, const FigureBounds& bounds) -> ErrorOr<void> {
                 auto x_col = TRY(eng->try_data_type_conversion<std::vector<double>>(TRY(Utils::try_find(s.data, "x", "Missing"))));
                 auto y_col = TRY(eng->try_data_type_conversion<std::vector<double>>(TRY(Utils::try_find(s.data, "y", "Missing"))));
                 auto color = TRY(eng->try_data_type_conversion_variant<Color, std::vector<Color>>(TRY(Utils::try_find(s.data, "color", "Missing"))));
@@ -99,7 +99,7 @@ void register_series_create() {
                                               .y_high = y.second,
                                           };
                                       },
-                                      .evalulate = [](NodePlotFile*, EvaluatedNodeGraph* eng, const GenericSeries& s, Figure& fig, const FigureBounds& bounds) -> ErrorOr<void> {
+                                      .evaluate = [](NodePlotFile*, EvaluatedNodeGraph* eng, const GenericSeries& s, Figure& fig, const FigureBounds& bounds) -> ErrorOr<void> {
                                           auto x_col = TRY(eng->try_data_type_conversion<std::vector<double>>(TRY(Utils::try_find(s.data, "x", "Missing"))));
                                           auto y_col = TRY(eng->try_data_type_conversion<std::vector<double>>(TRY(Utils::try_find(s.data, "y", "Missing"))));
                                           auto color = TRY(eng->try_data_type_conversion<Color>(TRY(Utils::try_find(s.data, "color", "Missing"))));
@@ -145,7 +145,7 @@ void register_series_create() {
                     .y_high = std::max(y_min.second, y_max.second),
                 };
             },
-            .evalulate = [](NodePlotFile*, EvaluatedNodeGraph* eng, const GenericSeries& s, Figure& fig, const FigureBounds& bounds) -> ErrorOr<void> {
+            .evaluate = [](NodePlotFile*, EvaluatedNodeGraph* eng, const GenericSeries& s, Figure& fig, const FigureBounds& bounds) -> ErrorOr<void> {
                 auto x_col = TRY(eng->try_data_type_conversion<std::vector<double>>(TRY(Utils::try_find(s.data, "x", "Missing"))));
                 auto y_min_col = TRY(eng->try_data_type_conversion<std::vector<double>>(TRY(Utils::try_find(s.data, "y_min", "Missing"))));
                 auto y_max_col = TRY(eng->try_data_type_conversion<std::vector<double>>(TRY(Utils::try_find(s.data, "y_max", "Missing"))));
@@ -236,7 +236,7 @@ void register_series_create() {
                     .y_high = y.second,
                 };
             },
-            .evalulate = [](NodePlotFile*, EvaluatedNodeGraph* eng, const GenericSeries& s, Figure& fig, const FigureBounds& bounds) -> ErrorOr<void> {
+            .evaluate = [](NodePlotFile*, EvaluatedNodeGraph* eng, const GenericSeries& s, Figure& fig, const FigureBounds& bounds) -> ErrorOr<void> {
                 auto x_col = TRY(eng->try_data_type_conversion<std::vector<double>>(TRY(Utils::try_find(s.data, "x", "Missing"))));
 
                 std::vector<std::vector<double>> cols;
