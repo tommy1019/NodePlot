@@ -228,7 +228,7 @@ void register_figure() {
                                                 .pos = Pos{(float)(plot.x - style.y_axis_tick_mark_size + style.y_axis_tick_mark_offset.x), (float)(y_pos + style.y_axis_tick_mark_offset.y)},
                                                 .text = format_tick_number(y),
                                                 .anchor = NodePlot::DrawCommands::Text::RIGHT,
-                                                .font_size = style.x_axis_tick_mark_font_size,
+                                                .font_size = style.y_axis_tick_mark_font_size,
                                             });
                                         };
 
