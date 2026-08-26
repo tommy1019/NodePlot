@@ -25,7 +25,7 @@ int main(int argc, char** argv) {
 
     for (auto& n : main_graph->second.nodes) {
         if (n.second.type_id == "output") {
-            std::string filename = MUST(eng.get_input_value<std::string>(&npf, n.first, "filename"));
+            std::string filename = MUST(eng.get_input_value<std::string>(&npf, n.first, "filename")) + ".svg";
             auto svg = MUST(eng.get_output_data(&npf, n.first, "svg"));
 
             if (!std::holds_alternative<std::string>(svg))
