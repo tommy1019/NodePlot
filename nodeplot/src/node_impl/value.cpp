@@ -9,6 +9,7 @@ void register_value() {
                                 Node{
                                     .type_id = "numeric_value",
                                     .display_name = "Numeric Value",
+                                    .toolbar_path = {"Value", "Numeric"},
                                     .inputs = [](NodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::vector<std::pair<InputId, Node::Input>> {
                                         return {
                                             {"value", Node::Input{.id = "value", .display_name = "Value", .valid_data_types = {DataType::NUMBER}}},
@@ -29,6 +30,7 @@ void register_value() {
                                 Node{
                                     .type_id = "string_value",
                                     .display_name = "String Value",
+                                    .toolbar_path = {"Value", "String"},
                                     .inputs = [](NodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::vector<std::pair<InputId, Node::Input>> {
                                         return {
                                             {"value", Node::Input{.id = "value", .display_name = "Value", .valid_data_types = {DataType::STRING}}},
@@ -49,6 +51,7 @@ void register_value() {
                                 Node{
                                     .type_id = "color_value",
                                     .display_name = "Color Value",
+                                    .toolbar_path = {"Value", "Color", "Value"},
                                     .inputs = [](NodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::vector<std::pair<InputId, Node::Input>> {
                                         return {
                                             {"value", Node::Input{.id = "value", .display_name = "Value", .valid_data_types = {DataType::COLOR}}},
@@ -65,10 +68,11 @@ void register_value() {
                                     },
                                 });
 
-    NodeRegistry::register_node("color_compose",
+    NodeRegistry::register_node("color_compose_rgb",
                                 Node{
-                                    .type_id = "color_compose",
-                                    .display_name = "Color Compose",
+                                    .type_id = "color_compose_rgb",
+                                    .display_name = "Color Compose RGB",
+                                    .toolbar_path = {"Value", "Color", "Compose RGB"},
                                     .inputs = [](NodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::vector<std::pair<InputId, Node::Input>> {
                                         return {
                                             {"red", Node::Input{.id = "red", .display_name = "Red", .valid_data_types = {DataType::NUMBER, DataType::NUMBER_COLUMN}, .default_value = 1.0}},
@@ -105,6 +109,7 @@ void register_value() {
         Node{
             .type_id = "color_compose_hsv",
             .display_name = "Color Compose HSV",
+            .toolbar_path = {"Value", "Color", "Compose HSV"},
             .inputs = [](NodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::vector<std::pair<InputId, Node::Input>> {
                 return {
                     {"hue", Node::Input{.id = "hue", .display_name = "Hue", .valid_data_types = {DataType::NUMBER, DataType::NUMBER_COLUMN}, .default_value = 180.0}},

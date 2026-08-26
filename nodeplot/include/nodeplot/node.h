@@ -39,6 +39,11 @@ struct Node {
     NodeTypeId type_id;
     std::string display_name;
 
+    std::vector<std::string> toolbar_path;
+
+    bool deletable = true;
+    bool cloneable = true;
+
     using InputGenerator = std::function<ErrorOr<std::vector<std::pair<InputId, Input>>>(NodePlotFile*, EvaluatedNodeGraph*, NodeId)>;
     using OutputGenerator = std::function<ErrorOr<std::vector<std::pair<OutputId, Output>>>(NodePlotFile*, EvaluatedNodeGraph*, NodeId)>;
 

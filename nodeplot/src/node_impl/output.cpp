@@ -12,6 +12,9 @@ void register_output() {
                                 Node{
                                     .type_id = "output",
                                     .display_name = "Output",
+                                    .toolbar_path = {"Debug", "Output"},
+                                    .deletable = false,
+                                    .cloneable = false,
                                     .inputs = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id) -> std::vector<std::pair<InputId, Node::Input>> {
                                         std::vector<std::pair<InputId, Node::Input>> res;
 

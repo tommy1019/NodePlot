@@ -11,6 +11,7 @@ void register_sampled_property_extract() {
                                 Node{
                                     .type_id = "sampled_property_extract",
                                     .display_name = "Sampled Property Extract",
+                                    .toolbar_path = {"Math", "Sampled Property Extract"},
                                     .inputs = [](NodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::vector<std::pair<InputId, Node::Input>> {
                                         return {
                                             {"x", Node::Input{.id = "x", .display_name = "X", .valid_data_types = {DataType::NUMBER_COLUMN}}},
@@ -104,6 +105,7 @@ void register_sampled_property_extract() {
                                 Node{
                                     .type_id = "distribution_properties",
                                     .display_name = "Distribution Properties",
+                                    .toolbar_path = {"Math", "Distribution Properties"},
                                     .inputs = [](NodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::vector<std::pair<InputId, Node::Input>> {
                                         return {
                                             {"values", Node::Input{.id = "values", .display_name = "Values", .valid_data_types = {DataType::NUMBER_COLUMN}}},

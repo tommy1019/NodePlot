@@ -37,11 +37,12 @@ void NodeRegistry::init() {
 
 void NodeRegistry::NodeRegistry::register_node(NodeTypeId node_id, Node node) { NodeRegistry::node_map.insert({node_id, node}); }
 
-void NodeRegistry::register_series(SeriesTypeId series_id, Node::InputGenerator input_generator, SeriesDefinition def) {
+void NodeRegistry::register_series(SeriesTypeId series_id, std::vector<std::string> toolbar_path, Node::InputGenerator input_generator, SeriesDefinition def) {
     register_node("series_create_" + series_id,
                   Node{
                       .type_id = "series_create_" + series_id,
                       .display_name = "Create " + def.display_name + " Series",
+                      .toolbar_path = toolbar_path,
                       .inputs = input_generator,
                       .outputs = [](NodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::vector<std::pair<OutputId, Node::Output>> {
                           return {

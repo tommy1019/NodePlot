@@ -168,6 +168,9 @@ void register_function() {
         Node{
             .type_id = "function_input",
             .display_name = "Function Input",
+            .toolbar_path = {"Debug", "Function", "Input"},
+            .deletable = false,
+            .cloneable = false,
             .inputs = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id) -> std::vector<std::pair<InputId, Node::Input>> {
                 std::vector<std::pair<InputId, Node::Input>> res;
 
@@ -212,6 +215,9 @@ void register_function() {
                                 Node{
                                     .type_id = "function_output",
                                     .display_name = "Function Output",
+                                    .toolbar_path = {"Debug", "Function", "Output"},
+                                    .deletable = false,
+                                    .cloneable = false,
                                     .inputs = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id) -> std::vector<std::pair<InputId, Node::Input>> {
                                         std::vector<std::pair<InputId, Node::Input>> res;
 

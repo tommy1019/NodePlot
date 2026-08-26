@@ -2,6 +2,7 @@
 #include <fstream>
 #include <memory>
 #include <optional>
+#include <ranges>
 #include <string>
 
 #include <imgui.h>
@@ -10,6 +11,8 @@
 #include <nodeplot/nodeplot.h>
 
 #include <nfd.h>
+#include <utility>
+#include <variant>
 
 #include "node_renderer.h"
 #include "nodeplot/node_graph.h"
@@ -126,6 +129,35 @@ int main(int argc, char** argv) {
     std::set<NodePlot::NodeId> dragged_windows = {};
     std::set<NodePlot::NodeId> selected_windows;
 
+    struct Toolbar {
+        std::map<std::string, std::variant<NodePlot::NodeTypeId, Toolbar>> map;
+    };
+
+    Toolbar main_bar{};
+
+    for (auto& [type_id, node] : NodePlot::NodeRegistry::node_map) {
+        Toolbar* bar = &main_bar;
+
+        auto path = node.toolbar_path;
+        if (path.empty())
+            path = {node.display_name};
+
+        for (auto path_item : path | std::ranges::views::take(path.size() - 1)) {
+
+            if (!bar->map.contains(path_item)) {
+                bar->map.insert(std::make_pair(path_item, Toolbar{}));
+            }
+
+            if (!std::holds_alternative<Toolbar>(bar->map[path_item])) {
+                REQUIRE_NOT_REACHED("Node display names overlap with toolbar paths");
+            }
+
+            bar = &std::get<Toolbar>(bar->map[path_item]);
+        }
+
+        bar->map.insert(std::make_pair(path.back(), type_id));
+    }
+
     MUST(window->event_loop(NodePlot::Utils::overloaded{[&](Window::RenderEvent) -> ErrorOr<void> {
         ImGuiViewport* viewport = ImGui::GetMainViewport();
         ImGui::SetNextWindowPos(viewport->WorkPos);
@@ -168,8 +200,7 @@ int main(int argc, char** argv) {
             }
 
             if (ImGui::BeginMenu("NodeGraph")) {
-
-                if (ImGui::BeginMenu("Edit")) {
+                if (ImGui::BeginMenu("Edit Function")) {
                     for (auto [id, graph] : npf.graphs) {
                         if (ImGui::MenuItem(id.c_str())) {
                             set_current_graph(id);
@@ -178,14 +209,29 @@ int main(int argc, char** argv) {
                     ImGui::EndMenu();
                 }
 
-                if (ImGui::BeginMenu("Add")) {
-                    for (auto n : NodePlot::NodeRegistry::node_map) {
-                        if (ImGui::MenuItem(n.second.display_name.c_str())) {
-                            auto win_size = ImGui::GetWindowSize();
-                            auto placement_pos = node_renderer->screen_to_world(ImVec2(win_size.x, win_size.y));
-                            MUST(cur_ng().create_node(&npf, current_graph, n.second.type_id, placement_pos.x, placement_pos.y));
+                if (ImGui::BeginMenu("Add Node")) {
+                    auto add_add_bar = [&](this auto& self, Toolbar& bar) -> void {
+                        for (auto& [name, value] : bar.map) {
+                            std::visit(NodePlot::Utils::overloaded{
+                                           [&](NodePlot::NodeTypeId type_id) {
+                                               if (ImGui::MenuItem(name.c_str())) {
+                                                   auto win_size = ImGui::GetWindowSize();
+                                                   auto placement_pos = node_renderer->screen_to_world(ImVec2(win_size.x, win_size.y));
+                                                   MUST(cur_ng().create_node(&npf, current_graph, type_id, placement_pos.x, placement_pos.y));
+                                               }
+                                           },
+                                           [&](Toolbar& bar) {
+                                               if (ImGui::BeginMenu(name.c_str())) {
+                                                   self(bar);
+                                                   ImGui::EndMenu();
+                                               }
+                                           },
+                                       },
+                                       value);
                         }
-                    }
+                    };
+
+                    add_add_bar(main_bar);
                     ImGui::EndMenu();
                 }
 
@@ -317,6 +363,7 @@ int main(int argc, char** argv) {
 
             for (auto& [id, storage] : nodes) {
                 auto out_cache = cur_eng().cache[id];
+                auto& node = NodePlot::NodeRegistry::node_map.at(storage.type_id);
 
                 if (out_cache.error.has_value()) {
                     ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(1.0f, 0.7f, 0.7f, 1.0f));
@@ -361,19 +408,24 @@ int main(int argc, char** argv) {
                     }
 
                     if (ImGui::BeginPopupContextWindow()) {
-                        if (ImGui::MenuItem("Delete")) {
-                            if (selected_windows.contains(id)) {
-                                nodes_to_delete.insert_range(selected_windows);
-                            } else {
-                                nodes_to_delete.insert(id);
+
+                        if (node.deletable) {
+                            if (ImGui::MenuItem("Delete")) {
+                                if (selected_windows.contains(id)) {
+                                    nodes_to_delete.insert_range(selected_windows);
+                                } else {
+                                    nodes_to_delete.insert(id);
+                                }
                             }
                         }
 
-                        if (ImGui::MenuItem("Duplicate")) {
-                            if (selected_windows.contains(id)) {
-                                nodes_to_dupe.insert_range(selected_windows);
-                            } else {
-                                nodes_to_dupe.insert(id);
+                        if (node.cloneable) {
+                            if (ImGui::MenuItem("Duplicate")) {
+                                if (selected_windows.contains(id)) {
+                                    nodes_to_dupe.insert_range(selected_windows);
+                                } else {
+                                    nodes_to_dupe.insert(id);
+                                }
                             }
                         }
 

@@ -12,6 +12,7 @@ using namespace NodePlot;
 void register_series_create() {
     NodeRegistry::register_series(
         "scatter",
+        {"Create Series", "Scatter"},
         [](NodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::vector<std::pair<InputId, Node::Input>> {
             return {
                 {"x", Node::Input{.id = "x", .display_name = "X", .valid_data_types = {DataType::NUMBER_COLUMN}}},
@@ -79,6 +80,7 @@ void register_series_create() {
         });
 
     NodeRegistry::register_series("line",
+                                  {"Create Series", "Line"},
                                   [](NodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::vector<std::pair<InputId, Node::Input>> {
                                       return {
                                           {"x", Node::Input{.id = "x", .display_name = "X", .valid_data_types = {DataType::NUMBER_COLUMN}}},
@@ -124,6 +126,7 @@ void register_series_create() {
 
     NodeRegistry::register_series(
         "ribbon",
+        {"Create Series", "Ribbon"},
         [](NodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::vector<std::pair<InputId, Node::Input>> {
             return {
                 {"x", Node::Input{.id = "x", .display_name = "X", .valid_data_types = {DataType::NUMBER_COLUMN}}},
@@ -180,6 +183,7 @@ void register_series_create() {
 
     NodeRegistry::register_series(
         "partitioned_bars",
+        {"Create Series", "Partitioned Bars"},
         [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id) -> std::vector<std::pair<InputId, Node::Input>> {
             std::vector<std::pair<InputId, Node::Input>> res;
 

@@ -11,6 +11,7 @@ void register_binary_operation() {
         Node{
             .type_id = "binary_operation",
             .display_name = "Binary Operation",
+            .toolbar_path = {"Math", "Binary Operation"},
             .inputs = [](NodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::vector<std::pair<InputId, Node::Input>> {
                 return {
                     {"operation", Node::Input{.id = "operation", .display_name = "Operation", .valid_data_types = {DataType::STRING}, .default_value = "+"}},

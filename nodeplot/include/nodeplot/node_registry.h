@@ -21,7 +21,7 @@ struct NodeRegistry {
     static void init();
 
     static void register_node(NodeTypeId node_id, Node node);
-    static void register_series(SeriesTypeId series_id, Node::InputGenerator input_generator, SeriesDefinition series);
+    static void register_series(SeriesTypeId series_id, std::vector<std::string> toolbar_path, Node::InputGenerator input_generator, SeriesDefinition series);
 };
 
 } // namespace NodePlot
