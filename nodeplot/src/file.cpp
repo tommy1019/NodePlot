@@ -5,7 +5,11 @@ namespace NodePlot {
 ErrorOr<NodePlotFile> NodePlotFile::create(std::filesystem::path path) {
     NodePlotFile res;
     res.path = path;
-    res.graphs = {{"main", NodeGraph{}}};
+    res.graphs = {{"main",
+                   NodeGraph{
+                       .nodes = {{0, NodePlot::NodeGraph::NodeStorage{.type_id = "output", .input_storage = {{"width", 300.0}, {"height", 300.0}, {"filename", "out"}}}}},
+                       .next_free_node_id = 1,
+                   }}};
     return res;
 }
 
