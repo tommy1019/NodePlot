@@ -59,14 +59,18 @@ struct PlotStyle {
     Margins plot_margins;
     Margins internal_plot_margins;
 
+    double x_axis_stroke_width;
     double x_axis_tick_mark_font_size;
     double x_axis_tick_mark_size;
+    double x_axis_tick_mark_stroke_width;
     Pos x_axis_tick_mark_offset;
     double x_axis_label_font_size;
     Pos x_axis_label_offset;
 
+    double y_axis_stroke_width;
     double y_axis_tick_mark_font_size;
     double y_axis_tick_mark_size;
+    double y_axis_tick_mark_stroke_width;
     Pos y_axis_tick_mark_offset;
     double y_axis_label_font_size;
     Pos y_axis_label_offset;

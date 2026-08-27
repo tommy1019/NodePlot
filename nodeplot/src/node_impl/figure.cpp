@@ -161,13 +161,13 @@ void register_figure() {
                                             .start = Pos{plot.x, plot.y},
                                             .end = Pos{plot.x + plot.w, plot.y},
                                             .color = Color{0, 0, 0, 1},
-                                            .stroke_width = 2,
+                                            .stroke_width = style.x_axis_stroke_width,
                                         });
                                         res.commands.push_back(DrawCommands::Line{
                                             .start = Pos{plot.x, plot.y},
                                             .end = Pos{plot.x, plot.y - plot.h},
                                             .color = Color{0, 0, 0, 1},
-                                            .stroke_width = 2,
+                                            .stroke_width = style.y_axis_stroke_width,
                                         });
 
                                         auto format_tick_number = [](double v) {
@@ -204,7 +204,7 @@ void register_figure() {
                                                 .start = Pos{x_pos, (float)(plot.y + style.x_axis_tick_mark_size)},
                                                 .end = Pos{x_pos, (float)plot.y},
                                                 .color = Color{0, 0, 0, 1},
-                                                .stroke_width = 2,
+                                                .stroke_width = style.x_axis_tick_mark_stroke_width,
                                             });
 
                                             res.commands.push_back(DrawCommands::Text{
@@ -221,7 +221,7 @@ void register_figure() {
                                                 .start = Pos{plot.x, y_pos},
                                                 .end = Pos{(float)(plot.x - style.y_axis_tick_mark_size), (float)y_pos},
                                                 .color = Color{0, 0, 0, 1},
-                                                .stroke_width = 2,
+                                                .stroke_width = style.y_axis_tick_mark_stroke_width,
                                             });
 
                                             res.commands.push_back(DrawCommands::Text{

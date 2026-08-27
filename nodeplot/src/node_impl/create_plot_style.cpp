@@ -40,6 +40,13 @@ void register_create_plot_style() {
                                                  .valid_data_types = {DataType::POSITION},
                                                  .default_value = Pos{0.0f, 0.1f},
                                              }},
+                                            {"x_axis_stroke_width",
+                                             Node::Input{
+                                                 .id = "x_axis_stroke_width",
+                                                 .display_name = "X Stroke Width",
+                                                 .valid_data_types = {DataType::NUMBER},
+                                                 .default_value = 2.0,
+                                             }},
                                             {"x_axis_tick_mark_font_size",
                                              Node::Input{
                                                  .id = "x_axis_tick_mark_font_size",
@@ -53,6 +60,13 @@ void register_create_plot_style() {
                                                  .display_name = "X Tick Mark Size",
                                                  .valid_data_types = {DataType::NUMBER},
                                                  .default_value = 0.02f,
+                                             }},
+                                            {"x_axis_tick_mark_stroke_width",
+                                             Node::Input{
+                                                 .id = "x_axis_tick_mark_stroke_width",
+                                                 .display_name = "X Tick Mark Stroke Width",
+                                                 .valid_data_types = {DataType::NUMBER},
+                                                 .default_value = 2.0,
                                              }},
                                             {"x_axis_tick_mark_offset",
                                              Node::Input{
@@ -75,6 +89,13 @@ void register_create_plot_style() {
                                                  .valid_data_types = {DataType::POSITION},
                                                  .default_value = Pos{0.0f, 0.0f},
                                              }},
+                                            {"y_axis_stroke_width",
+                                             Node::Input{
+                                                 .id = "y_axis_stroke_width",
+                                                 .display_name = "Y Stroke Width",
+                                                 .valid_data_types = {DataType::NUMBER},
+                                                 .default_value = 2.0,
+                                             }},
                                             {"y_axis_tick_mark_font_size",
                                              Node::Input{
                                                  .id = "y_axis_tick_mark_font_size",
@@ -88,6 +109,13 @@ void register_create_plot_style() {
                                                  .display_name = "Y Tick Mark Size",
                                                  .valid_data_types = {DataType::NUMBER},
                                                  .default_value = 0.02,
+                                             }},
+                                            {"y_axis_tick_mark_stroke_width",
+                                             Node::Input{
+                                                 .id = "y_axis_tick_mark_stroke_width",
+                                                 .display_name = "Y Tick Mark Stroke Width",
+                                                 .valid_data_types = {DataType::NUMBER},
+                                                 .default_value = 2.0,
                                              }},
                                             {"y_axis_tick_mark_offset",
                                              Node::Input{
@@ -125,14 +153,18 @@ void register_create_plot_style() {
                                         res.title_font_size = TRY(eng->get_input_value<double>(npf, node_id, "title_font_size"));
                                         res.title_offset = TRY(eng->get_input_value<Pos>(npf, node_id, "title_offset"));
 
+                                        res.x_axis_stroke_width = TRY(eng->get_input_value<double>(npf, node_id, "x_axis_stroke_width"));
                                         res.x_axis_tick_mark_font_size = TRY(eng->get_input_value<double>(npf, node_id, "x_axis_tick_mark_font_size"));
                                         res.x_axis_tick_mark_size = TRY(eng->get_input_value<double>(npf, node_id, "x_axis_tick_mark_size"));
+                                        res.x_axis_tick_mark_stroke_width = TRY(eng->get_input_value<double>(npf, node_id, "x_axis_tick_mark_stroke_width"));
                                         res.x_axis_tick_mark_offset = TRY(eng->get_input_value<Pos>(npf, node_id, "x_axis_tick_mark_offset"));
                                         res.x_axis_label_font_size = TRY(eng->get_input_value<double>(npf, node_id, "x_axis_label_font_size"));
                                         res.x_axis_label_offset = TRY(eng->get_input_value<Pos>(npf, node_id, "x_axis_label_offset"));
 
+                                        res.y_axis_stroke_width = TRY(eng->get_input_value<double>(npf, node_id, "y_axis_stroke_width"));
                                         res.y_axis_tick_mark_font_size = TRY(eng->get_input_value<double>(npf, node_id, "y_axis_tick_mark_font_size"));
                                         res.y_axis_tick_mark_size = TRY(eng->get_input_value<double>(npf, node_id, "y_axis_tick_mark_size"));
+                                        res.y_axis_tick_mark_stroke_width = TRY(eng->get_input_value<double>(npf, node_id, "y_axis_tick_mark_stroke_width"));
                                         res.y_axis_tick_mark_offset = TRY(eng->get_input_value<Pos>(npf, node_id, "y_axis_tick_mark_offset"));
                                         res.y_axis_label_font_size = TRY(eng->get_input_value<double>(npf, node_id, "y_axis_label_font_size"));
                                         res.y_axis_label_offset = TRY(eng->get_input_value<Pos>(npf, node_id, "y_axis_label_offset"));
