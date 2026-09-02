@@ -41,6 +41,9 @@ struct NodeGraph {
 
     ErrorOr<nlohmann::json> to_json();
 
+    static ErrorOr<nlohmann::json> storage_to_json(NodeStorage storage);
+    static ErrorOr<NodeStorage> storage_from_json(nlohmann::json json, NodeId node_id);
+
     ErrorOr<NodeId> create_node(NodePlotFile* npf, GraphId graph_id, NodeTypeId type, float x, float y);
 };
 

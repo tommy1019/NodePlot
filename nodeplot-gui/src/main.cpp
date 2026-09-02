@@ -1,5 +1,6 @@
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <ranges>
@@ -13,6 +14,7 @@
 #include <nfd.h>
 #include <utility>
 #include <variant>
+#include <vector>
 
 #include "node_renderer.h"
 #include "nodeplot/node_graph.h"
@@ -408,7 +410,6 @@ int main(int argc, char** argv) {
                     }
 
                     if (ImGui::BeginPopupContextWindow()) {
-
                         if (node.deletable) {
                             if (ImGui::MenuItem("Delete")) {
                                 if (selected_windows.contains(id)) {
@@ -427,6 +428,34 @@ int main(int argc, char** argv) {
                                     nodes_to_dupe.insert(id);
                                 }
                             }
+
+                            if (ImGui::MenuItem("Copy")) {
+                                std::vector<NodePlot::NodeId> copy_nodes;
+
+                                if (selected_windows.contains(id)) {
+                                    for (auto& i : selected_windows)
+                                        copy_nodes.push_back(i);
+                                } else {
+                                    copy_nodes.push_back(id);
+                                }
+
+                                if (!copy_nodes.empty()) {
+                                    nlohmann::json copy_json;
+                                    for (auto& id : copy_nodes) {
+                                        if (auto node = cur_ng().nodes.find(id); node != cur_ng().nodes.end()) {
+                                            if (auto type = NodePlot::NodeRegistry::node_map.find(node->second.type_id); type != NodePlot::NodeRegistry::node_map.end()) {
+                                                if (type->second.cloneable) {
+                                                    nlohmann::json cur;
+                                                    cur["id"] = id;
+                                                    cur["storage"] = MUST(cur_ng().storage_to_json(node->second));
+                                                    copy_json.push_back(cur);
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ImGui::SetClipboardText(copy_json.dump().c_str());
+                                }
+                            }
                         }
 
                         ImGui::EndPopup();
@@ -441,6 +470,79 @@ int main(int argc, char** argv) {
                 if (out_cache.error.has_value()) {
                     ImGui::PopStyleColor();
                 }
+            }
+
+            if (ImGui::BeginPopupContextWindow()) {
+                if (ImGui::MenuItem("Paste")) {
+                    try {
+                        auto json = nlohmann::json::parse(ImGui::GetClipboardText());
+
+                        std::map<NodePlot::NodeId, NodePlot::NodeGraph::NodeStorage> node_storages;
+
+                        float min_x = std::numeric_limits<float>::max();
+                        float min_y = std::numeric_limits<float>::max();
+
+                        if (json.is_array()) {
+                            for (auto node_json : json) {
+
+                                if (node_json.contains("id") && node_json["id"].is_number_integer() && node_json.contains("storage")) {
+                                    NodePlot::NodeId id = node_json["id"];
+                                    if (auto storage = NodePlot::NodeGraph::storage_from_json(node_json["storage"], id); storage.has_value()) {
+                                        node_storages.insert({id, storage.value()});
+                                        if (storage->pos.x < min_x)
+                                            min_x = storage->pos.x;
+                                        if (storage->pos.y < min_y)
+                                            min_y = storage->pos.y;
+                                    }
+                                }
+                            }
+                        }
+
+                        auto click_pos = node_renderer->screen_to_world(ImGui::GetCursorScreenPos());
+
+                        std::map<NodePlot::NodeId, NodePlot::NodeId> id_map;
+
+                        for (auto& [old_id, storage] : node_storages) {
+                            storage.pos.x -= min_x;
+                            storage.pos.y -= min_y;
+
+                            storage.pos.x += click_pos.x;
+                            storage.pos.y += click_pos.y;
+
+                            if (auto id = cur_ng().create_node(&npf, current_graph, storage.type_id, storage.pos.x, storage.pos.y); id.has_value()) {
+                                id_map[old_id] = id.value();
+                            }
+                        }
+
+                        for (auto& [old_id, new_id] : id_map) {
+                            auto& node = cur_ng().nodes[new_id];
+
+                            auto& old_storage = node_storages[old_id];
+
+                            for (auto& [input_id, input] : old_storage.input_storage) {
+                                if (std::holds_alternative<NodePlot::NodeGraph::InputPin>(input)) {
+                                    if (auto new_id = id_map.find(std::get<NodePlot::NodeGraph::InputPin>(input).node_id); new_id != id_map.end()) {
+                                        std::get<NodePlot::NodeGraph::InputPin>(input).node_id = new_id->second;
+                                    } else {
+                                        std::get<NodePlot::NodeGraph::InputPin>(input).node_id = -1;
+                                    }
+                                }
+                            }
+
+                            node = old_storage;
+                        }
+
+                        selected_windows.clear();
+                        for (auto& [old_id, new_id] : id_map)
+                            selected_windows.insert(new_id);
+
+                    } catch (nlohmann::json::parse_error) {
+                    } catch (nlohmann::json::type_error) {
+                    } catch (nlohmann::json::other_error) {
+                    }
+                }
+
+                ImGui::EndPopup();
             }
 
             if (nodes_to_delete.size() > 0) {
