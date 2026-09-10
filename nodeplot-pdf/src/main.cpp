@@ -1,6 +1,7 @@
 #include <fstream>
 #include <numbers>
 #include <ranges>
+#include <sstream>
 #include <string>
 #include <variant>
 
@@ -8,6 +9,7 @@
 #include <nodeplot/nodeplot.h>
 
 #include <hpdf.h>
+#include <vector>
 
 int main(int argc, char** argv) {
 
@@ -46,6 +48,9 @@ int main(int argc, char** argv) {
             for (auto& cmd : figure.commands) {
                 std::visit(NodePlot::Utils::overloaded{
                                [&](NodePlot::DrawCommands::Line& cmd) {
+                                   if (cmd.points.empty())
+                                       return;
+
                                    HPDF_Page_SetRGBStroke(page, cmd.color.r, cmd.color.g, cmd.color.b);
                                    HPDF_Page_SetLineCap(page, HPDF_ROUND_END);
                                    HPDF_Page_SetLineWidth(page, cmd.stroke_width);
@@ -54,8 +59,24 @@ int main(int argc, char** argv) {
                                    HPDF_ExtGState_SetAlphaStroke(gstate, cmd.color.a);
                                    HPDF_Page_SetExtGState(page, gstate);
 
-                                   HPDF_Page_MoveTo(page, cmd.start.x * width, (1.0 - cmd.start.y) * height);
-                                   HPDF_Page_LineTo(page, cmd.end.x * width, (1.0 - cmd.end.y) * height);
+                                   if (cmd.dash_pattern == "none") {
+                                       HPDF_Page_SetDash(page, NULL, 0, 0.0);
+                                   } else {
+                                       HPDF_REAL dash_mode[2] = {8.0, 7.0};
+                                       std::vector<HPDF_REAL> dash_array;
+
+                                       std::istringstream ss(cmd.dash_pattern);
+                                       int num;
+                                       while (ss >> num)
+                                           dash_array.push_back(num);
+
+                                       HPDF_Page_SetDash(page, dash_array.data(), dash_array.size(), 0.0);
+                                   }
+
+                                   HPDF_Page_MoveTo(page, cmd.points.front().x * width, (1.0 - cmd.points.front().y) * height);
+                                   for (auto& p : cmd.points | std::ranges::views::drop(1))
+                                       HPDF_Page_LineTo(page, p.x * width, (1.0 - p.y) * height);
+
                                    HPDF_Page_Stroke(page);
                                },
                                [&](NodePlot::DrawCommands::Circle& cmd) {

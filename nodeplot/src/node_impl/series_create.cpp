@@ -87,6 +87,7 @@ void register_series_create() {
                                           {"y", Node::Input{.id = "y", .display_name = "Y", .valid_data_types = {DataType::NUMBER_COLUMN}}},
                                           {"color", Node::Input{.id = "color", .display_name = "Color", .valid_data_types = {DataType::COLOR}, .default_value = Color{.r = 1, .g = 0, .b = 0, .a = 1}}},
                                           {"stroke_width", Node::Input{.id = "stroke_width", .display_name = "Stroke Width", .valid_data_types = {DataType::NUMBER}, .default_value = 3.0}},
+                                          {"dash_pattern", Node::Input{.id = "dash_pattern", .display_name = "Dash Pattern", .valid_data_types = {DataType::STRING}, .default_value = "none"}},
                                       };
                                   },
                                   {
@@ -106,20 +107,24 @@ void register_series_create() {
                                           auto y_col = TRY(eng->try_data_type_conversion<std::vector<double>>(TRY(Utils::try_find(s.data, "y", "Missing"))));
                                           auto color = TRY(eng->try_data_type_conversion<Color>(TRY(Utils::try_find(s.data, "color", "Missing"))));
                                           auto stroke_width = TRY(eng->try_data_type_conversion<double>(TRY(Utils::try_find(s.data, "stroke_width", "Missing"))));
+                                          auto dash_pattern = TRY(eng->try_data_type_conversion<std::string>(TRY(Utils::try_find(s.data, "dash_pattern", "Missing"))));
 
                                           if (x_col.size() != y_col.size())
                                               return ERR("Columns are not of the same size");
 
-                                          for (size_t i = 1; i < x_col.size(); i++) {
-                                              auto [x1, y1] = bounds.normalize({(float)x_col[i - 1], (float)y_col[i - 1]});
-                                              auto [x2, y2] = bounds.normalize({(float)x_col[i], (float)y_col[i]});
-                                              fig.commands.push_back(DrawCommands::Line{
-                                                  .start = Pos{(float)x1, (float)y1},
-                                                  .end = Pos{(float)x2, (float)y2},
-                                                  .color = color,
-                                                  .stroke_width = stroke_width,
-                                              });
+                                          std::vector<Pos> points;
+                                          for (size_t i = 0; i < x_col.size(); i++) {
+                                              auto [x, y] = bounds.normalize({(float)x_col[i], (float)y_col[i]});
+                                              points.push_back({x, y});
                                           }
+
+                                          fig.commands.push_back(DrawCommands::Line{
+                                              .points = points,
+                                              .color = color,
+                                              .stroke_width = stroke_width,
+                                              .dash_pattern = dash_pattern,
+                                          });
+
                                           return {};
                                       },
                                   });

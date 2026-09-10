@@ -158,16 +158,16 @@ void register_figure() {
                                         }
 
                                         res.commands.push_back(DrawCommands::Line{
-                                            .start = Pos{plot.x, plot.y},
-                                            .end = Pos{plot.x + plot.w, plot.y},
+                                            .points = {Pos{plot.x, plot.y}, Pos{plot.x + plot.w, plot.y}},
                                             .color = Color{0, 0, 0, 1},
                                             .stroke_width = style.x_axis_stroke_width,
+                                            .dash_pattern = "none",
                                         });
                                         res.commands.push_back(DrawCommands::Line{
-                                            .start = Pos{plot.x, plot.y},
-                                            .end = Pos{plot.x, plot.y - plot.h},
+                                            .points = {Pos{plot.x, plot.y}, Pos{plot.x, plot.y - plot.h}},
                                             .color = Color{0, 0, 0, 1},
                                             .stroke_width = style.y_axis_stroke_width,
+                                            .dash_pattern = "none",
                                         });
 
                                         auto format_tick_number = [](double v) {
@@ -201,14 +201,17 @@ void register_figure() {
                                             float x_pos = normalize_coords({x, 0}).first;
 
                                             res.commands.push_back(DrawCommands::Line{
-                                                .start = Pos{x_pos, (float)(plot.y + style.x_axis_tick_mark_size)},
-                                                .end = Pos{x_pos, (float)plot.y},
-                                                .color = Color{0, 0, 0, 1},
+                                                .points = {
+                                                    Pos{.x=x_pos, .y=(float)plot.y},
+                                                    Pos{.x=x_pos, .y=(float)(plot.y + style.x_axis_tick_mark_size)},
+                                                },
+                                                .color = Color{.r=0, .g=0, .b=0, .a=1},
                                                 .stroke_width = style.x_axis_tick_mark_stroke_width,
+                                                .dash_pattern = "none",
                                             });
 
                                             res.commands.push_back(DrawCommands::Text{
-                                                .pos = Pos{(float)(x_pos + style.x_axis_tick_mark_offset.x), (float)(plot.y + style.x_axis_tick_mark_size + style.x_axis_tick_mark_offset.y)},
+                                                .pos = Pos{.x = (float)(x_pos + style.x_axis_tick_mark_offset.x), .y = (float)(plot.y + style.x_axis_tick_mark_size + style.x_axis_tick_mark_offset.y)},
                                                 .text = format_tick_number(x),
                                                 .anchor = NodePlot::DrawCommands::Text::MIDDLE,
                                                 .font_size = style.x_axis_tick_mark_font_size,
@@ -218,14 +221,17 @@ void register_figure() {
                                             float y_pos = normalize_coords({0, y}).second;
 
                                             res.commands.push_back(DrawCommands::Line{
-                                                .start = Pos{plot.x, y_pos},
-                                                .end = Pos{(float)(plot.x - style.y_axis_tick_mark_size), (float)y_pos},
-                                                .color = Color{0, 0, 0, 1},
+                                                .points = {
+                                                    Pos{.x=plot.x, .y=y_pos},
+                                                    Pos{.x=(float)(plot.x - style.y_axis_tick_mark_size), .y=(float)y_pos},
+                                                },
+                                                .color = Color{.r=0, .g=0, .b=0, .a=1},
                                                 .stroke_width = style.y_axis_tick_mark_stroke_width,
+                                                .dash_pattern = "none",
                                             });
 
                                             res.commands.push_back(DrawCommands::Text{
-                                                .pos = Pos{(float)(plot.x - style.y_axis_tick_mark_size + style.y_axis_tick_mark_offset.x), (float)(y_pos + style.y_axis_tick_mark_offset.y)},
+                                                .pos = Pos{.x = (float)(plot.x - style.y_axis_tick_mark_size + style.y_axis_tick_mark_offset.x), .y = (float)(y_pos + style.y_axis_tick_mark_offset.y)},
                                                 .text = format_tick_number(y),
                                                 .anchor = NodePlot::DrawCommands::Text::RIGHT,
                                                 .font_size = style.y_axis_tick_mark_font_size,
@@ -240,13 +246,13 @@ void register_figure() {
                                         }
 
                                         res.commands.push_back(DrawCommands::Text{
-                                            .pos = Pos{0.5f + style.x_axis_label_offset.x, 1.0f + style.x_axis_label_offset.y},
+                                            .pos = Pos{.x = 0.5f + style.x_axis_label_offset.x, .y = 1.0f + style.x_axis_label_offset.y},
                                             .text = x_label,
                                             .anchor = NodePlot::DrawCommands::Text::MIDDLE,
                                             .font_size = style.x_axis_label_font_size,
                                         });
                                         res.commands.push_back(DrawCommands::Text{
-                                            .pos = Pos{0.0f + style.y_axis_label_offset.x, 0.5f + style.y_axis_label_offset.y},
+                                            .pos = Pos{.x = 0.0f + style.y_axis_label_offset.x, .y = 0.5f + style.y_axis_label_offset.y},
                                             .text = y_label,
                                             .anchor = NodePlot::DrawCommands::Text::MIDDLE,
                                             .font_size = style.y_axis_label_font_size,
@@ -254,7 +260,7 @@ void register_figure() {
                                         });
 
                                         res.commands.push_back(DrawCommands::Text{
-                                            .pos = Pos{0.5f + style.title_offset.x, 0.0f + style.title_offset.y},
+                                            .pos = Pos{.x = 0.5f + style.title_offset.x, .y = 0.0f + style.title_offset.y},
                                             .text = title,
                                             .anchor = NodePlot::DrawCommands::Text::MIDDLE,
                                             .font_size = style.title_font_size,

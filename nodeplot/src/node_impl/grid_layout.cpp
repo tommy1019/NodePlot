@@ -58,11 +58,15 @@ void register_grid_layout() {
                                                 for (auto& cmd : fig.commands) {
                                                     std::visit(NodePlot::Utils::overloaded{
                                                                    [&](DrawCommands::Line& l) {
+                                                                       std::vector<Pos> new_points;
+                                                                       new_points.reserve(l.points.size());
+                                                                       for (auto& p : l.points)
+                                                                           new_points.push_back(transform_pos(p));
                                                                        res.commands.push_back(DrawCommands::Line{
-                                                                           .start = transform_pos(l.start),
-                                                                           .end = transform_pos(l.end),
+                                                                           .points = new_points,
                                                                            .color = l.color,
                                                                            .stroke_width = l.stroke_width,
+                                                                           .dash_pattern = l.dash_pattern,
                                                                        });
                                                                    },
                                                                    [&](DrawCommands::Circle& c) {

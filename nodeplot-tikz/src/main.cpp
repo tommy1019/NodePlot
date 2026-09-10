@@ -1,4 +1,6 @@
 #include <fstream>
+#include <ranges>
+#include <sstream>
 #include <string>
 #include <variant>
 
@@ -39,17 +41,49 @@ int main(int argc, char** argv) {
             for (auto& cmd : figure.commands) {
                 std::visit(NodePlot::Utils::overloaded{
                                [&](NodePlot::DrawCommands::Line& cmd) {
+                                   if (cmd.points.empty())
+                                       return;
+
                                    fprintf(file,
-                                           "    \\draw[color={rgb,255:red,%d; green,%d; blue,%d}, opacity=%f, line width=%fmm] (%fmm,%fmm) -- (%fmm,%fmm);\n",
+                                           "    \\draw[color={rgb,255:red,%d; green,%d; blue,%d}, opacity=%f, line width=%fmm",
                                            (int)std::floor(cmd.color.r * 255),
                                            (int)std::floor(cmd.color.g * 255),
                                            (int)std::floor(cmd.color.b * 255),
                                            cmd.color.a,
-                                           cmd.stroke_width,
-                                           cmd.start.x * width,
-                                           (1.0 - cmd.start.y) * height,
-                                           cmd.end.x * width,
-                                           (1.0 - cmd.end.y) * height);
+                                           cmd.stroke_width);
+
+                                   if (cmd.dash_pattern != "none") {
+                                       fprintf(file, ", dash pattern={");
+
+                                       std::istringstream ss(cmd.dash_pattern);
+
+                                       bool on = true;
+                                       bool first = true;
+
+                                       int num;
+                                       while (ss >> num) {
+                                           if (!first)
+                                               fprintf(file, " ");
+
+                                           if (on)
+                                               fprintf(file, "on %dpt", num);
+                                           else
+                                               fprintf(file, "off %dpt", num);
+
+                                           on = !on;
+                                           first = false;
+                                       }
+
+                                       fprintf(file, "}");
+                                   }
+
+                                   fprintf(file, "] ");
+
+                                   fprintf(file, "(%fmm,%fmm)", cmd.points.front().x * width, (1.0 - cmd.points.front().y) * height);
+                                   for (auto& p : cmd.points | std::ranges::views::drop(1))
+                                       fprintf(file, " -- (%fmm,%fmm)", p.x * width, (1.0 - p.y) * height);
+
+                                   fprintf(file, ";\n");
                                },
                                [&](NodePlot::DrawCommands::Circle& cmd) {
                                    fprintf(file,

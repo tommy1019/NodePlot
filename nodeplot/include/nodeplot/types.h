@@ -81,10 +81,10 @@ struct PlotStyle {
 
 namespace DrawCommands {
 struct Line {
-    Pos start;
-    Pos end;
+    std::vector<Pos> points;
     Color color;
     double stroke_width;
+    std::string dash_pattern;
 };
 struct Circle {
     Pos pos;

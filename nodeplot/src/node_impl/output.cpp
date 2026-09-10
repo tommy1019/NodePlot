@@ -47,9 +47,17 @@ void register_output() {
                                         for (auto& cmd : figure.commands) {
                                             std::visit(Utils::overloaded{
                                                            [&](DrawCommands::Line& l) {
-                                                               ss << "<line x1=\"" << (l.start.x * width) << "\" y1=\"" << (l.start.y * height) << "\" x2=\"" << (l.end.x * width) << "\" y2=\""
-                                                                  << (l.end.y * height) << "\" stroke=\"" << color_to_svg(l.color)
-                                                                  << "\" stroke-opacity=\"" + std::to_string(l.color.a) + "\" stroke-width=\"" << l.stroke_width << "\" stroke-linecap=\"round\" />\n";
+                                                               if (l.points.empty())
+                                                                   return;
+
+                                                               ss << "<path d=\"";
+
+                                                               ss << "M " << l.points.front().x * width << " " << l.points.front().y * height;
+                                                               for (auto& p : l.points | std::ranges::views::drop(1))
+                                                                   ss << " L " << p.x * width << " " << p.y * height;
+
+                                                               ss << "\" stroke=\"" << color_to_svg(l.color) << "\" stroke-opacity=\"" + std::to_string(l.color.a) + "\" stroke-width=\""
+                                                                  << l.stroke_width << "\" stroke-linecap=\"round\" stroke-dasharray=\"" << l.dash_pattern << "\" fill=\"none\" />\n";
                                                            },
                                                            [&](DrawCommands::Circle& c) {
                                                                ss << "<circle cx=\"" << (c.pos.x * width) << "\" cy=\"" << (c.pos.y * height) << "\" r=\"" << c.r << "\" fill=\""
