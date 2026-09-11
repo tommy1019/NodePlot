@@ -13,194 +13,200 @@
 using namespace NodePlot;
 
 void register_figure() {
-    NodeRegistry::register_node("plot_figure",
-                                Node{
-                                    .type_id = "plot_figure",
-                                    .display_name = "Plot Figure",
-                                    .inputs = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id) -> std::vector<std::pair<InputId, Node::Input>> {
-                                        std::vector<std::pair<InputId, Node::Input>> res;
+    NodeRegistry::register_node(
+        "plot_figure",
+        Node{
+            .type_id = "plot_figure",
+            .display_name = "Plot Figure",
+            .inputs = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id) -> std::vector<std::pair<InputId, Node::Input>> {
+                std::vector<std::pair<InputId, Node::Input>> res;
 
-                                        res.emplace_back("num_series", Node::Input{.id = "num_series", .display_name = "Number of Series", .valid_data_types = {DataType::INTEGER}});
+                res.emplace_back("num_series", Node::Input{.id = "num_series", .display_name = "Number of Series", .valid_data_types = {DataType::INTEGER}});
 
-                                        res.emplace_back("title", Node::Input{.id = "title", .display_name = "Title", .valid_data_types = {DataType::STRING}});
-                                        res.emplace_back("x_label", Node::Input{.id = "x_label", .display_name = "X Label", .valid_data_types = {DataType::STRING}});
-                                        res.emplace_back("y_label", Node::Input{.id = "y_label", .display_name = "Y Label", .valid_data_types = {DataType::STRING}});
-                                        res.emplace_back("x_axis_log_scale", Node::Input{.id = "x_axis_tick_mark_size", .display_name = "X Axis Log Scale", .valid_data_types = {DataType::BOOLEAN}});
-                                        res.emplace_back("y_axis_log_scale", Node::Input{.id = "y_axis_log_scale", .display_name = "Y Axis Log Scale", .valid_data_types = {DataType::BOOLEAN}});
-                                        res.emplace_back("style", Node::Input{.id = "style", .display_name = "Style", .valid_data_types = {DataType::PLOT_STYLE}});
+                res.emplace_back("title", Node::Input{.id = "title", .display_name = "Title", .valid_data_types = {DataType::STRING}});
+                res.emplace_back("x_label", Node::Input{.id = "x_label", .display_name = "X Label", .valid_data_types = {DataType::STRING}});
+                res.emplace_back("y_label", Node::Input{.id = "y_label", .display_name = "Y Label", .valid_data_types = {DataType::STRING}});
+                res.emplace_back("x_tick_count", Node::Input{.id = "x_tick_count", .display_name = "X Tick Count", .valid_data_types = {DataType::INTEGER}, .default_value = 3});
+                res.emplace_back("y_tick_count", Node::Input{.id = "y_tick_count", .display_name = "Y Tick Count", .valid_data_types = {DataType::INTEGER}, .default_value = 3});
+                res.emplace_back("x_axis_log_scale", Node::Input{.id = "x_axis_tick_mark_size", .display_name = "X Axis Log Scale", .valid_data_types = {DataType::BOOLEAN}});
+                res.emplace_back("y_axis_log_scale", Node::Input{.id = "y_axis_log_scale", .display_name = "Y Axis Log Scale", .valid_data_types = {DataType::BOOLEAN}});
+                res.emplace_back("style", Node::Input{.id = "style", .display_name = "Style", .valid_data_types = {DataType::PLOT_STYLE}});
 
-                                        int64_t num_series = std::clamp(eng->get_input_value<int64_t>(npf, node_id, "num_series").value_or(0), int64_t{0}, int64_t{255});
-                                        for (int64_t i = 0; i < num_series; i++) {
-                                            std::string name = "series_" + std::to_string(i);
-                                            res.emplace_back(name, Node::Input{.id = name, .display_name = "Series " + std::to_string(i), .valid_data_types = {DataType::SERIES}});
-                                        }
+                int64_t num_series = std::clamp(eng->get_input_value<int64_t>(npf, node_id, "num_series").value_or(0), int64_t{0}, int64_t{255});
+                for (int64_t i = 0; i < num_series; i++) {
+                    std::string name = "series_" + std::to_string(i);
+                    res.emplace_back(name, Node::Input{.id = name, .display_name = "Series " + std::to_string(i), .valid_data_types = {DataType::SERIES}});
+                }
 
-                                        return res;
-                                    },
-                                    .outputs = [](NodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::vector<std::pair<OutputId, Node::Output>> {
-                                        return {
-                                            {"figure", Node::Output{.id = "figure", .display_name = "Figure", .valid_data_types = {DataType::FIGURE}}},
-                                        };
-                                    },
-                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
-                                        std::string title = TRY(eng->get_input_value<std::string>(npf, node_id, "title"));
+                return res;
+            },
+            .outputs = [](NodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::vector<std::pair<OutputId, Node::Output>> {
+                return {
+                    {"figure", Node::Output{.id = "figure", .display_name = "Figure", .valid_data_types = {DataType::FIGURE}}},
+                };
+            },
+            .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
+                std::string title = TRY(eng->get_input_value<std::string>(npf, node_id, "title"));
 
-                                        std::string x_label = TRY(eng->get_input_value<std::string>(npf, node_id, "x_label"));
-                                        std::string y_label = TRY(eng->get_input_value<std::string>(npf, node_id, "y_label"));
+                std::string x_label = TRY(eng->get_input_value<std::string>(npf, node_id, "x_label"));
+                std::string y_label = TRY(eng->get_input_value<std::string>(npf, node_id, "y_label"));
 
-                                        bool x_axis_log_scale = TRY(eng->get_input_value<bool>(npf, node_id, "x_axis_log_scale"));
-                                        bool y_axis_log_scale = TRY(eng->get_input_value<bool>(npf, node_id, "y_axis_log_scale"));
+                bool x_axis_log_scale = TRY(eng->get_input_value<bool>(npf, node_id, "x_axis_log_scale"));
+                bool y_axis_log_scale = TRY(eng->get_input_value<bool>(npf, node_id, "y_axis_log_scale"));
 
-                                        PlotStyle style = TRY(eng->get_input_value<PlotStyle>(npf, node_id, "style"));
+                int64_t x_tick_count = std::clamp(eng->get_input_value<int64_t>(npf, node_id, "x_tick_count").value_or(0), int64_t{1}, int64_t{255});
+                int64_t y_tick_count = std::clamp(eng->get_input_value<int64_t>(npf, node_id, "y_tick_count").value_or(0), int64_t{1}, int64_t{255});
 
-                                        int64_t num_series = std::clamp(eng->get_input_value<int64_t>(npf, node_id, "num_series").value_or(0), int64_t{0}, int64_t{255});
+                PlotStyle style = TRY(eng->get_input_value<PlotStyle>(npf, node_id, "style"));
 
-                                        std::vector<GenericSeries> all_series;
-                                        all_series.reserve(num_series);
+                int64_t num_series = std::clamp(eng->get_input_value<int64_t>(npf, node_id, "num_series").value_or(0), int64_t{0}, int64_t{255});
 
-                                        for (int64_t i = 0; i < num_series; i++) {
-                                            all_series.push_back(TRY(eng->get_input_value<GenericSeries>(npf, node_id, "series_" + std::to_string(i))));
-                                        }
+                std::vector<GenericSeries> all_series;
+                all_series.reserve(num_series);
 
-                                        Figure res;
+                for (int64_t i = 0; i < num_series; i++) {
+                    all_series.push_back(TRY(eng->get_input_value<GenericSeries>(npf, node_id, "series_" + std::to_string(i))));
+                }
 
-                                        std::pair<double, double> x_lims = {std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity()};
-                                        std::pair<double, double> y_lims = {std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity()};
+                Figure res;
 
-                                        for (auto& series : all_series) {
-                                            auto& series_def = TRY(Utils::try_find(NodeRegistry::series_map, series.type_id, "Invalid Series Type")).get();
-                                            auto cur_lims = TRY(series_def.get_limits(npf, eng, series));
-                                            x_lims.first = std::min(x_lims.first, cur_lims.x_low);
-                                            x_lims.second = std::max(x_lims.second, cur_lims.x_high);
-                                            y_lims.first = std::min(y_lims.first, cur_lims.y_low);
-                                            y_lims.second = std::max(y_lims.second, cur_lims.y_high);
-                                        }
+                std::pair<double, double> x_lims = {std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity()};
+                std::pair<double, double> y_lims = {std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity()};
 
-                                        if (x_axis_log_scale) {
-                                            x_lims.first = std::log10(x_lims.first);
-                                            x_lims.second = std::log10(x_lims.second);
-                                        }
-                                        if (y_axis_log_scale) {
-                                            y_lims.first = std::log10(y_lims.first);
-                                            y_lims.second = std::log10(y_lims.second);
-                                        }
+                for (auto& series : all_series) {
+                    auto& series_def = TRY(Utils::try_find(NodeRegistry::series_map, series.type_id, "Invalid Series Type")).get();
+                    auto cur_lims = TRY(series_def.get_limits(npf, eng, series));
+                    x_lims.first = std::min(x_lims.first, cur_lims.x_low);
+                    x_lims.second = std::max(x_lims.second, cur_lims.x_high);
+                    y_lims.first = std::min(y_lims.first, cur_lims.y_low);
+                    y_lims.second = std::max(y_lims.second, cur_lims.y_high);
+                }
 
-                                        double x_range = x_lims.second - x_lims.first;
-                                        double y_range = y_lims.second - y_lims.first;
+                if (x_axis_log_scale) {
+                    x_lims.first = std::log10(x_lims.first);
+                    x_lims.second = std::log10(x_lims.second);
+                }
+                if (y_axis_log_scale) {
+                    y_lims.first = std::log10(y_lims.first);
+                    y_lims.second = std::log10(y_lims.second);
+                }
 
-                                        auto tick_interval = [](double range, int32_t max_count) {
-                                            double x = std::pow(10.0, std::floor(std::log10(range)));
-                                            if (range / x <= max_count)
-                                                return x;
-                                            if (range / (x * 2.0) <= max_count)
-                                                return x * 2.0;
-                                            if (range / (x * 5.0) <= max_count)
-                                                return x * 5.0;
-                                            return x * 10.0;
-                                        };
+                double x_range = x_lims.second - x_lims.first;
+                double y_range = y_lims.second - y_lims.first;
 
-                                        double x_tick_interval = tick_interval(x_range, 3);
-                                        double x_tick_start = std::floor(x_lims.first / x_tick_interval) * x_tick_interval;
-                                        double x_tick_end = std::ceil(x_lims.second / x_tick_interval) * x_tick_interval;
+                auto tick_interval = [](double range, int32_t max_count) {
+                    double x = std::pow(10.0, std::floor(std::log10(range)));
+                    if (range / x <= max_count)
+                        return x;
+                    if (range / (x * 2.0) <= max_count)
+                        return x * 2.0;
+                    if (range / (x * 5.0) <= max_count)
+                        return x * 5.0;
+                    return x * 10.0;
+                };
 
-                                        double y_tick_interval = tick_interval(y_range, 3);
-                                        double y_tick_start = std::floor(y_lims.first / y_tick_interval) * y_tick_interval;
-                                        double y_tick_end = std::ceil(y_lims.second / y_tick_interval) * y_tick_interval;
+                double x_tick_interval = tick_interval(x_range, x_tick_count);
+                double x_tick_start = std::floor(x_lims.first / x_tick_interval) * x_tick_interval;
+                double x_tick_end = std::ceil(x_lims.second / x_tick_interval) * x_tick_interval;
 
-                                        x_lims = {x_tick_start, x_tick_end};
-                                        y_lims = {y_tick_start, y_tick_end};
-                                        x_range = x_lims.second - x_lims.first;
-                                        y_range = y_lims.second - y_lims.first;
+                double y_tick_interval = tick_interval(y_range, y_tick_count);
+                double y_tick_start = std::floor(y_lims.first / y_tick_interval) * y_tick_interval;
+                double y_tick_end = std::ceil(y_lims.second / y_tick_interval) * y_tick_interval;
 
-                                        struct {
-                                            float x, y, w, h;
-                                        } plot = {
-                                            .x = style.plot_margins.left,
-                                            .y = (float)1 - style.plot_margins.bottom,
-                                            .w = (float)1 - style.plot_margins.left - style.plot_margins.right,
-                                            .h = (float)1 - style.plot_margins.top - style.plot_margins.bottom,
-                                        };
+                x_lims = {x_tick_start, x_tick_end};
+                y_lims = {y_tick_start, y_tick_end};
+                x_range = x_lims.second - x_lims.first;
+                y_range = y_lims.second - y_lims.first;
 
-                                        double plot_range_x = plot.w - style.internal_plot_margins.left - style.internal_plot_margins.right;
-                                        double plot_range_y = plot.h - style.internal_plot_margins.bottom - style.internal_plot_margins.top;
+                struct {
+                    float x, y, w, h;
+                } plot = {
+                    .x = style.plot_margins.left,
+                    .y = (float)1 - style.plot_margins.bottom,
+                    .w = (float)1 - style.plot_margins.left - style.plot_margins.right,
+                    .h = (float)1 - style.plot_margins.top - style.plot_margins.bottom,
+                };
 
-                                        auto normalize_coords = [&](std::pair<double, double> p) -> std::pair<double, double> {
-                                            double x = p.first;
-                                            double y = p.second;
+                double plot_range_x = plot.w - style.internal_plot_margins.left - style.internal_plot_margins.right;
+                double plot_range_y = plot.h - style.internal_plot_margins.bottom - style.internal_plot_margins.top;
 
-                                            if (x_axis_log_scale)
-                                                x = std::log10(x);
-                                            if (y_axis_log_scale)
-                                                y = std::log10(y);
+                auto normalize_coords = [&](std::pair<double, double> p) -> std::pair<double, double> {
+                    double x = p.first;
+                    double y = p.second;
 
-                                            x = (x - x_lims.first) / x_range * plot_range_x + plot.x + style.internal_plot_margins.left;
-                                            y = plot.y - (y - y_lims.first) / y_range * plot_range_y - style.internal_plot_margins.bottom;
+                    if (x_axis_log_scale)
+                        x = std::log10(x);
+                    if (y_axis_log_scale)
+                        y = std::log10(y);
 
-                                            return {x, y};
-                                        };
+                    x = (x - x_lims.first) / x_range * plot_range_x + plot.x + style.internal_plot_margins.left;
+                    y = plot.y - (y - y_lims.first) / y_range * plot_range_y - style.internal_plot_margins.bottom;
 
-                                        FigureBounds bounds{
-                                            .x_axis_log_scale = x_axis_log_scale,
-                                            .y_axis_log_scale = y_axis_log_scale,
-                                            .x_transform_pre = -x_lims.first,
-                                            .y_transform_pre = -y_lims.first,
-                                            .x_scale = 1.0f / x_range * plot_range_x,
-                                            .y_scale = -1.0f / y_range * plot_range_y,
-                                            .x_transform_post = plot.x + style.internal_plot_margins.left,
-                                            .y_transform_post = plot.y - style.internal_plot_margins.bottom,
-                                        };
+                    return {x, y};
+                };
 
-                                        for (auto& series : all_series) {
-                                            auto& series_def = TRY(Utils::try_find(NodeRegistry::series_map, series.type_id, "Invalid Series Type")).get();
-                                            auto err = series_def.evaluate(npf, eng, series, res, bounds);
-                                            if (!err.has_value())
-                                                return ERR("Failed to plot series '" + series_def.display_name + "': " + err.error());
-                                        }
+                FigureBounds bounds{
+                    .x_axis_log_scale = x_axis_log_scale,
+                    .y_axis_log_scale = y_axis_log_scale,
+                    .x_transform_pre = -x_lims.first,
+                    .y_transform_pre = -y_lims.first,
+                    .x_scale = 1.0f / x_range * plot_range_x,
+                    .y_scale = -1.0f / y_range * plot_range_y,
+                    .x_transform_post = plot.x + style.internal_plot_margins.left,
+                    .y_transform_post = plot.y - style.internal_plot_margins.bottom,
+                };
 
-                                        res.commands.push_back(DrawCommands::Line{
-                                            .points = {Pos{plot.x, plot.y}, Pos{plot.x + plot.w, plot.y}},
-                                            .color = Color{0, 0, 0, 1},
-                                            .stroke_width = style.x_axis_stroke_width,
-                                            .dash_pattern = "none",
-                                        });
-                                        res.commands.push_back(DrawCommands::Line{
-                                            .points = {Pos{plot.x, plot.y}, Pos{plot.x, plot.y - plot.h}},
-                                            .color = Color{0, 0, 0, 1},
-                                            .stroke_width = style.y_axis_stroke_width,
-                                            .dash_pattern = "none",
-                                        });
+                for (auto& series : all_series) {
+                    auto& series_def = TRY(Utils::try_find(NodeRegistry::series_map, series.type_id, "Invalid Series Type")).get();
+                    auto err = series_def.evaluate(npf, eng, series, res, bounds);
+                    if (!err.has_value())
+                        return ERR("Failed to plot series '" + series_def.display_name + "': " + err.error());
+                }
 
-                                        auto format_tick_number = [](double v) {
-                                            bool e_format = false;
-                                            if (std::log10(v) >= 5) {
-                                                e_format = true;
-                                                v = std::log10(v);
-                                            }
+                res.commands.push_back(DrawCommands::Line{
+                    .points = {Pos{plot.x, plot.y}, Pos{plot.x + plot.w, plot.y}},
+                    .color = Color{0, 0, 0, 1},
+                    .stroke_width = style.x_axis_stroke_width,
+                    .dash_pattern = "none",
+                });
+                res.commands.push_back(DrawCommands::Line{
+                    .points = {Pos{plot.x, plot.y}, Pos{plot.x, plot.y - plot.h}},
+                    .color = Color{0, 0, 0, 1},
+                    .stroke_width = style.y_axis_stroke_width,
+                    .dash_pattern = "none",
+                });
 
-                                            auto s = std::format("{:.2f}", v);
-                                            auto remove_trailing_zeros = [](std::string s) {
-                                                if (!s.contains('.'))
-                                                    return s;
+                auto format_tick_number = [](double v) {
+                    bool e_format = false;
+                    if (std::log10(v) >= 5) {
+                        e_format = true;
+                        v = std::log10(v);
+                    }
 
-                                                for (ssize_t i = s.size() - 1; i >= 0; i--) {
-                                                    if (s[i] != '0') {
-                                                        if (s[i] == '.')
-                                                            return s.substr(0, i);
-                                                        return s.substr(0, i + 1);
-                                                    }
-                                                }
-                                                return s;
-                                            };
+                    auto s = std::format("{:.2f}", v);
+                    auto remove_trailing_zeros = [](std::string s) {
+                        if (!s.contains('.'))
+                            return s;
 
-                                            s = remove_trailing_zeros(s);
+                        for (ssize_t i = s.size() - 1; i >= 0; i--) {
+                            if (s[i] != '0') {
+                                if (s[i] == '.')
+                                    return s.substr(0, i);
+                                return s.substr(0, i + 1);
+                            }
+                        }
+                        return s;
+                    };
 
-                                            return e_format ? ("1e" + s) : s;
-                                        };
+                    s = remove_trailing_zeros(s);
 
-                                        auto x_tick = [&](double x) {
-                                            float x_pos = normalize_coords({x, 0}).first;
+                    return e_format ? ("1e" + s) : s;
+                };
 
-                                            res.commands.push_back(DrawCommands::Line{
+                auto x_tick = [&](double x) {
+                    float x_pos = normalize_coords({x, 0}).first;
+
+                    res.commands.push_back(DrawCommands::Line{
                                                 .points = {
                                                     Pos{.x=x_pos, .y=(float)plot.y},
                                                     Pos{.x=x_pos, .y=(float)(plot.y + style.x_axis_tick_mark_size)},
@@ -210,17 +216,17 @@ void register_figure() {
                                                 .dash_pattern = "none",
                                             });
 
-                                            res.commands.push_back(DrawCommands::Text{
-                                                .pos = Pos{.x = (float)(x_pos + style.x_axis_tick_mark_offset.x), .y = (float)(plot.y + style.x_axis_tick_mark_size + style.x_axis_tick_mark_offset.y)},
-                                                .text = format_tick_number(x),
-                                                .anchor = NodePlot::DrawCommands::Text::MIDDLE,
-                                                .font_size = style.x_axis_tick_mark_font_size,
-                                            });
-                                        };
-                                        auto y_tick = [&](double y) {
-                                            float y_pos = normalize_coords({0, y}).second;
+                    res.commands.push_back(DrawCommands::Text{
+                        .pos = Pos{.x = (float)(x_pos + style.x_axis_tick_mark_offset.x), .y = (float)(plot.y + style.x_axis_tick_mark_size + style.x_axis_tick_mark_offset.y)},
+                        .text = format_tick_number(x),
+                        .anchor = NodePlot::DrawCommands::Text::MIDDLE,
+                        .font_size = style.x_axis_tick_mark_font_size,
+                    });
+                };
+                auto y_tick = [&](double y) {
+                    float y_pos = normalize_coords({0, y}).second;
 
-                                            res.commands.push_back(DrawCommands::Line{
+                    res.commands.push_back(DrawCommands::Line{
                                                 .points = {
                                                     Pos{.x=plot.x, .y=y_pos},
                                                     Pos{.x=(float)(plot.x - style.y_axis_tick_mark_size), .y=(float)y_pos},
@@ -230,46 +236,46 @@ void register_figure() {
                                                 .dash_pattern = "none",
                                             });
 
-                                            res.commands.push_back(DrawCommands::Text{
-                                                .pos = Pos{.x = (float)(plot.x - style.y_axis_tick_mark_size + style.y_axis_tick_mark_offset.x), .y = (float)(y_pos + style.y_axis_tick_mark_offset.y)},
-                                                .text = format_tick_number(y),
-                                                .anchor = NodePlot::DrawCommands::Text::RIGHT,
-                                                .font_size = style.y_axis_tick_mark_font_size,
-                                            });
-                                        };
+                    res.commands.push_back(DrawCommands::Text{
+                        .pos = Pos{.x = (float)(plot.x - style.y_axis_tick_mark_size + style.y_axis_tick_mark_offset.x), .y = (float)(y_pos + style.y_axis_tick_mark_offset.y)},
+                        .text = format_tick_number(y),
+                        .anchor = NodePlot::DrawCommands::Text::RIGHT,
+                        .font_size = style.y_axis_tick_mark_font_size,
+                    });
+                };
 
-                                        for (double x = x_tick_start; x <= x_lims.second; x += x_tick_interval) {
-                                            x_tick(x_axis_log_scale ? std::pow(10, x) : x);
-                                        }
-                                        for (double y = y_tick_start; y <= y_lims.second; y += y_tick_interval) {
-                                            y_tick(y_axis_log_scale ? std::pow(10, y) : y);
-                                        }
+                for (double x = x_tick_start; x <= x_lims.second; x += x_tick_interval) {
+                    x_tick(x_axis_log_scale ? std::pow(10, x) : x);
+                }
+                for (double y = y_tick_start; y <= y_lims.second; y += y_tick_interval) {
+                    y_tick(y_axis_log_scale ? std::pow(10, y) : y);
+                }
 
-                                        res.commands.push_back(DrawCommands::Text{
-                                            .pos = Pos{.x = 0.5f + style.x_axis_label_offset.x, .y = 1.0f + style.x_axis_label_offset.y},
-                                            .text = x_label,
-                                            .anchor = NodePlot::DrawCommands::Text::MIDDLE,
-                                            .font_size = style.x_axis_label_font_size,
-                                        });
-                                        res.commands.push_back(DrawCommands::Text{
-                                            .pos = Pos{.x = 0.0f + style.y_axis_label_offset.x, .y = 0.5f + style.y_axis_label_offset.y},
-                                            .text = y_label,
-                                            .anchor = NodePlot::DrawCommands::Text::MIDDLE,
-                                            .font_size = style.y_axis_label_font_size,
-                                            .rotate = -90,
-                                        });
+                res.commands.push_back(DrawCommands::Text{
+                    .pos = Pos{.x = 0.5f + style.x_axis_label_offset.x, .y = 1.0f + style.x_axis_label_offset.y},
+                    .text = x_label,
+                    .anchor = NodePlot::DrawCommands::Text::MIDDLE,
+                    .font_size = style.x_axis_label_font_size,
+                });
+                res.commands.push_back(DrawCommands::Text{
+                    .pos = Pos{.x = 0.0f + style.y_axis_label_offset.x, .y = 0.5f + style.y_axis_label_offset.y},
+                    .text = y_label,
+                    .anchor = NodePlot::DrawCommands::Text::MIDDLE,
+                    .font_size = style.y_axis_label_font_size,
+                    .rotate = -90,
+                });
 
-                                        res.commands.push_back(DrawCommands::Text{
-                                            .pos = Pos{.x = 0.5f + style.title_offset.x, .y = 0.0f + style.title_offset.y},
-                                            .text = title,
-                                            .anchor = NodePlot::DrawCommands::Text::MIDDLE,
-                                            .font_size = style.title_font_size,
-                                            .bold = true,
-                                        });
+                res.commands.push_back(DrawCommands::Text{
+                    .pos = Pos{.x = 0.5f + style.title_offset.x, .y = 0.0f + style.title_offset.y},
+                    .text = title,
+                    .anchor = NodePlot::DrawCommands::Text::MIDDLE,
+                    .font_size = style.title_font_size,
+                    .bold = true,
+                });
 
-                                        cache.computed_outputs["figure"] = res;
+                cache.computed_outputs["figure"] = res;
 
-                                        return {};
-                                    },
-                                });
+                return {};
+            },
+        });
 }
