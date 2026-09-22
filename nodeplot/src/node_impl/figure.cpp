@@ -37,7 +37,7 @@ void register_figure() {
                     res.emplace_back("x_range_max", Node::Input{.id = "x_range_max", .display_name = "X Max", .valid_data_types = {DataType::NUMBER}});
                 }
 
-                res.emplace_back("y_range_auto", Node::Input{.id = "y_range_auto", .display_name = "X Range Auto", .valid_data_types = {DataType::BOOLEAN}, .default_value = true});
+                res.emplace_back("y_range_auto", Node::Input{.id = "y_range_auto", .display_name = "Y Range Auto", .valid_data_types = {DataType::BOOLEAN}, .default_value = true});
                 if (!eng->get_input_value<bool>(npf, node_id, "y_range_auto", false).value_or(true)) {
                     res.emplace_back("y_range_min", Node::Input{.id = "y_range_min", .display_name = "Y Min", .valid_data_types = {DataType::NUMBER}});
                     res.emplace_back("y_range_max", Node::Input{.id = "y_range_max", .display_name = "Y Max", .valid_data_types = {DataType::NUMBER}});
