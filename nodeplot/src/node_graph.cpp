@@ -1,6 +1,7 @@
 #include "node_graph.h"
 
 #include "eval_node_graph.h"
+#include "file.h"
 #include "node_registry.h"
 #include "types.h"
 
@@ -47,6 +48,15 @@ ErrorOr<NodeGraph> NodeGraph::from_json(nlohmann::json json) {
         res.next_free_node_id = std::max(res.next_free_node_id, node_id + 1);
 
         res.nodes[node_id] = TRY(storage_from_json(nodes_it.value(), node_id));
+
+        EvaluatedNodeGraph eng;
+        NodePlotFile npf;
+        if (auto inputs = NodeRegistry::node_map[res.nodes[node_id].type_id].inputs(&npf, &eng, node_id); inputs.has_value()) {
+            for (auto& i : inputs.value()) {
+                if (i.second.default_value.has_value() && !res.nodes[node_id].input_storage.contains(i.first))
+                    res.nodes[node_id].input_storage[i.first] = i.second.default_value.value();
+            }
+        }
     }
 
     return res;

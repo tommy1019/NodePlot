@@ -147,27 +147,27 @@ void register_create_plot_style() {
                                     },
                                     .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
                                         PlotStyle res;
-                                        res.plot_margins = TRY(eng->get_input_value<Margins>(npf, node_id, "plot_margins"));
-                                        res.internal_plot_margins = TRY(eng->get_input_value<Margins>(npf, node_id, "internal_plot_margins"));
+                                        res.plot_margins = TRY(eng->get_input_value<Margins>(npf, node_id, "plot_margins", true));
+                                        res.internal_plot_margins = TRY(eng->get_input_value<Margins>(npf, node_id, "internal_plot_margins", true));
 
-                                        res.title_font_size = TRY(eng->get_input_value<double>(npf, node_id, "title_font_size"));
-                                        res.title_offset = TRY(eng->get_input_value<Pos>(npf, node_id, "title_offset"));
+                                        res.title_font_size = TRY(eng->get_input_value<double>(npf, node_id, "title_font_size", true));
+                                        res.title_offset = TRY(eng->get_input_value<Pos>(npf, node_id, "title_offset", true));
 
-                                        res.x_axis_stroke_width = TRY(eng->get_input_value<double>(npf, node_id, "x_axis_stroke_width"));
-                                        res.x_axis_tick_mark_font_size = TRY(eng->get_input_value<double>(npf, node_id, "x_axis_tick_mark_font_size"));
-                                        res.x_axis_tick_mark_size = TRY(eng->get_input_value<double>(npf, node_id, "x_axis_tick_mark_size"));
-                                        res.x_axis_tick_mark_stroke_width = TRY(eng->get_input_value<double>(npf, node_id, "x_axis_tick_mark_stroke_width"));
-                                        res.x_axis_tick_mark_offset = TRY(eng->get_input_value<Pos>(npf, node_id, "x_axis_tick_mark_offset"));
-                                        res.x_axis_label_font_size = TRY(eng->get_input_value<double>(npf, node_id, "x_axis_label_font_size"));
-                                        res.x_axis_label_offset = TRY(eng->get_input_value<Pos>(npf, node_id, "x_axis_label_offset"));
+                                        res.x_axis_stroke_width = TRY(eng->get_input_value<double>(npf, node_id, "x_axis_stroke_width", true));
+                                        res.x_axis_tick_mark_font_size = TRY(eng->get_input_value<double>(npf, node_id, "x_axis_tick_mark_font_size", true));
+                                        res.x_axis_tick_mark_size = TRY(eng->get_input_value<double>(npf, node_id, "x_axis_tick_mark_size", true));
+                                        res.x_axis_tick_mark_stroke_width = TRY(eng->get_input_value<double>(npf, node_id, "x_axis_tick_mark_stroke_width", true));
+                                        res.x_axis_tick_mark_offset = TRY(eng->get_input_value<Pos>(npf, node_id, "x_axis_tick_mark_offset", true));
+                                        res.x_axis_label_font_size = TRY(eng->get_input_value<double>(npf, node_id, "x_axis_label_font_size", true));
+                                        res.x_axis_label_offset = TRY(eng->get_input_value<Pos>(npf, node_id, "x_axis_label_offset", true));
 
-                                        res.y_axis_stroke_width = TRY(eng->get_input_value<double>(npf, node_id, "y_axis_stroke_width"));
-                                        res.y_axis_tick_mark_font_size = TRY(eng->get_input_value<double>(npf, node_id, "y_axis_tick_mark_font_size"));
-                                        res.y_axis_tick_mark_size = TRY(eng->get_input_value<double>(npf, node_id, "y_axis_tick_mark_size"));
-                                        res.y_axis_tick_mark_stroke_width = TRY(eng->get_input_value<double>(npf, node_id, "y_axis_tick_mark_stroke_width"));
-                                        res.y_axis_tick_mark_offset = TRY(eng->get_input_value<Pos>(npf, node_id, "y_axis_tick_mark_offset"));
-                                        res.y_axis_label_font_size = TRY(eng->get_input_value<double>(npf, node_id, "y_axis_label_font_size"));
-                                        res.y_axis_label_offset = TRY(eng->get_input_value<Pos>(npf, node_id, "y_axis_label_offset"));
+                                        res.y_axis_stroke_width = TRY(eng->get_input_value<double>(npf, node_id, "y_axis_stroke_width", true));
+                                        res.y_axis_tick_mark_font_size = TRY(eng->get_input_value<double>(npf, node_id, "y_axis_tick_mark_font_size", true));
+                                        res.y_axis_tick_mark_size = TRY(eng->get_input_value<double>(npf, node_id, "y_axis_tick_mark_size", true));
+                                        res.y_axis_tick_mark_stroke_width = TRY(eng->get_input_value<double>(npf, node_id, "y_axis_tick_mark_stroke_width", true));
+                                        res.y_axis_tick_mark_offset = TRY(eng->get_input_value<Pos>(npf, node_id, "y_axis_tick_mark_offset", true));
+                                        res.y_axis_label_font_size = TRY(eng->get_input_value<double>(npf, node_id, "y_axis_label_font_size", true));
+                                        res.y_axis_label_offset = TRY(eng->get_input_value<Pos>(npf, node_id, "y_axis_label_offset", true));
 
                                         cache.computed_outputs["style"] = res;
 

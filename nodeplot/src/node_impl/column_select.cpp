@@ -22,8 +22,8 @@ void register_column_select() {
                 };
             },
             .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
-                Table table = TRY(eng->get_input_value<Table>(npf, node_id, "table"));
-                std::string column_name = TRY(eng->get_input_value<std::string>(npf, node_id, "column_name"));
+                Table table = TRY(eng->get_input_value<Table>(npf, node_id, "table", true));
+                std::string column_name = TRY(eng->get_input_value<std::string>(npf, node_id, "column_name", true));
 
                 auto res = table->columns.find(column_name);
                 if (res == table->columns.end())

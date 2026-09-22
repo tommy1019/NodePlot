@@ -31,23 +31,27 @@ ErrorOr<Data> EvaluatedNodeGraph::get_output_data(NodePlotFile* npf, NodeId node
     return TRY(Utils::try_find(output_cache.computed_outputs, output_id, "OutputId not found")).get();
 }
 
-ErrorOr<Data> EvaluatedNodeGraph::get_input_data(NodePlotFile* npf, NodeId node_id, InputId input_id) {
+ErrorOr<Data> EvaluatedNodeGraph::get_input_data(NodePlotFile* npf, NodeId node_id, InputId input_id, bool fill_default_value) {
     auto& ng = TRY(node_graph(npf)).get();
     NodeGraph::NodeStorage& node_storage = TRY(Utils::try_find(ng.nodes, node_id, "Invalid NodeID")).get();
     auto input_storage_or_error = Utils::try_find(node_storage.input_storage, input_id, "Invalid InputID: " + input_id);
 
     if (!input_storage_or_error.has_value()) {
-        auto inputs = TRY(TRY(Utils::try_find(NodeRegistry::node_map, node_storage.type_id, "Invalid Node Type ID")).get().inputs(npf, this, node_id));
+        if (fill_default_value) {
+            auto inputs = TRY(TRY(Utils::try_find(NodeRegistry::node_map, node_storage.type_id, "Invalid Node Type ID")).get().inputs(npf, this, node_id));
 
-        for (auto& input : inputs) {
-            if (input.first == input_id) {
-                if (input.second.default_value.has_value())
-                    return input.second.default_value.value();
-                break;
+            for (auto& input : inputs) {
+                if (input.first == input_id) {
+                    if (input.second.default_value.has_value())
+                        return input.second.default_value.value();
+                    break;
+                }
             }
-        }
 
-        return ERR("Node has no value for " + input_id + " and no default value");
+            return ERR("Node has no value for " + input_id + " and no default value");
+        } else {
+            return ERR("Node has no value for " + input_id);
+        }
     }
 
     return std::visit(Utils::overloaded{

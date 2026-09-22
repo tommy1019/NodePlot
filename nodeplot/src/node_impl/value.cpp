@@ -21,7 +21,7 @@ void register_value() {
                                         };
                                     },
                                     .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
-                                        cache.computed_outputs["value"] = TRY(eng->get_input_value<double>(npf, node_id, "value"));
+                                        cache.computed_outputs["value"] = TRY(eng->get_input_value<double>(npf, node_id, "value", true));
                                         return {};
                                     },
                                 });
@@ -42,7 +42,7 @@ void register_value() {
                                         };
                                     },
                                     .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
-                                        cache.computed_outputs["value"] = TRY(eng->get_input_value<std::string>(npf, node_id, "value"));
+                                        cache.computed_outputs["value"] = TRY(eng->get_input_value<std::string>(npf, node_id, "value", true));
                                         return {};
                                     },
                                 });
@@ -63,7 +63,7 @@ void register_value() {
                                         };
                                     },
                                     .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
-                                        cache.computed_outputs["value"] = TRY(eng->get_input_value<Color>(npf, node_id, "value"));
+                                        cache.computed_outputs["value"] = TRY(eng->get_input_value<Color>(npf, node_id, "value", true));
                                         return {};
                                     },
                                 });
@@ -96,10 +96,10 @@ void register_value() {
                                                     .a = (float)a,
                                                 };
                                             },
-                                            TRY(eng->get_input_value_variant<double, std::vector<double>>(npf, node_id, "red")),
-                                            TRY(eng->get_input_value_variant<double, std::vector<double>>(npf, node_id, "green")),
-                                            TRY(eng->get_input_value_variant<double, std::vector<double>>(npf, node_id, "blue")),
-                                            TRY(eng->get_input_value_variant<double, std::vector<double>>(npf, node_id, "alpha"))));
+                                            TRY(eng->get_input_value_variant<double, std::vector<double>>(npf, node_id, "red", true)),
+                                            TRY(eng->get_input_value_variant<double, std::vector<double>>(npf, node_id, "green", true)),
+                                            TRY(eng->get_input_value_variant<double, std::vector<double>>(npf, node_id, "blue", true)),
+                                            TRY(eng->get_input_value_variant<double, std::vector<double>>(npf, node_id, "alpha", true))));
                                         return {};
                                     },
                                 });
@@ -166,10 +166,10 @@ void register_value() {
                             .a = (float)a,
                         };
                     },
-                    TRY(eng->get_input_value_variant<double, std::vector<double>>(npf, node_id, "hue")),
-                    TRY(eng->get_input_value_variant<double, std::vector<double>>(npf, node_id, "saturation")),
-                    TRY(eng->get_input_value_variant<double, std::vector<double>>(npf, node_id, "value")),
-                    TRY(eng->get_input_value_variant<double, std::vector<double>>(npf, node_id, "alpha"))));
+                    TRY(eng->get_input_value_variant<double, std::vector<double>>(npf, node_id, "hue", true)),
+                    TRY(eng->get_input_value_variant<double, std::vector<double>>(npf, node_id, "saturation", true)),
+                    TRY(eng->get_input_value_variant<double, std::vector<double>>(npf, node_id, "value", true)),
+                    TRY(eng->get_input_value_variant<double, std::vector<double>>(npf, node_id, "alpha", true))));
                 return {};
             },
         });
@@ -192,7 +192,7 @@ void register_value() {
                                         };
                                     },
                                     .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
-                                        auto color = TRY(eng->get_input_value_variant<Color, std::vector<Color>>(npf, node_id, "color"));
+                                        auto color = TRY(eng->get_input_value_variant<Color, std::vector<Color>>(npf, node_id, "color", true));
                                         cache.computed_outputs["red"] = TRY(Utils::vectorized([](Color c) -> double { return c.r; }, color));
                                         cache.computed_outputs["green"] = TRY(Utils::vectorized([](Color c) -> double { return c.g; }, color));
                                         cache.computed_outputs["blue"] = TRY(Utils::vectorized([](Color c) -> double { return c.b; }, color));

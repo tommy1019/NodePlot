@@ -31,12 +31,12 @@ int main(int argc, char** argv) {
 
     for (auto& n : main_graph->second.nodes) {
         if (n.second.type_id == "output") {
-            std::string filename = MUST(eng.get_input_value<std::string>(&npf, n.first, "filename")) + ".pdf";
+            std::string filename = MUST(eng.get_input_value<std::string>(&npf, n.first, "filename", true)) + ".pdf";
 
-            auto width = MUST(eng.get_input_value<double>(&npf, n.first, "width"));
-            auto height = MUST(eng.get_input_value<double>(&npf, n.first, "height"));
+            auto width = MUST(eng.get_input_value<double>(&npf, n.first, "width", true));
+            auto height = MUST(eng.get_input_value<double>(&npf, n.first, "height", true));
 
-            auto figure = MUST(eng.get_input_value<NodePlot::Figure>(&npf, n.first, "figure"));
+            auto figure = MUST(eng.get_input_value<NodePlot::Figure>(&npf, n.first, "figure", true));
 
             auto pdf = HPDF_New(nullptr, nullptr);
             REQUIRE(pdf, "Could not create pdf");

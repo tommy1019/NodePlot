@@ -24,7 +24,8 @@ struct EvaluatedNodeGraph {
     ErrorOr<std::reference_wrapper<NodeGraph>> node_graph(NodePlotFile* npf);
 
     ErrorOr<Data> get_output_data(NodePlotFile* npf, NodeId node_id, OutputId output_id);
-    ErrorOr<Data> get_input_data(NodePlotFile* npf, NodeId node_id, InputId input_id);
+
+    ErrorOr<Data> get_input_data(NodePlotFile* npf, NodeId node_id, InputId input_id, bool fill_default_value);
 
     template <typename T>
     ErrorOr<T> try_data_type_conversion(Data data) {
@@ -80,8 +81,8 @@ struct EvaluatedNodeGraph {
     }
 
     template <typename T>
-    ErrorOr<T> get_input_value(NodePlotFile* npf, NodeId node_id, InputId input_id) {
-        auto data = get_input_data(npf, node_id, input_id);
+    ErrorOr<T> get_input_value(NodePlotFile* npf, NodeId node_id, InputId input_id, bool fill_default_value) {
+        auto data = get_input_data(npf, node_id, input_id, fill_default_value);
         if (!data.has_value()) {
             return ERR(input_id + ": " + data.error());
         }
@@ -95,8 +96,8 @@ struct EvaluatedNodeGraph {
     }
 
     template <typename... Ts>
-    ErrorOr<std::variant<Ts...>> get_input_value_variant(NodePlotFile* npf, NodeId node_id, InputId input_id) {
-        auto data = get_input_data(npf, node_id, input_id);
+    ErrorOr<std::variant<Ts...>> get_input_value_variant(NodePlotFile* npf, NodeId node_id, InputId input_id, bool fill_default_value) {
+        auto data = get_input_data(npf, node_id, input_id, fill_default_value);
         if (!data.has_value()) {
             return ERR(input_id + ": " + data.error());
         }

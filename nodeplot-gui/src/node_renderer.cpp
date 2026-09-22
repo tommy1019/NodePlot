@@ -92,7 +92,7 @@ NodeRenderer::RenderFunction NodeRenderer::default_renderer = [](Renderer& rnd, 
                         }
 
                         if (std::holds_alternative<NodePlot::InputAttribute::AutoFillsFromTable>(att)) {
-                            auto table = ctx.eng->get_input_value<NodePlot::Table>(ctx.npf, ctx.node_id, std::get<NodePlot::InputAttribute::AutoFillsFromTable>(att).id);
+                            auto table = ctx.eng->get_input_value<NodePlot::Table>(ctx.npf, ctx.node_id, std::get<NodePlot::InputAttribute::AutoFillsFromTable>(att).id, false);
                             if (table.has_value()) {
                                 ATTR_OFFSET += INPUT_HEIGHT;
 

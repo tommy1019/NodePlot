@@ -29,8 +29,8 @@ void register_sampled_property_extract() {
                                         };
                                     },
                                     .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
-                                        std::vector<double> x = TRY(eng->get_input_value<std::vector<double>>(npf, node_id, "x"));
-                                        std::vector<double> y = TRY(eng->get_input_value<std::vector<double>>(npf, node_id, "y"));
+                                        std::vector<double> x = TRY(eng->get_input_value<std::vector<double>>(npf, node_id, "x", true));
+                                        std::vector<double> y = TRY(eng->get_input_value<std::vector<double>>(npf, node_id, "y", true));
 
                                         struct Bucket {
                                             std::vector<double> vals;
@@ -121,7 +121,7 @@ void register_sampled_property_extract() {
                                         };
                                     },
                                     .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
-                                        std::vector<double> v = TRY(eng->get_input_value<std::vector<double>>(npf, node_id, "values"));
+                                        std::vector<double> v = TRY(eng->get_input_value<std::vector<double>>(npf, node_id, "values", true));
 
                                         double sum = 0;
                                         double min = v.size() > 0 ? v.front() : 0.0;

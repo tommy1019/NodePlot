@@ -30,9 +30,10 @@ void register_figure() {
                 res.emplace_back("y_tick_count", Node::Input{.id = "y_tick_count", .display_name = "Y Tick Count", .valid_data_types = {DataType::INTEGER}, .default_value = 3});
                 res.emplace_back("x_axis_log_scale", Node::Input{.id = "x_axis_tick_mark_size", .display_name = "X Axis Log Scale", .valid_data_types = {DataType::BOOLEAN}});
                 res.emplace_back("y_axis_log_scale", Node::Input{.id = "y_axis_log_scale", .display_name = "Y Axis Log Scale", .valid_data_types = {DataType::BOOLEAN}});
+
                 res.emplace_back("style", Node::Input{.id = "style", .display_name = "Style", .valid_data_types = {DataType::PLOT_STYLE}});
 
-                int64_t num_series = std::clamp(eng->get_input_value<int64_t>(npf, node_id, "num_series").value_or(0), int64_t{0}, int64_t{255});
+                int64_t num_series = std::clamp(eng->get_input_value<int64_t>(npf, node_id, "num_series", false).value_or(0), int64_t{0}, int64_t{255});
                 for (int64_t i = 0; i < num_series; i++) {
                     std::string name = "series_" + std::to_string(i);
                     res.emplace_back(name, Node::Input{.id = name, .display_name = "Series " + std::to_string(i), .valid_data_types = {DataType::SERIES}});
@@ -46,26 +47,26 @@ void register_figure() {
                 };
             },
             .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
-                std::string title = TRY(eng->get_input_value<std::string>(npf, node_id, "title"));
+                std::string title = TRY(eng->get_input_value<std::string>(npf, node_id, "title", true));
 
-                std::string x_label = TRY(eng->get_input_value<std::string>(npf, node_id, "x_label"));
-                std::string y_label = TRY(eng->get_input_value<std::string>(npf, node_id, "y_label"));
+                std::string x_label = TRY(eng->get_input_value<std::string>(npf, node_id, "x_label", true));
+                std::string y_label = TRY(eng->get_input_value<std::string>(npf, node_id, "y_label", true));
 
-                bool x_axis_log_scale = TRY(eng->get_input_value<bool>(npf, node_id, "x_axis_log_scale"));
-                bool y_axis_log_scale = TRY(eng->get_input_value<bool>(npf, node_id, "y_axis_log_scale"));
+                bool x_axis_log_scale = TRY(eng->get_input_value<bool>(npf, node_id, "x_axis_log_scale", true));
+                bool y_axis_log_scale = TRY(eng->get_input_value<bool>(npf, node_id, "y_axis_log_scale", true));
 
-                int64_t x_tick_count = std::clamp(eng->get_input_value<int64_t>(npf, node_id, "x_tick_count").value_or(0), int64_t{1}, int64_t{255});
-                int64_t y_tick_count = std::clamp(eng->get_input_value<int64_t>(npf, node_id, "y_tick_count").value_or(0), int64_t{1}, int64_t{255});
+                int64_t x_tick_count = std::clamp(eng->get_input_value<int64_t>(npf, node_id, "x_tick_count", true).value_or(0), int64_t{1}, int64_t{255});
+                int64_t y_tick_count = std::clamp(eng->get_input_value<int64_t>(npf, node_id, "y_tick_count", true).value_or(0), int64_t{1}, int64_t{255});
 
-                PlotStyle style = TRY(eng->get_input_value<PlotStyle>(npf, node_id, "style"));
+                PlotStyle style = TRY(eng->get_input_value<PlotStyle>(npf, node_id, "style", true));
 
-                int64_t num_series = std::clamp(eng->get_input_value<int64_t>(npf, node_id, "num_series").value_or(0), int64_t{0}, int64_t{255});
+                int64_t num_series = std::clamp(eng->get_input_value<int64_t>(npf, node_id, "num_series", true).value_or(0), int64_t{0}, int64_t{255});
 
                 std::vector<GenericSeries> all_series;
                 all_series.reserve(num_series);
 
                 for (int64_t i = 0; i < num_series; i++) {
-                    all_series.push_back(TRY(eng->get_input_value<GenericSeries>(npf, node_id, "series_" + std::to_string(i))));
+                    all_series.push_back(TRY(eng->get_input_value<GenericSeries>(npf, node_id, "series_" + std::to_string(i), true)));
                 }
 
                 Figure res;

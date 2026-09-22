@@ -26,8 +26,8 @@ void register_csv_import() {
                                         };
                                     },
                                     .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
-                                        std::filesystem::path filename = TRY(eng->get_input_value<std::filesystem::path>(npf, node_id, "filename"));
-                                        bool has_headers = TRY(eng->get_input_value<bool>(npf, node_id, "has_headers"));
+                                        std::filesystem::path filename = TRY(eng->get_input_value<std::filesystem::path>(npf, node_id, "filename", true));
+                                        bool has_headers = TRY(eng->get_input_value<bool>(npf, node_id, "has_headers", true));
 
                                         filename = npf->path.parent_path() / filename;
 

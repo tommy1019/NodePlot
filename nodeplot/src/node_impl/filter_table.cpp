@@ -23,7 +23,7 @@ void register_filter_table() {
                 res.emplace_back("compare_type", Node::Input{.id = "compare_type", .display_name = "Compare Type", .valid_data_types = {DataType::STRING}, .default_value = "<"});
                 res.emplace_back("numeric_compare", Node::Input{.id = "numeric_compare", .display_name = "Numeric Compare", .valid_data_types = {DataType::BOOLEAN}, .default_value = true});
 
-                if (eng->get_input_value<bool>(npf, node_id, "numeric_compare").value_or(false)) {
+                if (eng->get_input_value<bool>(npf, node_id, "numeric_compare", false).value_or(true)) {
                     res.emplace_back("compare_value", Node::Input{.id = "compare_value", .display_name = "Compare Value", .valid_data_types = {DataType::NUMBER}});
                 } else {
                     res.emplace_back("compare_value", Node::Input{.id = "compare_value", .display_name = "Compare Value", .valid_data_types = {DataType::STRING}});
@@ -37,10 +37,10 @@ void register_filter_table() {
                 };
             },
             .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
-                Table table = TRY(eng->get_input_value<Table>(npf, node_id, "table"));
-                std::string column_name = TRY(eng->get_input_value<std::string>(npf, node_id, "column_name"));
-                std::string compare_type = TRY(eng->get_input_value<std::string>(npf, node_id, "compare_type"));
-                bool numeric_compare = TRY(eng->get_input_value<bool>(npf, node_id, "numeric_compare"));
+                Table table = TRY(eng->get_input_value<Table>(npf, node_id, "table", true));
+                std::string column_name = TRY(eng->get_input_value<std::string>(npf, node_id, "column_name", true));
+                std::string compare_type = TRY(eng->get_input_value<std::string>(npf, node_id, "compare_type", true));
+                bool numeric_compare = TRY(eng->get_input_value<bool>(npf, node_id, "numeric_compare", true));
 
                 auto& column = TRY(Utils::try_find(table->columns, column_name, "No column by the specified name found")).get();
 
@@ -48,7 +48,7 @@ void register_filter_table() {
                 compared_column.reserve(column.size());
 
                 if (numeric_compare) {
-                    double compare_val = TRY(eng->get_input_value<double>(npf, node_id, "compare_value"));
+                    double compare_val = TRY(eng->get_input_value<double>(npf, node_id, "compare_value", true));
                     for (auto v : column) {
                         double num_v = Utils::string_to_double_with_nan(v);
                         if (compare_type == "<") {
@@ -68,7 +68,7 @@ void register_filter_table() {
                         }
                     }
                 } else {
-                    std::string compare_val = TRY(eng->get_input_value<std::string>(npf, node_id, "compare_value"));
+                    std::string compare_val = TRY(eng->get_input_value<std::string>(npf, node_id, "compare_value", true));
                     for (auto v : column) {
                         if (compare_type == "<") {
                             compared_column.push_back(v < compare_val);

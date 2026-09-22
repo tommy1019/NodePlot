@@ -17,8 +17,8 @@ void register_grid_layout() {
                                         res.emplace_back("cols", Node::Input{.id = "cols", .display_name = "Columns", .valid_data_types = {DataType::INTEGER}, .default_value = 1});
                                         res.emplace_back("rows", Node::Input{.id = "rows", .display_name = "Rows", .valid_data_types = {DataType::INTEGER}, .default_value = 1});
 
-                                        int64_t cols = std::clamp(eng->get_input_value<int64_t>(npf, node_id, "cols").value_or(0), int64_t{0}, int64_t{255});
-                                        int64_t rows = std::clamp(eng->get_input_value<int64_t>(npf, node_id, "rows").value_or(0), int64_t{0}, int64_t{255});
+                                        int64_t cols = std::clamp(eng->get_input_value<int64_t>(npf, node_id, "cols", false).value_or(0), int64_t{0}, int64_t{255});
+                                        int64_t rows = std::clamp(eng->get_input_value<int64_t>(npf, node_id, "rows", false).value_or(0), int64_t{0}, int64_t{255});
 
                                         for (int64_t j = 0; j < rows; j++) {
                                             for (int64_t i = 0; i < cols; i++) {
@@ -36,8 +36,8 @@ void register_grid_layout() {
                                         };
                                     },
                                     .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
-                                        int64_t cols = std::clamp(eng->get_input_value<int64_t>(npf, node_id, "cols").value_or(0), int64_t{0}, int64_t{255});
-                                        int64_t rows = std::clamp(eng->get_input_value<int64_t>(npf, node_id, "rows").value_or(0), int64_t{0}, int64_t{255});
+                                        int64_t cols = std::clamp(eng->get_input_value<int64_t>(npf, node_id, "cols", true).value_or(0), int64_t{0}, int64_t{255});
+                                        int64_t rows = std::clamp(eng->get_input_value<int64_t>(npf, node_id, "rows", true).value_or(0), int64_t{0}, int64_t{255});
 
                                         float width_per_col = 1.0f / cols;
                                         float height_per_row = 1.0f / rows;
@@ -49,12 +49,12 @@ void register_grid_layout() {
 
                                                 auto transform_pos = [&](Pos p) {
                                                     return Pos{
-                                                        p.x * width_per_col + c * width_per_col,
-                                                        p.y * height_per_row + r * height_per_row,
+                                                        .x = p.x * width_per_col + c * width_per_col,
+                                                        .y = p.y * height_per_row + r * height_per_row,
                                                     };
                                                 };
 
-                                                auto fig = TRY(eng->get_input_value<Figure>(npf, node_id, "figure_" + std::to_string(c) + "_" + std::to_string(r)));
+                                                auto fig = TRY(eng->get_input_value<Figure>(npf, node_id, "figure_" + std::to_string(c) + "_" + std::to_string(r), true));
                                                 for (auto& cmd : fig.commands) {
                                                     std::visit(NodePlot::Utils::overloaded{
                                                                    [&](DrawCommands::Line& l) {

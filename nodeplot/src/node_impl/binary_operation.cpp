@@ -25,10 +25,10 @@ void register_binary_operation() {
                 };
             },
             .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
-                std::string operation = TRY(eng->get_input_value<std::string>(npf, node_id, "operation"));
+                std::string operation = TRY(eng->get_input_value<std::string>(npf, node_id, "operation", true));
 
-                auto a_val = TRY(eng->get_input_value_variant<double, std::string, std::vector<double>, std::vector<std::string>>(npf, node_id, "a"));
-                auto b_val = TRY(eng->get_input_value_variant<double, std::string, std::vector<double>, std::vector<std::string>>(npf, node_id, "b"));
+                auto a_val = TRY(eng->get_input_value_variant<double, std::string, std::vector<double>, std::vector<std::string>>(npf, node_id, "a", true));
+                auto b_val = TRY(eng->get_input_value_variant<double, std::string, std::vector<double>, std::vector<std::string>>(npf, node_id, "b", true));
 
                 auto op = [&operation](auto a, auto b) -> ErrorOr<decltype(a)> {
                     if (operation == "+")

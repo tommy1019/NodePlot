@@ -33,8 +33,8 @@ void register_output() {
                                         };
                                     },
                                     .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
-                                        double width = TRY(eng->get_input_value<double>(npf, node_id, "width"));
-                                        double height = TRY(eng->get_input_value<double>(npf, node_id, "height"));
+                                        double width = TRY(eng->get_input_value<double>(npf, node_id, "width", true));
+                                        double height = TRY(eng->get_input_value<double>(npf, node_id, "height", true));
 
                                         std::stringstream ss;
                                         ss << "<svg width=\"" << width << "\" height=\"" << height << "\" xmlns=\"http://www.w3.org/2000/svg\">\n";
@@ -43,7 +43,7 @@ void register_output() {
                                             return "rgb(" + std::to_string(((int)(c.r * 255.0))) + ", " + std::to_string(((int)(c.g * 255.0))) + ", " + std::to_string(((int)(c.b * 255.0))) + ")";
                                         };
 
-                                        auto figure = TRY(eng->get_input_value<Figure>(npf, node_id, "figure"));
+                                        auto figure = TRY(eng->get_input_value<Figure>(npf, node_id, "figure", true));
                                         for (auto& cmd : figure.commands) {
                                             std::visit(Utils::overloaded{
                                                            [&](DrawCommands::Line& l) {

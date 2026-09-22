@@ -198,7 +198,7 @@ void register_series_create() {
 
             res.emplace_back("x", Node::Input{.id = "x", .display_name = "X", .valid_data_types = {DataType::NUMBER_COLUMN}});
 
-            int64_t num_series = std::clamp(eng->get_input_value<int64_t>(npf, node_id, "num_partitions").value_or(0), int64_t{0}, int64_t{255});
+            int64_t num_series = std::clamp(eng->get_input_value<int64_t>(npf, node_id, "num_partitions", false).value_or(0), int64_t{0}, int64_t{255});
             for (int64_t i = 0; i < num_series; i++) {
                 std::string name = "partition_" + std::to_string(i);
                 std::string name_color = "partition_color_" + std::to_string(i);
