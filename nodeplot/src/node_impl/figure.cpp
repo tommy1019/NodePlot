@@ -31,6 +31,18 @@ void register_figure() {
                 res.emplace_back("x_axis_log_scale", Node::Input{.id = "x_axis_tick_mark_size", .display_name = "X Axis Log Scale", .valid_data_types = {DataType::BOOLEAN}});
                 res.emplace_back("y_axis_log_scale", Node::Input{.id = "y_axis_log_scale", .display_name = "Y Axis Log Scale", .valid_data_types = {DataType::BOOLEAN}});
 
+                res.emplace_back("x_range_auto", Node::Input{.id = "x_range_auto", .display_name = "X Range Auto", .valid_data_types = {DataType::BOOLEAN}, .default_value = true});
+                if (!eng->get_input_value<bool>(npf, node_id, "x_range_auto", false).value_or(true)) {
+                    res.emplace_back("x_range_min", Node::Input{.id = "x_range_min", .display_name = "X Min", .valid_data_types = {DataType::NUMBER}});
+                    res.emplace_back("x_range_max", Node::Input{.id = "x_range_max", .display_name = "X Max", .valid_data_types = {DataType::NUMBER}});
+                }
+
+                res.emplace_back("y_range_auto", Node::Input{.id = "y_range_auto", .display_name = "X Range Auto", .valid_data_types = {DataType::BOOLEAN}, .default_value = true});
+                if (!eng->get_input_value<bool>(npf, node_id, "y_range_auto", false).value_or(true)) {
+                    res.emplace_back("y_range_min", Node::Input{.id = "y_range_min", .display_name = "Y Min", .valid_data_types = {DataType::NUMBER}});
+                    res.emplace_back("y_range_max", Node::Input{.id = "y_range_max", .display_name = "Y Max", .valid_data_types = {DataType::NUMBER}});
+                }
+
                 res.emplace_back("style", Node::Input{.id = "style", .display_name = "Style", .valid_data_types = {DataType::PLOT_STYLE}});
 
                 int64_t num_series = std::clamp(eng->get_input_value<int64_t>(npf, node_id, "num_series", false).value_or(0), int64_t{0}, int64_t{255});
@@ -74,13 +86,31 @@ void register_figure() {
                 std::pair<double, double> x_lims = {std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity()};
                 std::pair<double, double> y_lims = {std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity()};
 
-                for (auto& series : all_series) {
-                    auto& series_def = TRY(Utils::try_find(NodeRegistry::series_map, series.type_id, "Invalid Series Type")).get();
-                    auto cur_lims = TRY(series_def.get_limits(npf, eng, series));
-                    x_lims.first = std::min(x_lims.first, cur_lims.x_low);
-                    x_lims.second = std::max(x_lims.second, cur_lims.x_high);
-                    y_lims.first = std::min(y_lims.first, cur_lims.y_low);
-                    y_lims.second = std::max(y_lims.second, cur_lims.y_high);
+                bool x_range_auto = TRY(eng->get_input_value<bool>(npf, node_id, "x_range_auto", true));
+                bool y_range_auto = TRY(eng->get_input_value<bool>(npf, node_id, "y_range_auto", true));
+
+                if (!x_range_auto) {
+                    x_lims.first = TRY(eng->get_input_value<double>(npf, node_id, "x_range_min", true));
+                    x_lims.second = TRY(eng->get_input_value<double>(npf, node_id, "x_range_max", true));
+                }
+                if (!y_range_auto) {
+                    y_lims.first = TRY(eng->get_input_value<double>(npf, node_id, "y_range_min", true));
+                    y_lims.second = TRY(eng->get_input_value<double>(npf, node_id, "y_range_max", true));
+                }
+
+                if (x_range_auto || y_range_auto) {
+                    for (auto& series : all_series) {
+                        auto& series_def = TRY(Utils::try_find(NodeRegistry::series_map, series.type_id, "Invalid Series Type")).get();
+                        auto cur_lims = TRY(series_def.get_limits(npf, eng, series));
+                        if (x_range_auto) {
+                            x_lims.first = std::min(x_lims.first, cur_lims.x_low);
+                            x_lims.second = std::max(x_lims.second, cur_lims.x_high);
+                        }
+                        if (y_range_auto) {
+                            y_lims.first = std::min(y_lims.first, cur_lims.y_low);
+                            y_lims.second = std::max(y_lims.second, cur_lims.y_high);
+                        }
+                    }
                 }
 
                 if (x_axis_log_scale) {
@@ -147,6 +177,10 @@ void register_figure() {
                 };
 
                 FigureBounds bounds{
+                    .x_min = x_lims.first,
+                    .x_max = x_lims.second,
+                    .y_min = y_lims.first,
+                    .y_max = y_lims.second,
                     .x_axis_log_scale = x_axis_log_scale,
                     .y_axis_log_scale = y_axis_log_scale,
                     .x_transform_pre = -x_lims.first,

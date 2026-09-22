@@ -14,6 +14,11 @@ MappedFile::~MappedFile() {
     }
 }
 
+bool FigureBounds::in_range_x(double x) const { return (x >= x_min && x <= x_max); }
+bool FigureBounds::in_range_y(double y) const { return (y >= y_min && y <= y_max); }
+
+bool FigureBounds::in_range(Pos p) const { return (p.x >= x_min && p.x <= x_max) && (p.y >= y_min && p.y <= y_max); }
+
 Pos FigureBounds::normalize(Pos p) const {
     if (x_axis_log_scale)
         p.x = std::log10(p.x);

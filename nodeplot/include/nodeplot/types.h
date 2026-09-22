@@ -120,6 +120,12 @@ struct Figure {
     std::vector<DrawCommand> commands;
 };
 struct FigureBounds {
+    double x_min;
+    double x_max;
+
+    double y_min;
+    double y_max;
+
     bool x_axis_log_scale;
     bool y_axis_log_scale;
 
@@ -131,6 +137,10 @@ struct FigureBounds {
 
     double x_transform_post;
     double y_transform_post;
+
+    bool in_range(Pos p) const;
+    bool in_range_x(double x) const;
+    bool in_range_y(double y) const;
 
     Pos normalize(Pos p) const;
 };

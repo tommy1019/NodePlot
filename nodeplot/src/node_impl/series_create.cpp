@@ -51,7 +51,11 @@ void register_series_create() {
                 std::visit(
                     [&](auto point_size, auto color) {
                         for (size_t i = 0; i < x_col.size(); i++) {
-                            auto [x, y] = bounds.normalize({(float)x_col[i], (float)y_col[i]});
+                            Pos input_p = {(float)x_col[i], (float)y_col[i]};
+                            if (!bounds.in_range(input_p))
+                                continue;
+
+                            auto [x, y] = bounds.normalize(input_p);
 
                             Color color_val;
                             if constexpr (std::is_same_v<decltype(color), Color>)
@@ -114,7 +118,11 @@ void register_series_create() {
 
                                           std::vector<Pos> points;
                                           for (size_t i = 0; i < x_col.size(); i++) {
-                                              auto [x, y] = bounds.normalize({(float)x_col[i], (float)y_col[i]});
+                                              Pos input_p = {(float)x_col[i], (float)y_col[i]};
+                                              if (!bounds.in_range(input_p))
+                                                  continue;
+
+                                              auto [x, y] = bounds.normalize(input_p);
                                               points.push_back({x, y});
                                           }
 
@@ -162,17 +170,25 @@ void register_series_create() {
                 if (x_col.size() != y_min_col.size() && x_col.size() != y_max_col.size())
                     return ERR("Columns are not of the same size");
 
-                std::vector<Pos> points;
+                std::vector<std::pair<double, std::pair<double, double>>> in_range_points;
+                in_range_points.reserve(x_col.size());
                 for (size_t i = 0; i < x_col.size(); i++) {
-                    auto [x, y] = bounds.normalize({(float)x_col[i], (float)y_min_col[i]});
+                    if (!bounds.in_range_x(x_col[i]))
+                        continue;
+                    in_range_points.push_back({x_col[i], {std::clamp(y_min_col[i], bounds.y_min, bounds.y_max), std::clamp(y_max_col[i], bounds.y_min, bounds.y_max)}});
+                }
+
+                std::vector<Pos> points;
+                for (size_t i = 0; i < in_range_points.size(); i++) {
+                    auto [x, y] = bounds.normalize({(float)in_range_points[i].first, (float)in_range_points[i].second.first});
                     points.push_back({(float)x, (float)y});
                 }
-                for (size_t i = x_col.size(); i > 0; i--) {
-                    auto [x, y] = bounds.normalize({(float)x_col[i - 1], (float)y_max_col[i - 1]});
+                for (size_t i = in_range_points.size(); i > 0; i--) {
+                    auto [x, y] = bounds.normalize({(float)in_range_points[i - 1].first, (float)in_range_points[i - 1].second.second});
                     points.push_back({(float)x, (float)y});
                 }
-                if (x_col.size() > 0) {
-                    auto [x, y] = bounds.normalize({(float)x_col[0], (float)y_min_col[0]});
+                if (in_range_points.size() > 0) {
+                    auto [x, y] = bounds.normalize({(float)in_range_points[0].first, (float)in_range_points[0].second.first});
                     points.push_back({(float)x, (float)y});
                 }
 
@@ -271,6 +287,9 @@ void register_series_create() {
 
                     for (size_t i = 0; i < x_col.size(); i++) {
                         auto x = x_col[i];
+
+                        if (!bounds.in_range_x(x))
+                            continue;
 
                         double cur_sum = 0;
 
