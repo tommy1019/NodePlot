@@ -177,10 +177,10 @@ void register_figure() {
                 };
 
                 FigureBounds bounds{
-                    .x_min = x_lims.first,
-                    .x_max = x_lims.second,
-                    .y_min = y_lims.first,
-                    .y_max = y_lims.second,
+                    .x_min = x_axis_log_scale ? std::pow(10, x_lims.first) : x_lims.first,
+                    .x_max = x_axis_log_scale ? std::pow(10, x_lims.second) : x_lims.second,
+                    .y_min = y_axis_log_scale ? std::pow(10, y_lims.first) : y_lims.first,
+                    .y_max = y_axis_log_scale ? std::pow(10, y_lims.second) : y_lims.second,
                     .x_axis_log_scale = x_axis_log_scale,
                     .y_axis_log_scale = y_axis_log_scale,
                     .x_transform_pre = -x_lims.first,
