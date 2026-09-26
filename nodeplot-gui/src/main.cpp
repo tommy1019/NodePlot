@@ -394,7 +394,7 @@ int main(int argc, char** argv) {
                         }
                     }
 
-                    if (out_cache.error.has_value()) {
+                    if (current_graph == "main" && out_cache.error.has_value()) {
                         ImGui::Separator();
                         ImGui::Text("%s", out_cache.error.value().c_str());
                     }
