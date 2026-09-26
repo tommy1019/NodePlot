@@ -520,11 +520,11 @@ int main(int argc, char** argv) {
                             auto& old_storage = node_storages[old_id];
 
                             for (auto& [input_id, input] : old_storage.input_storage) {
-                                if (std::holds_alternative<NodePlot::NodeGraph::InputPin>(input)) {
-                                    if (auto new_id = id_map.find(std::get<NodePlot::NodeGraph::InputPin>(input).node_id); new_id != id_map.end()) {
-                                        std::get<NodePlot::NodeGraph::InputPin>(input).node_id = new_id->second;
+                                if (std::holds_alternative<NodePlot::InputPin>(input)) {
+                                    if (auto new_id = id_map.find(std::get<NodePlot::InputPin>(input).node_id); new_id != id_map.end()) {
+                                        std::get<NodePlot::InputPin>(input).node_id = new_id->second;
                                     } else {
-                                        std::get<NodePlot::NodeGraph::InputPin>(input).node_id = -1;
+                                        std::get<NodePlot::InputPin>(input).node_id = -1;
                                     }
                                 }
                             }
@@ -595,11 +595,11 @@ int main(int argc, char** argv) {
                     for (auto& i : inputs) {
                         dst.input_storage[i.first] = src.input_storage[i.first];
                         auto& input = dst.input_storage[i.first];
-                        if (std::holds_alternative<NodePlot::NodeGraph::InputPin>(input)) {
-                            if (auto f = created_map.find(std::get<NodePlot::NodeGraph::InputPin>(input).node_id); f != created_map.end()) {
-                                input = NodePlot::NodeGraph::InputPin{
+                        if (std::holds_alternative<NodePlot::InputPin>(input)) {
+                            if (auto f = created_map.find(std::get<NodePlot::InputPin>(input).node_id); f != created_map.end()) {
+                                input = NodePlot::InputPin{
                                     .node_id = f->second,
-                                    .output_id = std::get<NodePlot::NodeGraph::InputPin>(input).output_id,
+                                    .output_id = std::get<NodePlot::InputPin>(input).output_id,
                                 };
                             }
                         }

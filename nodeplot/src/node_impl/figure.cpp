@@ -70,7 +70,7 @@ void register_figure() {
                 int64_t x_tick_count = std::clamp(eng->get_input_value<int64_t>(npf, node_id, "x_tick_count", true).value_or(0), int64_t{1}, int64_t{255});
                 int64_t y_tick_count = std::clamp(eng->get_input_value<int64_t>(npf, node_id, "y_tick_count", true).value_or(0), int64_t{1}, int64_t{255});
 
-                PlotStyle style = TRY(eng->get_input_value<PlotStyle>(npf, node_id, "style", true));
+                PlotStyle style = TRY(eng->get_input_style(npf, node_id, "style"));
 
                 int64_t num_series = std::clamp(eng->get_input_value<int64_t>(npf, node_id, "num_series", true).value_or(0), int64_t{0}, int64_t{255});
 

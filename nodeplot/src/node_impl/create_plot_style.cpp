@@ -1,4 +1,6 @@
+#include "error.h"
 #include "nodeplot.h"
+#include "types.h"
 #include <algorithm>
 #include <string>
 #include <vector>
@@ -12,131 +14,11 @@ void register_create_plot_style() {
                                     .display_name = "Create Plot Style",
                                     .inputs = [](NodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::vector<std::pair<InputId, Node::Input>> {
                                         return {
-                                            {"plot_margins",
+                                            {"style",
                                              Node::Input{
-                                                 .id = "plot_margins",
-                                                 .display_name = "Plot Margins",
-                                                 .valid_data_types = {DataType::MARGINS},
-                                                 .default_value = Margins{.left = 0.16f, .right = 0.05f, .top = 0.14f, .bottom = 0.15f},
-                                             }},
-                                            {"internal_plot_margins",
-                                             Node::Input{
-                                                 .id = "internal_plot_margins",
-                                                 .display_name = "Internal Plot Margins",
-                                                 .valid_data_types = {DataType::MARGINS},
-                                                 .default_value = Margins{.left = 0, .right = 0, .top = 0, .bottom = 0},
-                                             }},
-                                            {"title_font_size",
-                                             Node::Input{
-                                                 .id = "title_font_size",
-                                                 .display_name = "Title Font Size",
-                                                 .valid_data_types = {DataType::NUMBER},
-                                                 .default_value = 16.0,
-                                             }},
-                                            {"title_offset",
-                                             Node::Input{
-                                                 .id = "title_offset",
-                                                 .display_name = "Title Offset",
-                                                 .valid_data_types = {DataType::POSITION},
-                                                 .default_value = Pos{0.0f, 0.1f},
-                                             }},
-                                            {"x_axis_stroke_width",
-                                             Node::Input{
-                                                 .id = "x_axis_stroke_width",
-                                                 .display_name = "X Stroke Width",
-                                                 .valid_data_types = {DataType::NUMBER},
-                                                 .default_value = 2.0,
-                                             }},
-                                            {"x_axis_tick_mark_font_size",
-                                             Node::Input{
-                                                 .id = "x_axis_tick_mark_font_size",
-                                                 .display_name = "X Tick Mark Font Size",
-                                                 .valid_data_types = {DataType::NUMBER},
-                                                 .default_value = 12.0,
-                                             }},
-                                            {"x_axis_tick_mark_size",
-                                             Node::Input{
-                                                 .id = "x_axis_tick_mark_size",
-                                                 .display_name = "X Tick Mark Size",
-                                                 .valid_data_types = {DataType::NUMBER},
-                                                 .default_value = 0.02f,
-                                             }},
-                                            {"x_axis_tick_mark_stroke_width",
-                                             Node::Input{
-                                                 .id = "x_axis_tick_mark_stroke_width",
-                                                 .display_name = "X Tick Mark Stroke Width",
-                                                 .valid_data_types = {DataType::NUMBER},
-                                                 .default_value = 2.0,
-                                             }},
-                                            {"x_axis_tick_mark_offset",
-                                             Node::Input{
-                                                 .id = "x_axis_tick_mark_offset",
-                                                 .display_name = "X Tick Offset",
-                                                 .valid_data_types = {DataType::POSITION},
-                                                 .default_value = Pos{0.0f, 0.04f},
-                                             }},
-                                            {"x_axis_label_font_size",
-                                             Node::Input{
-                                                 .id = "x_axis_label_font_size",
-                                                 .display_name = "X Label Font Size",
-                                                 .valid_data_types = {DataType::NUMBER},
-                                                 .default_value = 12.0,
-                                             }},
-                                            {"x_axis_label_offset",
-                                             Node::Input{
-                                                 .id = "x_axis_label_offset",
-                                                 .display_name = "X Label Offset",
-                                                 .valid_data_types = {DataType::POSITION},
-                                                 .default_value = Pos{0.0f, 0.0f},
-                                             }},
-                                            {"y_axis_stroke_width",
-                                             Node::Input{
-                                                 .id = "y_axis_stroke_width",
-                                                 .display_name = "Y Stroke Width",
-                                                 .valid_data_types = {DataType::NUMBER},
-                                                 .default_value = 2.0,
-                                             }},
-                                            {"y_axis_tick_mark_font_size",
-                                             Node::Input{
-                                                 .id = "y_axis_tick_mark_font_size",
-                                                 .display_name = "Y Tick Mark Font Size",
-                                                 .valid_data_types = {DataType::NUMBER},
-                                                 .default_value = 12.0,
-                                             }},
-                                            {"y_axis_tick_mark_size",
-                                             Node::Input{
-                                                 .id = "y_axis_tick_mark_size",
-                                                 .display_name = "Y Tick Mark Size",
-                                                 .valid_data_types = {DataType::NUMBER},
-                                                 .default_value = 0.02,
-                                             }},
-                                            {"y_axis_tick_mark_stroke_width",
-                                             Node::Input{
-                                                 .id = "y_axis_tick_mark_stroke_width",
-                                                 .display_name = "Y Tick Mark Stroke Width",
-                                                 .valid_data_types = {DataType::NUMBER},
-                                                 .default_value = 2.0,
-                                             }},
-                                            {"y_axis_tick_mark_offset",
-                                             Node::Input{
-                                                 .id = "y_axis_tick_mark_offset",
-                                                 .display_name = "Y Tick Offset",
-                                                 .valid_data_types = {DataType::POSITION},
-                                                 .default_value = Pos{-0.01f, 0.015f},
-                                             }},
-                                            {"y_axis_label_font_size",
-                                             Node::Input{
-                                                 .id = "y_axis_label_font_size",
-                                                 .display_name = "Y Label Font Size",
-                                                 .valid_data_types = {DataType::NUMBER},
-                                                 .default_value = 12.0,
-                                             }},
-                                            {"y_axis_label_offset",
-                                             Node::Input{
-                                                 .id = "y_axis_label_offset",
-                                                 .display_name = "Y Label Offset",
-                                                 .valid_data_types = {DataType::POSITION},
-                                                 .default_value = Pos{0.06f, 0.0f},
+                                                 .id = "style",
+                                                 .display_name = "Style",
+                                                 .valid_data_types = {DataType::PLOT_STYLE},
                                              }},
                                         };
                                     },
@@ -146,31 +28,7 @@ void register_create_plot_style() {
                                         };
                                     },
                                     .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
-                                        PlotStyle res;
-                                        res.plot_margins = TRY(eng->get_input_value<Margins>(npf, node_id, "plot_margins", true));
-                                        res.internal_plot_margins = TRY(eng->get_input_value<Margins>(npf, node_id, "internal_plot_margins", true));
-
-                                        res.title_font_size = TRY(eng->get_input_value<double>(npf, node_id, "title_font_size", true));
-                                        res.title_offset = TRY(eng->get_input_value<Pos>(npf, node_id, "title_offset", true));
-
-                                        res.x_axis_stroke_width = TRY(eng->get_input_value<double>(npf, node_id, "x_axis_stroke_width", true));
-                                        res.x_axis_tick_mark_font_size = TRY(eng->get_input_value<double>(npf, node_id, "x_axis_tick_mark_font_size", true));
-                                        res.x_axis_tick_mark_size = TRY(eng->get_input_value<double>(npf, node_id, "x_axis_tick_mark_size", true));
-                                        res.x_axis_tick_mark_stroke_width = TRY(eng->get_input_value<double>(npf, node_id, "x_axis_tick_mark_stroke_width", true));
-                                        res.x_axis_tick_mark_offset = TRY(eng->get_input_value<Pos>(npf, node_id, "x_axis_tick_mark_offset", true));
-                                        res.x_axis_label_font_size = TRY(eng->get_input_value<double>(npf, node_id, "x_axis_label_font_size", true));
-                                        res.x_axis_label_offset = TRY(eng->get_input_value<Pos>(npf, node_id, "x_axis_label_offset", true));
-
-                                        res.y_axis_stroke_width = TRY(eng->get_input_value<double>(npf, node_id, "y_axis_stroke_width", true));
-                                        res.y_axis_tick_mark_font_size = TRY(eng->get_input_value<double>(npf, node_id, "y_axis_tick_mark_font_size", true));
-                                        res.y_axis_tick_mark_size = TRY(eng->get_input_value<double>(npf, node_id, "y_axis_tick_mark_size", true));
-                                        res.y_axis_tick_mark_stroke_width = TRY(eng->get_input_value<double>(npf, node_id, "y_axis_tick_mark_stroke_width", true));
-                                        res.y_axis_tick_mark_offset = TRY(eng->get_input_value<Pos>(npf, node_id, "y_axis_tick_mark_offset", true));
-                                        res.y_axis_label_font_size = TRY(eng->get_input_value<double>(npf, node_id, "y_axis_label_font_size", true));
-                                        res.y_axis_label_offset = TRY(eng->get_input_value<Pos>(npf, node_id, "y_axis_label_offset", true));
-
-                                        cache.computed_outputs["style"] = res;
-
+                                        cache.computed_outputs["style"] = TRY(eng->get_input_style(npf, node_id, "style"));
                                         return {};
                                     },
                                 });

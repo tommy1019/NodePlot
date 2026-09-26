@@ -5,6 +5,7 @@
 #include <stack>
 #include <vector>
 
+#include "error.h"
 #include "node_graph.h"
 #include "types.h"
 #include "utils.h"
@@ -110,6 +111,8 @@ struct EvaluatedNodeGraph {
         return convert.value();
     }
 
+    ErrorOr<PlotStyle> get_input_style(NodePlotFile* npf, NodeId node_id, InputId input_id);
+
     bool validate_data_type(Data& data, DataType type) {
         // TODO: Actually validate data type here
         return true;
@@ -136,8 +139,8 @@ struct EvaluatedNodeGraph {
 
             for (auto [other_id, other_storage] : ng.nodes) {
                 for (auto [input_id, value] : other_storage.input_storage) {
-                    if (std::holds_alternative<NodeGraph::InputPin>(value)) {
-                        auto& pin = std::get<NodeGraph::InputPin>(value);
+                    if (std::holds_alternative<InputPin>(value)) {
+                        auto& pin = std::get<InputPin>(value);
                         if (pin.node_id == id) {
                             if (seen.insert(other_id).second) {
                                 to_check.push(other_id);

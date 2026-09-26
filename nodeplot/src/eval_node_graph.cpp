@@ -56,9 +56,61 @@ ErrorOr<Data> EvaluatedNodeGraph::get_input_data(NodePlotFile* npf, NodeId node_
 
     return std::visit(Utils::overloaded{
                           [&](Data data) -> ErrorOr<Data> { return data; },
-                          [&](NodeGraph::InputPin input_pin) -> ErrorOr<Data> { return this->get_output_data(npf, input_pin.node_id, input_pin.output_id); },
+                          [&](InputPin input_pin) -> ErrorOr<Data> { return this->get_output_data(npf, input_pin.node_id, input_pin.output_id); },
                       },
                       input_storage_or_error.value().get());
+}
+
+ErrorOr<PlotStyle> EvaluatedNodeGraph::get_input_style(NodePlotFile* npf, NodeId node_id, InputId id) {
+    auto& str = TRY(Utils::try_find(TRY(node_graph(npf)).get().nodes, node_id, "Invalid NodeID")).get().input_storage;
+
+    PlotStyle res = DEFAULT_PLOT_STYLE;
+
+    if (str.contains(id + "_base")) {
+        res = TRY(get_input_value<PlotStyle>(npf, node_id, id + "_base", false));
+    }
+
+    if (str.contains(id + "_plot_margins"))
+        res.plot_margins = TRY(get_input_value<Margins>(npf, node_id, id + "_plot_margins", false));
+    if (str.contains(id + "_internal_plot_margins"))
+        res.plot_margins = TRY(get_input_value<Margins>(npf, node_id, id + "_internal_plot_margins", false));
+
+    if (str.contains(id + "_title_font_size"))
+        res.title_font_size = TRY(get_input_value<double>(npf, node_id, id + "_title_font_size", false));
+    if (str.contains(id + "_title_offset"))
+        res.title_offset = TRY(get_input_value<Pos>(npf, node_id, id + "_title_offset", false));
+
+    if (str.contains(id + "_x_axis_stroke_width"))
+        res.x_axis_stroke_width = TRY(get_input_value<double>(npf, node_id, id + "_x_axis_stroke_width", false));
+    if (str.contains(id + "_x_axis_tick_mark_font_size"))
+        res.x_axis_tick_mark_font_size = TRY(get_input_value<double>(npf, node_id, id + "_x_axis_tick_mark_font_size", false));
+    if (str.contains(id + "_x_axis_tick_mark_size"))
+        res.x_axis_tick_mark_size = TRY(get_input_value<double>(npf, node_id, id + "_x_axis_tick_mark_size", false));
+    if (str.contains(id + "_x_axis_tick_mark_stroke_width"))
+        res.x_axis_tick_mark_stroke_width = TRY(get_input_value<double>(npf, node_id, id + "_x_axis_tick_mark_stroke_width", false));
+    if (str.contains(id + "_x_axis_tick_mark_offset"))
+        res.x_axis_tick_mark_offset = TRY(get_input_value<Pos>(npf, node_id, id + "_x_axis_tick_mark_offset", false));
+    if (str.contains(id + "_x_axis_label_font_size"))
+        res.x_axis_label_font_size = TRY(get_input_value<double>(npf, node_id, id + "_x_axis_label_font_size", false));
+    if (str.contains(id + "_x_axis_label_offset"))
+        res.x_axis_label_offset = TRY(get_input_value<Pos>(npf, node_id, id + "_x_axis_label_offset", false));
+
+    if (str.contains(id + "_y_axis_stroke_width"))
+        res.y_axis_stroke_width = TRY(get_input_value<double>(npf, node_id, id + "_y_axis_stroke_width", false));
+    if (str.contains(id + "_y_axis_tick_mark_font_size"))
+        res.y_axis_tick_mark_font_size = TRY(get_input_value<double>(npf, node_id, id + "_y_axis_tick_mark_font_size", false));
+    if (str.contains(id + "_y_axis_tick_mark_size"))
+        res.y_axis_tick_mark_size = TRY(get_input_value<double>(npf, node_id, id + "_y_axis_tick_mark_size", false));
+    if (str.contains(id + "_y_axis_tick_mark_stroke_width"))
+        res.y_axis_tick_mark_stroke_width = TRY(get_input_value<double>(npf, node_id, id + "_y_axis_tick_mark_stroke_width", false));
+    if (str.contains(id + "_y_axis_tick_mark_offset"))
+        res.y_axis_tick_mark_offset = TRY(get_input_value<Pos>(npf, node_id, id + "_y_axis_tick_mark_offset", false));
+    if (str.contains(id + "_y_axis_label_font_size"))
+        res.y_axis_label_font_size = TRY(get_input_value<double>(npf, node_id, id + "_y_axis_label_font_size", false));
+    if (str.contains(id + "_y_axis_label_offset"))
+        res.y_axis_label_offset = TRY(get_input_value<Pos>(npf, node_id, id + "_y_axis_label_offset", false));
+
+    return res;
 }
 
 } // namespace NodePlot

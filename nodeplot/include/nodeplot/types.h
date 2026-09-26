@@ -2,6 +2,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <variant>
 #include <vector>
@@ -17,6 +18,11 @@ using InputId = std::string;
 using OutputId = std::string;
 
 using NodeId = ssize_t;
+
+struct InputPin {
+    NodeId node_id;
+    OutputId output_id;
+};
 
 struct NodePlotFile;
 struct EvaluatedNodeGraph;
@@ -59,6 +65,9 @@ struct PlotStyle {
     Margins plot_margins;
     Margins internal_plot_margins;
 
+    double title_font_size;
+    Pos title_offset;
+
     double x_axis_stroke_width;
     double x_axis_tick_mark_font_size;
     double x_axis_tick_mark_size;
@@ -74,9 +83,30 @@ struct PlotStyle {
     Pos y_axis_tick_mark_offset;
     double y_axis_label_font_size;
     Pos y_axis_label_offset;
+};
 
-    double title_font_size;
-    Pos title_offset;
+static constexpr PlotStyle DEFAULT_PLOT_STYLE = {
+    .plot_margins = NodePlot::Margins{.left = 0.16f, .right = 0.05f, .top = 0.14f, .bottom = 0.15f},
+    .internal_plot_margins = NodePlot::Margins{.left = 0, .right = 0, .top = 0, .bottom = 0},
+
+    .title_font_size = 16,
+    .title_offset = {.x = 0.0f, .y = 0.1f},
+
+    .x_axis_stroke_width = 2.0,
+    .x_axis_tick_mark_font_size = 12,
+    .x_axis_tick_mark_size = 0.02,
+    .x_axis_tick_mark_stroke_width = 2.0,
+    .x_axis_tick_mark_offset = {.x = 0.0, .y = 0.04},
+    .x_axis_label_font_size = 12,
+    .x_axis_label_offset = {.x = 0, .y = 0},
+
+    .y_axis_stroke_width = 2.0,
+    .y_axis_tick_mark_font_size = 12,
+    .y_axis_tick_mark_size = 0.02,
+    .y_axis_tick_mark_stroke_width = 2.0,
+    .y_axis_tick_mark_offset = {.x = 0.01, .y = 0.015},
+    .y_axis_label_font_size = 12,
+    .y_axis_label_offset = {.x = 0.06f, .y = 0.0f},
 };
 
 namespace DrawCommands {

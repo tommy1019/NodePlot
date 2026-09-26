@@ -1,6 +1,7 @@
 #pragma once
 
 #include "nodeplot/types.h"
+#include <functional>
 #include <nodeplot/nodeplot.h>
 
 #include <imgui.h>
@@ -8,6 +9,11 @@
 #include <vector>
 
 struct NodeRenderer {
+
+    struct NodeCache {
+        bool style_open = false;
+    };
+
     struct RenderContext {
         NodeRenderer& node_renderer;
         NodePlot::NodePlotFile* npf;
@@ -17,6 +23,8 @@ struct NodeRenderer {
         NodePlot::NodeGraph::NodeStorage& node_storage;
 
         NodePlot::Node node;
+
+        NodeCache& cache;
     };
 
     struct Renderer {
@@ -26,11 +34,17 @@ struct NodeRenderer {
         std::function<void(RenderContext&, ImVec2, std::string)> text = [](RenderContext&, ImVec2, std::string) {};
         std::function<void(RenderContext&, ImVec2)> separator = [](RenderContext&, ImVec2) {};
 
+        std::function<std::optional<bool>(RenderContext&, std::string, std::function<void()>)> folded_section = [](RenderContext& ctx, std::string, std::function<void()> f) {
+            f();
+            return std::nullopt;
+        };
+
         std::function<bool(RenderContext&, ImVec2, ImVec2, std::string)> button = [](RenderContext&, ImVec2, ImVec2, std::string) { return false; };
         std::function<std::optional<std::string>(RenderContext&, ImVec2, ImVec2, std::string, std::vector<std::pair<std::string, std::string>>)> dropdown
             = [](RenderContext&, ImVec2, ImVec2, std::string, std::vector<std::pair<std::string, std::string>>) { return std::nullopt; };
 
-        std::function<bool(RenderContext&, ImVec2, float, NodePlot::InputId)> input_pin = [](RenderContext&, ImVec2, float, NodePlot::InputId) { return false; };
+        std::function<bool(RenderContext&, ImVec2, float, NodePlot::InputId, std::optional<NodePlot::Data>)> input_pin
+            = [](RenderContext&, ImVec2, float, NodePlot::InputId, std::optional<NodePlot::Data>) { return false; };
         std::function<bool(RenderContext&, ImVec2, float, NodePlot::OutputId)> output_pin = [](RenderContext&, ImVec2, float, NodePlot::OutputId) { return false; };
 
         std::function<bool(RenderContext&, ImVec2, ImVec2, std::string&, bool)> string_input = [](RenderContext&, ImVec2, ImVec2, std::string&, bool) { return false; };
@@ -46,10 +60,6 @@ struct NodeRenderer {
 
     static std::map<NodePlot::NodeTypeId, RenderFunction> render_override_map;
     static RenderFunction default_renderer;
-
-    struct NodeCache {
-        ImVec2 size;
-    };
 
     std::map<NodePlot::NodeId, NodeCache> node_cache;
 
@@ -67,7 +77,7 @@ struct NodeRenderer {
 
     NodeRenderer(NodePlot::NodePlotFile* npf, NodePlot::EvaluatedNodeGraph* eng) : npf(npf), eng(eng) {}
 
-    void draw_node_path(ImVec2 start, ImVec2 end);
+    void draw_node_path(float start_node_pos, ImVec2 start, ImVec2 end, float end_node_pos);
 
     ErrorOr<bool> render_node(NodePlot::NodeId node_id, NodePlot::NodeGraph::NodeStorage& storage);
 

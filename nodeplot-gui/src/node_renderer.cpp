@@ -1,5 +1,8 @@
+#include <cstdio>
+#include <functional>
 #include <optional>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -38,21 +41,22 @@ NodeRenderer::RenderFunction NodeRenderer::default_renderer = [](Renderer& rnd, 
 
     auto inputs = TRY(ctx.node.inputs(ctx.npf, ctx.eng, ctx.node_id));
     for (auto [id, input] : inputs) {
-        ImGui::PushID(id.c_str());
-
-        float cur_y = y_pos += INPUT_HEIGHT + 6 * rs;
-
-        if (rnd.input_pin(ctx, {PADDING, cur_y + 2 * rs}, PIN_SIZE, input.id)) {
-            updated = true;
-        }
-
-        rnd.text(ctx, {PADDING + 15 * rs, cur_y}, input.display_name);
-
         if (input.valid_data_types.size() > 0) {
+            ImGui::PushID(id.c_str());
+
             auto input_type = input.valid_data_types.front();
 
-            // For these types we must create the input storage if it doesn't exist to use for the imgui gui elements. Otherwise we do not create storage so the error messages are better
+            float cur_y = y_pos += INPUT_HEIGHT + 6 * rs;
 
+            if (input_type != NodePlot::DataType::PLOT_STYLE) {
+                if (rnd.input_pin(ctx, {PADDING, cur_y + 2 * rs}, PIN_SIZE, input.id, std::nullopt)) {
+                    updated = true;
+                }
+
+                rnd.text(ctx, {PADDING + 15 * rs, cur_y}, input.display_name);
+            }
+
+            // For these types we must create the input storage if it doesn't exist to use for the imgui gui elements. Otherwise we do not create storage so the error messages are better
             switch (input_type) {
             case NodePlot::DataType::STRING:
             case NodePlot::DataType::BOOLEAN:
@@ -60,10 +64,11 @@ NodeRenderer::RenderFunction NodeRenderer::default_renderer = [](Renderer& rnd, 
             case NodePlot::DataType::INTEGER:
             case NodePlot::DataType::COLOR:
             case NodePlot::DataType::MARGINS:
-            case NodePlot::DataType::POSITION: {
+            case NodePlot::DataType::POSITION:
+            case NodePlot::DataType::PLOT_STYLE: {
 
-                std::variant<NodePlot::Data, NodePlot::NodeGraph::InputPin>& input_storage = ctx.node_storage.input_storage[id];
-                bool is_pin_set = std::holds_alternative<NodePlot::NodeGraph::InputPin>(input_storage);
+                std::variant<NodePlot::Data, NodePlot::InputPin>& input_storage = ctx.node_storage.input_storage[id];
+                bool is_pin_set = std::holds_alternative<NodePlot::InputPin>(input_storage);
 
                 switch (input_type) {
                 case NodePlot::DataType::STRING: {
@@ -265,15 +270,141 @@ NodeRenderer::RenderFunction NodeRenderer::default_renderer = [](Renderer& rnd, 
                         }
                     }
                     break;
+                case NodePlot::DataType::PLOT_STYLE: {
+                    // Plot style can't itself be an input pin, override it to the default style
+                    if (is_pin_set) {
+                        input_storage = NodePlot::Data(NodePlot::PlotStyle{});
+                    }
+                    if (!std::holds_alternative<NodePlot::PlotStyle>(std::get<NodePlot::Data>(input_storage))) {
+                        input_storage = NodePlot::Data(NodePlot::PlotStyle{});
+                    }
+
+                    auto& style = std::get<NodePlot::PlotStyle>(std::get<NodePlot::Data>(input_storage));
+
+                    auto style_open = rnd.folded_section(ctx, "Style", [&]() {
+                        float override_enable_x = PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH;
+                        float pin_x = override_enable_x + INPUT_PIN_WIDTH * 2;
+                        float input_x = pin_x + INPUT_PIN_WIDTH;
+
+                        auto add_style_input = [&](std::string title, std::string id, auto default_value) {
+                            ImGui::PushID(id.c_str());
+
+                            float cur_y = y_pos += ctx.cache.style_open ? (INPUT_HEIGHT + 6 * rs) : 0;
+
+                            rnd.text(ctx, {PADDING + 15 * rs, cur_y}, title);
+
+                            bool tmp = ctx.node_storage.input_storage.contains(id);
+                            if (rnd.boolean_input(ctx, {override_enable_x, cur_y}, tmp, true)) {
+                                if (tmp) {
+                                    ctx.node_storage.input_storage[id] = default_value;
+                                } else {
+                                    ctx.node_storage.input_storage.erase(id);
+                                }
+                                updated = true;
+                            }
+
+                            if (tmp) {
+                                updated |= rnd.input_pin(ctx, {pin_x, cur_y + 3.5f * rs}, PIN_SIZE, id, default_value);
+
+                                std::variant<NodePlot::Data, NodePlot::InputPin>& input_storage = ctx.node_storage.input_storage[id];
+                                bool is_pin_set = std::holds_alternative<NodePlot::InputPin>(input_storage);
+
+                                if (is_pin_set) {
+                                    if (std::is_same_v<decltype(default_value), NodePlot::Margins>) {
+                                        static NodePlot::Margins disabled_margin = {};
+                                        rnd.margin_input(ctx, {input_x, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, disabled_margin, false);
+                                    }
+
+                                    if (std::is_same_v<decltype(default_value), double>) {
+                                        static double disabled_number = {};
+                                        rnd.number_input(ctx, {input_x, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, disabled_number, false);
+                                    }
+
+                                    if (std::is_same_v<decltype(default_value), NodePlot::Pos>) {
+                                        static NodePlot::Pos disabled_pos = {};
+                                        rnd.position_input(ctx, {input_x, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, disabled_pos, false);
+                                    }
+                                } else {
+                                    auto& data = std::get<NodePlot::Data>(input_storage);
+
+                                    if (std::is_same_v<decltype(default_value), NodePlot::Margins>) {
+                                        if (!std::holds_alternative<NodePlot::Margins>(data)) {
+                                            data = NodePlot::Margins{};
+                                            updated = true;
+                                        }
+                                        updated |= rnd.margin_input(ctx, {input_x, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, std::get<NodePlot::Margins>(data), true);
+                                    }
+
+                                    if (std::is_same_v<decltype(default_value), double>) {
+                                        if (!std::holds_alternative<double>(data)) {
+                                            data = 0.0;
+                                            updated = true;
+                                        }
+                                        updated |= rnd.number_input(ctx, {input_x, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, std::get<double>(data), true);
+                                    }
+
+                                    if (std::is_same_v<decltype(default_value), NodePlot::Pos>) {
+                                        if (!std::holds_alternative<NodePlot::Pos>(data)) {
+                                            data = NodePlot::Pos{};
+                                            updated = true;
+                                        }
+                                        updated |= rnd.position_input(ctx, {input_x, cur_y}, {INPUT_ELEMENT_WIDTH, INPUT_HEIGHT}, std::get<NodePlot::Pos>(data), true);
+                                    }
+                                }
+                            }
+
+                            ImGui::PopID();
+                        };
+
+                        {
+                            float cur_y = y_pos += ctx.cache.style_open ? (INPUT_HEIGHT + 6 * rs) : 0;
+                            rnd.text(ctx, {PADDING + 15 * rs, cur_y}, "Base Style");
+                            updated |= rnd.input_pin(ctx, {PADDING, cur_y + 2 * rs}, PIN_SIZE, id + "_base", std::nullopt);
+                        }
+
+                        rnd.separator(ctx, {0, y_pos += ctx.cache.style_open ? (INPUT_HEIGHT + 6 * rs) : 0});
+
+                        add_style_input("Plot Margins", id + "_plot_margins", NodePlot::DEFAULT_PLOT_STYLE.plot_margins);
+                        add_style_input("Internal Plot Margins", id + "_internal_plot_margins", NodePlot::DEFAULT_PLOT_STYLE.internal_plot_margins);
+
+                        rnd.separator(ctx, {0, y_pos += ctx.cache.style_open ? (INPUT_HEIGHT + 6 * rs) : 0});
+
+                        add_style_input("Title Font Size", id + "_title_font_size", NodePlot::DEFAULT_PLOT_STYLE.title_font_size);
+                        add_style_input("Title Offset", id + "_title_offset", NodePlot::DEFAULT_PLOT_STYLE.title_offset);
+
+                        rnd.separator(ctx, {0, y_pos += ctx.cache.style_open ? (INPUT_HEIGHT + 6 * rs) : 0});
+
+                        add_style_input("X Stroke Width", id + "_x_axis_stroke_width", NodePlot::DEFAULT_PLOT_STYLE.x_axis_stroke_width);
+                        add_style_input("X Tick Mark Font Size", id + "_x_axis_tick_mark_font_size", NodePlot::DEFAULT_PLOT_STYLE.x_axis_tick_mark_font_size);
+                        add_style_input("X Tick Mark Size", id + "_x_axis_tick_mark_size", NodePlot::DEFAULT_PLOT_STYLE.x_axis_tick_mark_size);
+                        add_style_input("X Tick Mark Stroke Width", id + "_x_axis_tick_mark_stroke_width", NodePlot::DEFAULT_PLOT_STYLE.x_axis_tick_mark_stroke_width);
+                        add_style_input("X Tick Offset", id + "_x_axis_tick_mark_offset", NodePlot::DEFAULT_PLOT_STYLE.x_axis_tick_mark_offset);
+                        add_style_input("X Label Font Size", id + "_x_axis_label_font_size", NodePlot::DEFAULT_PLOT_STYLE.x_axis_label_font_size);
+                        add_style_input("X Label Offset", id + "_x_axis_label_offset", NodePlot::DEFAULT_PLOT_STYLE.x_axis_label_offset);
+
+                        rnd.separator(ctx, {0, y_pos += ctx.cache.style_open ? (INPUT_HEIGHT + 6 * rs) : 0});
+
+                        add_style_input("Y Stroke Width", id + "_y_axis_stroke_width", NodePlot::DEFAULT_PLOT_STYLE.y_axis_stroke_width);
+                        add_style_input("Y Tick Mark Font Size", id + "_y_axis_tick_mark_font_size", NodePlot::DEFAULT_PLOT_STYLE.y_axis_tick_mark_font_size);
+                        add_style_input("Y Tick Mark Size", id + "_y_axis_tick_mark_size", NodePlot::DEFAULT_PLOT_STYLE.y_axis_tick_mark_size);
+                        add_style_input("Y Tick Mark Stroke Width", id + "_y_axis_tick_mark_stroke_width", NodePlot::DEFAULT_PLOT_STYLE.y_axis_tick_mark_stroke_width);
+                        add_style_input("Y Tick Offset", id + "_y_axis_tick_mark_offset", NodePlot::DEFAULT_PLOT_STYLE.y_axis_tick_mark_offset);
+                        add_style_input("Y Label Font Size", id + "_y_axis_label_font_size", NodePlot::DEFAULT_PLOT_STYLE.y_axis_label_font_size);
+                        add_style_input("Y Label Offset", id + "_y_axis_label_offset", NodePlot::DEFAULT_PLOT_STYLE.y_axis_label_offset);
+                    });
+                    if (style_open.has_value())
+                        ctx.cache.style_open = style_open.value();
+
+                } break;
                 default:
                     break;
                 }
             } break;
             default:
             }
-        }
 
-        ImGui::PopID();
+            ImGui::PopID();
+        }
     }
 
     rnd.separator(ctx, {PADDING / 2, (y_pos += INPUT_HEIGHT * 0.75f) + (INPUT_HEIGHT * 0.75f) / 2.0f});
@@ -293,7 +424,7 @@ NodeRenderer::RenderFunction NodeRenderer::default_renderer = [](Renderer& rnd, 
     return updated;
 };
 
-void NodeRenderer::draw_node_path(ImVec2 start, ImVec2 end) {
+void NodeRenderer::draw_node_path(float start_node_pos, ImVec2 start, ImVec2 end, float end_node_pos) {
     constexpr ImVec4 color = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);
     const ImU32 color_32 = ImGui::GetColorU32(color);
 
@@ -303,6 +434,31 @@ void NodeRenderer::draw_node_path(ImVec2 start, ImVec2 end) {
     float PATH_X_ESCAPE = 20.0f * scene_scale;
 
     float OVERLAP_MUL = 0.02f;
+
+    float start_node_escape = std::clamp(start.x - start_node_pos, 0.0f, PATH_X_ESCAPE);
+    float end_node_escape = std::clamp(end_node_pos - end.x, 0.0f, PATH_X_ESCAPE);
+
+    if (start_node_escape > 0) {
+        fg_draw_list->AddLine({start_node_pos, start.y},
+                              {
+                                  start_node_pos + start_node_escape,
+                                  start.y,
+                              },
+                              color_32,
+                              3);
+    }
+
+    if (end_node_escape > 0) {
+        fg_draw_list->AddLine({end_node_pos, end.y},
+                              {
+                                  end_node_pos - end_node_escape,
+                                  end.y,
+                              },
+                              color_32,
+                              3);
+    }
+
+    PATH_X_ESCAPE = 0;
 
     fg_draw_list->AddLine(start,
                           {
@@ -364,6 +520,15 @@ ErrorOr<bool> NodeRenderer::render_node(NodePlot::NodeId node_id, NodePlot::Node
                 ImGui::Separator();
             },
 
+        .folded_section = [](RenderContext& ctx, std::string title, std::function<void()> f) -> bool {
+            bool folded = false;
+            if (ImGui::CollapsingHeader(title.c_str())) {
+                f();
+                folded = true;
+            }
+            return folded;
+        },
+
         .button =
             [](RenderContext& ctx, ImVec2 pos, ImVec2 size, std::string label) {
                 ImGui::SetCursorPos(pos);
@@ -388,27 +553,26 @@ ErrorOr<bool> NodeRenderer::render_node(NodePlot::NodeId node_id, NodePlot::Node
             return res;
         },
 
-        .input_pin = [](RenderContext& ctx, ImVec2 pos, float size, NodePlot::InputId id) -> bool {
+        .input_pin = [](RenderContext& ctx, ImVec2 pos, float size, NodePlot::InputId id, std::optional<NodePlot::Data> default_value) -> bool {
             bool updated = false;
             auto win_pos = ImGui::GetWindowPos();
             ImGui::GetForegroundDrawList()->AddCircle({win_pos.x + pos.x + size, win_pos.y + pos.y + size}, size, ImGui::GetColorU32(ImVec4(0.3f, 0.3f, 0.3f, 1.0f)), 0);
             ImGui::SetCursorPos(pos);
             if (ImGui::InvisibleButton("##input_pin", {size * 2, size * 2})) {
 
-                std::optional<NodePlot::Data> default_val;
-                {
+                if (!default_value.has_value()) {
                     auto inputs = ctx.node.inputs(ctx.npf, ctx.eng, ctx.node_id);
                     if (inputs.has_value()) {
                         for (auto& i : inputs.value()) {
                             if (i.first == id) {
-                                default_val = i.second.default_value;
+                                default_value = i.second.default_value;
                             }
                         }
                     }
                 }
 
-                if (default_val.has_value()) {
-                    ctx.node_storage.input_storage[id] = default_val.value();
+                if (default_value.has_value()) {
+                    ctx.node_storage.input_storage[id] = default_value.value();
                 } else {
                     ctx.node_storage.input_storage.erase(id);
                 }
@@ -420,7 +584,7 @@ ErrorOr<bool> NodeRenderer::render_node(NodePlot::NodeId node_id, NodePlot::Node
                     IM_ASSERT(payload->DataSize == sizeof(std::pair<NodePlot::NodeId, NodePlot::OutputId>));
                     std::pair<NodePlot::NodeId, NodePlot::OutputId> pin = *(const decltype(pin)*)payload->Data;
 
-                    ctx.node_storage.input_storage[id] = NodePlot::NodeGraph::InputPin{.node_id = pin.first, .output_id = pin.second};
+                    ctx.node_storage.input_storage[id] = NodePlot::InputPin{.node_id = pin.first, .output_id = pin.second};
 
                     updated = true;
                 }
@@ -439,7 +603,7 @@ ErrorOr<bool> NodeRenderer::render_node(NodePlot::NodeId node_id, NodePlot::Node
             if (ImGui::BeginDragDropSource()) {
                 std::pair<NodePlot::NodeId, NodePlot::OutputId> pin = {ctx.node_id, id};
                 ImGui::SetDragDropPayload("PIN", &pin, sizeof(pin));
-                ctx.node_renderer.draw_node_path({pos.x + win_pos.x + size, pos.y + win_pos.y + size}, ImGui::GetIO().MousePos);
+                ctx.node_renderer.draw_node_path(ctx.node_storage.end_pos.x, {pos.x + win_pos.x + size, pos.y + win_pos.y + size}, ImGui::GetIO().MousePos, ImGui::GetIO().MousePos.x);
                 ImGui::EndDragDropSource();
                 return true;
             }
@@ -538,6 +702,7 @@ ErrorOr<bool> NodeRenderer::render_node(NodePlot::NodeId node_id, NodePlot::Node
         .node_id = node_id,
         .node_storage = storage,
         .node = node->second,
+        .cache = node_cache[node_id],
     };
 
     ctx.node_storage.end_pos = {-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max()};
@@ -565,14 +730,14 @@ ErrorOr<bool> NodeRenderer::render_node(NodePlot::NodeId node_id, NodePlot::Node
 
 ErrorOr<void> NodeRenderer::render_input_paths(NodePlot::NodeId node_id, NodePlot::NodeGraph::NodeStorage& storage) {
     Renderer input_pin_renderer{
-        .input_pin = [&](RenderContext& ctx, ImVec2 pos, float size, NodePlot::InputId id) -> bool {
+        .input_pin = [&](RenderContext& ctx, ImVec2 pos, float size, NodePlot::InputId id, std::optional<NodePlot::Data> default_value) -> bool {
             auto input = ctx.node_storage.input_storage.find(id);
             if (input == ctx.node_storage.input_storage.end())
                 return false;
-            if (std::holds_alternative<NodePlot::NodeGraph::InputPin>(input->second)) {
+            if (std::holds_alternative<NodePlot::InputPin>(input->second)) {
                 pos.x += size;
                 pos.y += size;
-                auto& pin = std::get<NodePlot::NodeGraph::InputPin>(input->second);
+                auto& pin = std::get<NodePlot::InputPin>(input->second);
 
                 auto output_ng = eng->node_graph(ctx.npf);
                 if (!output_ng.has_value())
@@ -605,6 +770,7 @@ ErrorOr<void> NodeRenderer::render_input_paths(NodePlot::NodeId node_id, NodePlo
                     .node_id = pin.node_id,
                     .node_storage = output_node_storage->second,
                     .node = output_node->second,
+                    .cache = node_cache[pin.node_id],
                 };
 
                 auto rnf = render_override_map.find(output_node_storage->second.type_id);
@@ -620,16 +786,18 @@ ErrorOr<void> NodeRenderer::render_input_paths(NodePlot::NodeId node_id, NodePlo
 
                     ImVec2 input_node_pos = ctx.node_renderer.world_to_screen({storage.pos.x, storage.pos.y});
                     ImVec2 output_node_pos = ctx.node_renderer.world_to_screen({output_node_storage->second.pos.x, output_node_storage->second.pos.y});
+                    ImVec2 output_node_pos_end = ctx.node_renderer.world_to_screen({output_node_storage->second.end_pos.x, output_node_storage->second.end_pos.y});
 
-                    ctx.node_renderer.draw_node_path(
-                        {
-                            found_pos->x + output_node_pos.x,
-                            found_pos->y + output_node_pos.y,
-                        },
-                        {
-                            pos.x + input_node_pos.x,
-                            pos.y + input_node_pos.y,
-                        });
+                    ctx.node_renderer.draw_node_path(found_pos->x + output_node_pos.x,
+                                                     {
+                                                         output_node_pos_end.x,
+                                                         found_pos->y + output_node_pos.y,
+                                                     },
+                                                     {
+                                                         input_node_pos.x,
+                                                         pos.y + input_node_pos.y,
+                                                     },
+                                                     pos.x + input_node_pos.x);
                 }
             }
 
@@ -650,6 +818,7 @@ ErrorOr<void> NodeRenderer::render_input_paths(NodePlot::NodeId node_id, NodePlo
         .node_id = node_id,
         .node_storage = storage,
         .node = node->second,
+        .cache = node_cache[node_id],
     };
 
     auto rnf = render_override_map.find(storage.type_id);

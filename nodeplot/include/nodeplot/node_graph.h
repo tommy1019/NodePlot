@@ -10,11 +10,6 @@
 namespace NodePlot {
 
 struct NodeGraph {
-    struct InputPin {
-        NodeId node_id;
-        OutputId output_id;
-    };
-
     struct NodeStorage {
         NodeTypeId type_id;
 

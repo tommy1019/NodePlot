@@ -66,7 +66,7 @@ ErrorOr<nlohmann::json> NodeGraph::storage_to_json(NodeStorage node_storage) {
     nlohmann::json node_inputs;
     for (auto [input_id, data_or_pin] : node_storage.input_storage) {
         node_inputs[input_id] = TRY(std::visit(Utils::overloaded{
-                                                   [](Data data) -> ErrorOr<nlohmann::json> {
+                                                   [&](Data data) -> ErrorOr<nlohmann::json> {
                                                        nlohmann::json res;
                                                        res["type"] = "data";
 
@@ -105,7 +105,11 @@ ErrorOr<nlohmann::json> NodeGraph::storage_to_json(NodeStorage node_storage) {
                                                                                             res["value"] = std::vector<float>{p.x, p.y};
                                                                                             return {};
                                                                                         },
-                                                                                        [&](auto) -> ErrorOr<void> { return ERR("Cannot encode input value"); }},
+                                                                                        [&](PlotStyle v) -> ErrorOr<void> {
+                                                                                            res["data_type"] = "plot_style";
+                                                                                            return {};
+                                                                                        },
+                                                                                        [&](auto) -> ErrorOr<void> { return ERR("Cannot encode input value of unknown type for key: " + input_id); }},
                                                                       data));
 
                                                        return res;
@@ -201,6 +205,8 @@ ErrorOr<NodeGraph::NodeStorage> NodeGraph::storage_from_json(nlohmann::json json
                     if (position_arr.size() != 2)
                         return ERR(err_str() + "Invalid position data");
                     return Data(NodePlot::Pos{position_arr[0], position_arr[1]});
+                } else if (data_type == "plot_style") {
+                    return Data(DEFAULT_PLOT_STYLE);
                 } else
                     return ERR(err_str() + "Invalid data type for input");
             } else {
