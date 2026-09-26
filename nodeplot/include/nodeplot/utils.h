@@ -47,7 +47,7 @@ ErrorOr<Data> vectorized(const Func& func, std::variant<Ts, std::vector<Ts>>... 
         return Data(std::invoke(func, std::get<Ts>(args)...));
     } else {
         size_t column_size = std::max({std::holds_alternative<std::vector<Ts>>(args) ? std::get<std::vector<Ts>>(args).size() : 0 ...});
-        printf("Checking column size: %zu\n", column_size);
+        // printf("Checking column size: %zu\n", column_size);
         if (column_size == 0)
             return ERR("Zero sized columns");
         if (!(((std::holds_alternative<std::vector<Ts>>(args) ? (std::get<std::vector<Ts>>(args).size() == column_size) : true) && ...)))
