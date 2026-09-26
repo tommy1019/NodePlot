@@ -367,7 +367,7 @@ int main(int argc, char** argv) {
                 auto out_cache = cur_eng().cache[id];
                 auto& node = NodePlot::NodeRegistry::node_map.at(storage.type_id);
 
-                if (out_cache.error.has_value()) {
+                if (current_graph == "main" && out_cache.error.has_value()) {
                     ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(1.0f, 0.7f, 0.7f, 1.0f));
                 }
 
@@ -467,7 +467,7 @@ int main(int argc, char** argv) {
                     ImGui::PopStyleColor();
                 }
 
-                if (out_cache.error.has_value()) {
+                if (current_graph == "main" && out_cache.error.has_value()) {
                     ImGui::PopStyleColor();
                 }
             }
