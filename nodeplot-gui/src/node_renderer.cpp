@@ -281,7 +281,13 @@ NodeRenderer::RenderFunction NodeRenderer::default_renderer = [](Renderer& rnd, 
 
                     auto& style = std::get<NodePlot::PlotStyle>(std::get<NodePlot::Data>(input_storage));
 
-                    auto style_open = rnd.folded_section(ctx, "Style", [&]() {
+                    {
+                        float cur_y = y_pos;
+                        rnd.text(ctx, {PADDING + 15 * rs, cur_y}, "Base Style");
+                        updated |= rnd.input_pin(ctx, {PADDING, cur_y + 2 * rs}, PIN_SIZE, id + "_base", std::nullopt);
+                    }
+
+                    auto style_open = rnd.folded_section(ctx, {0, y_pos += INPUT_HEIGHT + 6 * rs}, "Style Overrides", [&]() {
                         float override_enable_x = PADDING + INPUT_PIN_WIDTH + INPUT_TEXT_WIDTH;
                         float pin_x = override_enable_x + INPUT_PIN_WIDTH * 2;
                         float input_x = pin_x + INPUT_PIN_WIDTH;
@@ -355,12 +361,6 @@ NodeRenderer::RenderFunction NodeRenderer::default_renderer = [](Renderer& rnd, 
 
                             ImGui::PopID();
                         };
-
-                        {
-                            float cur_y = y_pos += ctx.cache.style_open ? (INPUT_HEIGHT + 6 * rs) : 0;
-                            rnd.text(ctx, {PADDING + 15 * rs, cur_y}, "Base Style");
-                            updated |= rnd.input_pin(ctx, {PADDING, cur_y + 2 * rs}, PIN_SIZE, id + "_base", std::nullopt);
-                        }
 
                         rnd.separator(ctx, {0, y_pos += ctx.cache.style_open ? (INPUT_HEIGHT + 6 * rs) : 0});
 
@@ -520,8 +520,9 @@ ErrorOr<bool> NodeRenderer::render_node(NodePlot::NodeId node_id, NodePlot::Node
                 ImGui::Separator();
             },
 
-        .folded_section = [](RenderContext& ctx, std::string title, std::function<void()> f) -> bool {
+        .folded_section = [](RenderContext& ctx, ImVec2 pos, std::string title, std::function<void()> f) -> bool {
             bool folded = false;
+            ImGui::SetCursorPos(pos);
             if (ImGui::CollapsingHeader(title.c_str())) {
                 f();
                 folded = true;

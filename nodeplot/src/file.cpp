@@ -1,4 +1,9 @@
 #include "file.h"
+#include "error.h"
+#include "nlohmann/json_fwd.hpp"
+#include "nodeplot.h"
+#include "utils.h"
+#include <functional>
 
 namespace NodePlot {
 
@@ -14,6 +19,51 @@ ErrorOr<NodePlotFile> NodePlotFile::create(std::filesystem::path path) {
 }
 
 ErrorOr<NodePlotFile> NodePlotFile::from_json(nlohmann::json json, std::filesystem::path path) {
+
+    {
+
+        auto try_find = [](nlohmann::json& map, auto key, std::string err) -> ErrorOr<std::reference_wrapper<nlohmann::json>> {
+            auto res = map.find(key);
+            if (res == map.end())
+                return ERR(err);
+            return *res;
+        };
+
+        std::string version = "0.0.0";
+        auto version_json = json.find("version");
+        if (version_json != json.end() && version_json->is_string()) {
+            version = version_json->get<std::string>();
+        }
+
+        if (version == "0.0.0") {
+            if (auto err = [&]() -> ErrorOr<void> {
+                    auto& graphs = TRY(try_find(json, "graphs", "")).get();
+
+                    for (auto& graph : graphs) {
+                        auto& nodes = TRY(try_find(graph, "nodes", "")).get();
+
+                        for (auto& node : nodes) {
+                            auto type_id = TRY(try_find(node, "type_id", "")).get();
+                            auto& inputs = TRY(try_find(node, "inputs", "")).get();
+
+                            if (type_id == "create_plot_style") {
+                                nlohmann::json new_inputs;
+                                for (auto& [key, input] : inputs.items()) {
+                                    new_inputs["style_" + key] = input;
+                                }
+                                inputs = new_inputs;
+                            }
+                        }
+                    }
+
+                    return {};
+                }();
+                !err.has_value()) {
+                return ERR("Could not upgrade from version 0.0.0: " + err.error());
+            };
+        }
+    }
+
     NodePlotFile res;
     res.path = path;
 
@@ -36,6 +86,7 @@ ErrorOr<nlohmann::json> NodePlotFile::to_json() {
     }
 
     nlohmann::json res;
+    res["version"] = NODEPLOT_VERSION;
     res["graphs"] = graphs;
 
     return res;

@@ -6,3 +6,5 @@
 #include "node_registry.h"
 #include "types.h"
 #include "utils.h"
+
+#define NODEPLOT_VERSION "1.0.0"

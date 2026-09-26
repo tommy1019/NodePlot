@@ -147,8 +147,21 @@ void register_function() {
 
                 // Get inputs from this nodes inputs and put them in the output cache of the function's input node
                 for (int64_t i = 0; i < input_count; i++) {
+
                     std::string param_name = "input_" + std::to_string(i);
-                    auto value = TRY(eng->get_input_data(npf, node_id, param_name, true));
+                    std::string name_field = param_name + "_name";
+                    std::string type_field = param_name + "_type";
+
+                    DataType type = TRY(parse_data_type(TRY(func_eng.get_input_value<std::string>(npf, graph.function_input_id.value(), type_field, false))));
+
+                    Data value;
+
+                    if (type != NodePlot::DataType::PLOT_STYLE) {
+                        value = TRY(eng->get_input_data(npf, node_id, param_name, true));
+                    } else {
+                        value = TRY(eng->get_input_style(npf, node_id, param_name));
+                    }
+
                     input_cache.computed_outputs[param_name] = value;
                 }
 

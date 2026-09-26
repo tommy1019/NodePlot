@@ -34,7 +34,7 @@ struct NodeRenderer {
         std::function<void(RenderContext&, ImVec2, std::string)> text = [](RenderContext&, ImVec2, std::string) {};
         std::function<void(RenderContext&, ImVec2)> separator = [](RenderContext&, ImVec2) {};
 
-        std::function<std::optional<bool>(RenderContext&, std::string, std::function<void()>)> folded_section = [](RenderContext& ctx, std::string, std::function<void()> f) {
+        std::function<std::optional<bool>(RenderContext&, ImVec2, std::string, std::function<void()>)> folded_section = [](RenderContext& ctx, ImVec2 pos, std::string, std::function<void()> f) {
             f();
             return std::nullopt;
         };

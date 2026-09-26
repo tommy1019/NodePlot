@@ -73,7 +73,7 @@ ErrorOr<PlotStyle> EvaluatedNodeGraph::get_input_style(NodePlotFile* npf, NodeId
     if (str.contains(id + "_plot_margins"))
         res.plot_margins = TRY(get_input_value<Margins>(npf, node_id, id + "_plot_margins", false));
     if (str.contains(id + "_internal_plot_margins"))
-        res.plot_margins = TRY(get_input_value<Margins>(npf, node_id, id + "_internal_plot_margins", false));
+        res.internal_plot_margins = TRY(get_input_value<Margins>(npf, node_id, id + "_internal_plot_margins", false));
 
     if (str.contains(id + "_title_font_size"))
         res.title_font_size = TRY(get_input_value<double>(npf, node_id, id + "_title_font_size", false));
