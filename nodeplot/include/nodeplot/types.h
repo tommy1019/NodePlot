@@ -104,7 +104,7 @@ static constexpr PlotStyle DEFAULT_PLOT_STYLE = {
     .y_axis_tick_mark_font_size = 12,
     .y_axis_tick_mark_size = 0.02,
     .y_axis_tick_mark_stroke_width = 2.0,
-    .y_axis_tick_mark_offset = {.x = 0.01, .y = 0.015},
+    .y_axis_tick_mark_offset = {.x = -0.01, .y = 0.015},
     .y_axis_label_font_size = 12,
     .y_axis_label_offset = {.x = 0.06f, .y = 0.0f},
 };
