@@ -249,6 +249,8 @@ int main(int argc, char** argv) {
                           ImGuiChildFlags_ResizeX | ImGuiChildFlags_Borders,
                           ImGuiWindowFlags_None | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
         {
+            bool show_error_messages = current_graph == "main";
+
             auto& nodes = cur_ng().nodes;
 
             auto render_node_editor_position = ImGui::GetCursorScreenPos();
@@ -367,7 +369,7 @@ int main(int argc, char** argv) {
                 auto out_cache = cur_eng().cache[id];
                 auto& node = NodePlot::NodeRegistry::node_map.at(storage.type_id);
 
-                if (current_graph == "main" && out_cache.error.has_value()) {
+                if (show_error_messages && out_cache.error.has_value()) {
                     ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(1.0f, 0.7f, 0.7f, 1.0f));
                 }
 
@@ -394,7 +396,7 @@ int main(int argc, char** argv) {
                         }
                     }
 
-                    if (current_graph == "main" && out_cache.error.has_value()) {
+                    if (show_error_messages && out_cache.error.has_value()) {
                         ImGui::Separator();
                         ImGui::Text("%s", out_cache.error.value().c_str());
                     }
@@ -467,7 +469,7 @@ int main(int argc, char** argv) {
                     ImGui::PopStyleColor();
                 }
 
-                if (current_graph == "main" && out_cache.error.has_value()) {
+                if (show_error_messages && out_cache.error.has_value()) {
                     ImGui::PopStyleColor();
                 }
             }
