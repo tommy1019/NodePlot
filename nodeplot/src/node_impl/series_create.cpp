@@ -3,6 +3,7 @@
 #include "nodeplot.h"
 #include "types.h"
 #include "utils.h"
+#include <string>
 #include <type_traits>
 #include <variant>
 #include <vector>
@@ -203,6 +204,109 @@ void register_series_create() {
         });
 
     NodeRegistry::register_series(
+        "bar",
+        {"Create Series", "Bar"},
+        [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id) -> std::vector<std::pair<InputId, Node::Input>> {
+            std::vector<std::pair<InputId, Node::Input>> res;
+
+            res.emplace_back("width", Node::Input{.id = "width", .display_name = "Width", .valid_data_types = {DataType::NUMBER}, .default_value = 0.8});
+            res.emplace_back("x", Node::Input{.id = "x", .display_name = "X", .valid_data_types = {DataType::NUMBER_COLUMN}});
+            res.emplace_back("y", Node::Input{.id = "y", .display_name = "Y", .valid_data_types = {DataType::NUMBER_COLUMN}});
+            res.emplace_back(
+                "color", Node::Input{.id = "color", .display_name = "Color", .valid_data_types = {DataType::COLOR, DataType::COLOR_COLUMN}, .default_value = Color{.r = 1, .g = 0, .b = 0, .a = 1}});
+
+            res.emplace_back("text_label", Node::Input{.id = "text_label", .display_name = "Text Label", .valid_data_types = {DataType::BOOLEAN}, .default_value = false});
+
+            bool text_label = eng->get_input_value<bool>(npf, node_id, "text_label", false).value_or(false);
+            if (text_label) {
+                res.emplace_back("label_font_size", Node::Input{.id = "label_font_size", .display_name = "Font Size", .valid_data_types = {DataType::NUMBER}, .default_value = 12.0});
+                res.emplace_back("label_offset", Node::Input{.id = "label_offset", .display_name = "Offset", .valid_data_types = {DataType::POSITION}});
+            }
+
+            return res;
+        },
+        {
+            .display_name = "Bar",
+            .get_limits = [](NodePlotFile*, EvaluatedNodeGraph* eng, const GenericSeries& s) -> ErrorOr<Limits> {
+                auto x = Utils::find_limits(TRY(eng->try_data_type_conversion<std::vector<double>>(TRY(Utils::try_find(s.data, "x", "Missing")))));
+                auto y = Utils::find_limits(TRY(eng->try_data_type_conversion<std::vector<double>>(TRY(Utils::try_find(s.data, "y", "Missing")))));
+
+                double width = TRY(eng->try_data_type_conversion<double>(TRY(Utils::try_find(s.data, "width", "Missing"))));
+
+                return Limits{
+                    .x_low = x.first - width / 2,
+                    .x_high = x.second + width / 2,
+                    .y_low = std::min(0.0, y.first),
+                    .y_high = std::max(0.0, y.second),
+                };
+            },
+            .evaluate = [](NodePlotFile*, EvaluatedNodeGraph* eng, const GenericSeries& s, Figure& fig, const FigureBounds& bounds) -> ErrorOr<void> {
+                auto x_col = TRY(eng->try_data_type_conversion<std::vector<double>>(TRY(Utils::try_find(s.data, "x", "Missing"))));
+                auto y_col = TRY(eng->try_data_type_conversion<std::vector<double>>(TRY(Utils::try_find(s.data, "y", "Missing"))));
+
+                auto color = TRY(eng->try_data_type_conversion_variant<Color, std::vector<Color>>(TRY(Utils::try_find(s.data, "color", "Missing"))));
+                double width = TRY(eng->try_data_type_conversion<double>(TRY(Utils::try_find(s.data, "width", "Missing"))));
+
+                if (x_col.size() != y_col.size())
+                    return ERR("Columns are not of the same size");
+                if (std::holds_alternative<std::vector<Color>>(color))
+                    if (x_col.size() != std::get<std::vector<Color>>(color).size())
+                        return ERR("Columns are not of the same size");
+
+                for (size_t i = 0; i < x_col.size(); i++) {
+                    auto& x = x_col[i];
+                    auto& y = y_col[i];
+
+                    if (!bounds.in_range_x(x))
+                        continue;
+
+                    auto [xn1, yn1] = bounds.normalize({.x = (float)(x - width / 2), .y = 0.0f});
+                    auto [xn2, yn2] = bounds.normalize({.x = (float)(x + width / 2), .y = (float)y});
+
+                    fig.commands.push_back(DrawCommands::Rect{
+                        .a = Pos{.x = xn1, .y = std::min(yn1, yn2)},
+                        .b = Pos{.x = xn2, .y = std::max(yn1, yn2)},
+                        .color = std::visit(
+                            [&](auto c) {
+                                if constexpr (std::is_same_v<std::vector<Color>, decltype(c)>)
+                                    return c[i];
+                                else
+                                    return c;
+                            },
+                            color),
+                    });
+                }
+
+                bool text_label = TRY(eng->try_data_type_conversion<bool>(TRY(Utils::try_find(s.data, "text_label", "Missing"))));
+                if (text_label) {
+                    double font_size = TRY(eng->try_data_type_conversion<double>(TRY(Utils::try_find(s.data, "label_font_size", "Missing"))));
+                    Pos offset = TRY(eng->try_data_type_conversion<Pos>(TRY(Utils::try_find(s.data, "label_offset", "Missing"))));
+
+                    for (size_t i = 0; i < x_col.size(); i++) {
+                        auto& x = x_col[i];
+                        auto& y = y_col[i];
+
+                        if (!bounds.in_range_x(x))
+                            continue;
+
+                        auto [xn, yn] = bounds.normalize({.x = (float)x, .y = (float)y});
+
+                        fig.commands.push_back(DrawCommands::Text{
+                            .pos = Pos{.x = xn + offset.x, .y = yn + offset.y},
+                            .text = std::to_string(y),
+                            .anchor = NodePlot::DrawCommands::Text::MIDDLE,
+                            .font_size = font_size,
+                            .rotate = 0,
+                            .bold = false,
+                        });
+                    }
+                }
+
+                return {};
+            },
+        });
+
+    NodeRegistry::register_series(
         "partitioned_bars",
         {"Create Series", "Partitioned Bars"},
         [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id) -> std::vector<std::pair<InputId, Node::Input>> {
@@ -210,7 +314,7 @@ void register_series_create() {
 
             res.emplace_back("num_partitions", Node::Input{.id = "num_partitions", .display_name = "Number of Partitions", .valid_data_types = {DataType::INTEGER}});
 
-            res.emplace_back("width", Node::Input{.id = "width", .display_name = "Width", .valid_data_types = {DataType::NUMBER}});
+            res.emplace_back("width", Node::Input{.id = "width", .display_name = "Width", .valid_data_types = {DataType::NUMBER}, .default_value = 0.8});
 
             res.emplace_back("x", Node::Input{.id = "x", .display_name = "X", .valid_data_types = {DataType::NUMBER_COLUMN}});
 
