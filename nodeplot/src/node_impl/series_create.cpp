@@ -291,9 +291,23 @@ void register_series_create() {
 
                         auto [xn, yn] = bounds.normalize({.x = (float)x, .y = (float)y});
 
+                        auto remove_trailing_zeros = [](std::string s) {
+                            if (!s.contains('.'))
+                                return s;
+
+                            for (ssize_t i = s.size() - 1; i >= 0; i--) {
+                                if (s[i] != '0') {
+                                    if (s[i] == '.')
+                                        return s.substr(0, i);
+                                    return s.substr(0, i + 1);
+                                }
+                            }
+                            return s;
+                        };
+
                         fig.commands.push_back(DrawCommands::Text{
                             .pos = Pos{.x = xn + offset.x, .y = yn + offset.y},
-                            .text = std::to_string(y),
+                            .text = remove_trailing_zeros(std::to_string(y)),
                             .anchor = NodePlot::DrawCommands::Text::MIDDLE,
                             .font_size = font_size,
                             .rotate = 0,
