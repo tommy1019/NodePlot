@@ -81,9 +81,9 @@ NodeRenderer::RenderFunction NodeRenderer::default_renderer = [](Renderer& rnd, 
                                 if (!is_pin_set) {
                                     nfdu8char_t* out_path;
                                     nfdopendialogu8args_t args = {0};
-                                    nfdu8filteritem_t filters[2] = {{"CSV Files", "csv"}, {"All Files", "*"}};
+                                    nfdu8filteritem_t filters[0] = {};
                                     args.filterList = filters;
-                                    args.filterCount = 2;
+                                    args.filterCount = 0;
 
                                     nfdresult_t result = NFD_OpenDialogU8_With(&out_path, &args);
                                     if (result == NFD_OKAY) {
