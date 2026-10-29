@@ -82,4 +82,7 @@ struct NodeRenderer {
     ErrorOr<bool> render_node(NodePlot::NodeId node_id, NodePlot::NodeGraph::NodeStorage& storage);
 
     ErrorOr<void> render_input_paths(NodePlot::NodeId node_id, NodePlot::NodeGraph::NodeStorage& storage);
+
+    ErrorOr<NodePlot::Pos> input_pin_position(NodePlot::GraphId graph_id, NodePlot::NodeId node_id, NodePlot::InputId input_id);
+    ErrorOr<NodePlot::Pos> output_pin_position(NodePlot::GraphId graph_id, NodePlot::NodeId node_id, NodePlot::OutputId output_id);
 };

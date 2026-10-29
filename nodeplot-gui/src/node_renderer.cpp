@@ -13,8 +13,10 @@
 #include "node_renderer.h"
 #include "nodeplot/node.h"
 #include "nodeplot/node_graph.h"
+#include "nodeplot/node_registry.h"
 #include "nodeplot/nodeplot.h"
 #include "nodeplot/types.h"
+#include "nodeplot/utils.h"
 
 std::map<NodePlot::NodeTypeId, NodeRenderer::RenderFunction> NodeRenderer::render_override_map;
 
@@ -558,9 +560,9 @@ ErrorOr<bool> NodeRenderer::render_node(NodePlot::NodeId node_id, NodePlot::Node
             bool updated = false;
             auto win_pos = ImGui::GetWindowPos();
             ImGui::GetForegroundDrawList()->AddCircle({win_pos.x + pos.x + size, win_pos.y + pos.y + size}, size, ImGui::GetColorU32(ImVec4(0.3f, 0.3f, 0.3f, 1.0f)), 0);
-            ImGui::SetCursorPos(pos);
-            if (ImGui::InvisibleButton("##input_pin", {size * 2, size * 2})) {
 
+            ImGui::SetCursorPos(pos);
+            auto reset_value = [&]() {
                 if (!default_value.has_value()) {
                     auto inputs = ctx.node.inputs(ctx.npf, ctx.eng, ctx.node_id);
                     if (inputs.has_value()) {
@@ -579,7 +581,31 @@ ErrorOr<bool> NodeRenderer::render_node(NodePlot::NodeId node_id, NodePlot::Node
                 }
 
                 updated = true;
+            };
+
+            if (ImGui::InvisibleButton("##input_pin", {size * 2, size * 2})) {
+                reset_value();
             }
+
+            if (auto ele = ctx.node_storage.input_storage.find(id); ele != ctx.node_storage.input_storage.end()) {
+                if (std::holds_alternative<NodePlot::InputPin>(ele->second)) {
+                    auto& pin = std::get<NodePlot::InputPin>(ele->second);
+                    if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceNoPreviewTooltip)) {
+                        std::pair<NodePlot::NodeId, NodePlot::OutputId> data = {pin.node_id, pin.output_id};
+                        ImGui::SetDragDropPayload("PIN", &data, sizeof(data));
+                        reset_value();
+                        updated = true;
+                        ImGui::EndDragDropSource();
+                    }
+                }
+            }
+
+            // We need a duplicated button to allow drops on the same place as the source
+            ImGui::SetCursorPos(pos);
+            if (ImGui::InvisibleButton("##input_pin_dupe", {size * 2, size * 2})) {
+                reset_value();
+            }
+
             if (ImGui::BeginDragDropTarget()) {
                 if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PIN")) {
                     IM_ASSERT(payload->DataSize == sizeof(std::pair<NodePlot::NodeId, NodePlot::OutputId>));
@@ -600,13 +626,10 @@ ErrorOr<bool> NodeRenderer::render_node(NodePlot::NodeId node_id, NodePlot::Node
             ImGui::GetForegroundDrawList()->AddCircle({win_pos.x + pos.x + size, win_pos.y + pos.y + size}, size, ImGui::GetColorU32(ImVec4(0.3f, 0.3f, 0.3f, 1.0f)), 0);
             ImGui::SetCursorPos(pos);
             ImGui::InvisibleButton("##output_pin", {size * 2, size * 2});
-
-            if (ImGui::BeginDragDropSource()) {
+            if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceNoPreviewTooltip)) {
                 std::pair<NodePlot::NodeId, NodePlot::OutputId> pin = {ctx.node_id, id};
                 ImGui::SetDragDropPayload("PIN", &pin, sizeof(pin));
-                ctx.node_renderer.draw_node_path(ctx.node_storage.end_pos.x, {pos.x + win_pos.x + size, pos.y + win_pos.y + size}, ImGui::GetIO().MousePos, ImGui::GetIO().MousePos.x);
                 ImGui::EndDragDropSource();
-                return true;
             }
             return false;
         },
@@ -830,4 +853,86 @@ ErrorOr<void> NodeRenderer::render_input_paths(NodePlot::NodeId node_id, NodePlo
     }
 
     return {};
+}
+
+ErrorOr<NodePlot::Pos> NodeRenderer::input_pin_position(NodePlot::GraphId graph_id, NodePlot::NodeId node_id, NodePlot::InputId input_id) {
+
+    std::optional<NodePlot::Pos> res;
+
+    Renderer input_pin_renderer{
+        .input_pin = [&](RenderContext& ctx, ImVec2 pos, float size, NodePlot::InputId id, std::optional<NodePlot::Data> default_value) -> bool {
+            if (id != input_id)
+                return false;
+            res = NodePlot::Pos{ctx.node_storage.pos.x + pos.x + size / 2, ctx.node_storage.pos.y + pos.y + size / 2};
+            return false;
+        },
+    };
+
+    auto& graph = TRY(NodePlot::Utils::try_find(npf->graphs, graph_id, "Unknown graph_id")).get();
+    auto& node_storage = TRY(NodePlot::Utils::try_find(graph.nodes, node_id, "Unknown node_id")).get();
+    auto& node_registry = TRY(NodePlot::Utils::try_find(NodePlot::NodeRegistry::node_map, node_storage.type_id, "Unknown node type")).get();
+
+    RenderContext ctx{
+        .node_renderer = *this,
+        .npf = npf,
+        .eng = eng,
+        .node_id = node_id,
+        .node_storage = node_storage,
+        .node = node_registry,
+        .cache = node_cache[node_id],
+    };
+
+    auto rnf = render_override_map.find(node_registry.type_id);
+    if (rnf == render_override_map.end()) {
+        TRY(default_renderer(input_pin_renderer, ctx));
+    } else {
+        TRY((rnf->second)(input_pin_renderer, ctx));
+    }
+
+    if (!res.has_value()) {
+        return ERR("Unknown input_id");
+    }
+
+    return *res;
+}
+
+ErrorOr<NodePlot::Pos> NodeRenderer::output_pin_position(NodePlot::GraphId graph_id, NodePlot::NodeId node_id, NodePlot::OutputId output_id) {
+
+    std::optional<NodePlot::Pos> res;
+
+    Renderer output_pin_renderer{
+        .output_pin = [&](RenderContext& ctx, ImVec2 pos, float size, NodePlot::OutputId id) -> bool {
+            if (id != output_id)
+                return false;
+            res = NodePlot::Pos{ctx.node_storage.pos.x + pos.x + size / 2, ctx.node_storage.pos.y + pos.y + size / 2};
+            return false;
+        },
+    };
+
+    auto& graph = TRY(NodePlot::Utils::try_find(npf->graphs, graph_id, "Unknown graph_id")).get();
+    auto& node_storage = TRY(NodePlot::Utils::try_find(graph.nodes, node_id, "Unknown node_id")).get();
+    auto& node_registry = TRY(NodePlot::Utils::try_find(NodePlot::NodeRegistry::node_map, node_storage.type_id, "Unknown node type")).get();
+
+    RenderContext ctx{
+        .node_renderer = *this,
+        .npf = npf,
+        .eng = eng,
+        .node_id = node_id,
+        .node_storage = node_storage,
+        .node = node_registry,
+        .cache = node_cache[node_id],
+    };
+
+    auto rnf = render_override_map.find(node_registry.type_id);
+    if (rnf == render_override_map.end()) {
+        TRY(default_renderer(output_pin_renderer, ctx));
+    } else {
+        TRY((rnf->second)(output_pin_renderer, ctx));
+    }
+
+    if (!res.has_value()) {
+        return ERR("Unknown input_id");
+    }
+
+    return *res;
 }

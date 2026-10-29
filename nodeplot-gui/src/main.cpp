@@ -547,6 +547,27 @@ int main(int argc, char** argv) {
                 ImGui::EndPopup();
             }
 
+            if (ImGui::GetDragDropPayload() != nullptr) {
+                auto payload = ImGui::GetDragDropPayload();
+                if (payload->IsDataType("PIN")) {
+                    IM_ASSERT(payload->DataSize == sizeof(std::pair<NodePlot::NodeId, NodePlot::OutputId>));
+                    std::pair<NodePlot::NodeId, NodePlot::OutputId> pin = *(const decltype(pin)*)payload->Data;
+
+                    auto node = NodePlot::Utils::try_find(nodes, pin.first, "ERR");
+                    if (node.has_value()) {
+                        auto node_pos = node.value().get().pos;
+
+                        auto pin_pos = node_renderer->output_pin_position(current_graph, pin.first, pin.second);
+                        if (pin_pos.has_value()) {
+                            auto screen_pos = node_renderer->world_to_screen({pin_pos->x, pin_pos->y});
+                            node_renderer->draw_node_path(screen_pos.x, {screen_pos.x, screen_pos.y}, ImGui::GetIO().MousePos, ImGui::GetIO().MousePos.x);
+                        } else {
+                            printf("PIN POS ERROR: %s\n", pin_pos.error().c_str());
+                        }
+                    }
+                }
+            }
+
             if (nodes_to_delete.size() > 0) {
                 did_update = true;
 
