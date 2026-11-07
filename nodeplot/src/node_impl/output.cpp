@@ -99,6 +99,7 @@ void register_output() {
                                                                    case NodePlot::DrawCommands::Text::RIGHT:
                                                                        return "end";
                                                                    }
+                                                                   return "err";
                                                                }() + "\" font-size=\"" << t.font_size
                                                                                        << "\" transform=\"rotate(" + std::to_string(t.rotate) + ")\" >";
                                                                ss << t.text << "";

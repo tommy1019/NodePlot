@@ -1,5 +1,6 @@
 #include "types.h"
 
+#include <cmath>
 #include <print>
 
 #include <sys/mman.h>

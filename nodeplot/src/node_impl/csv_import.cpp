@@ -1,11 +1,12 @@
 #include "nodeplot.h"
 
 #include <fcntl.h>
-#include <string_view>
 #include <sys/mman.h>
 #include <unistd.h>
 
 #include <filesystem>
+#include <print>
+#include <string_view>
 
 using namespace NodePlot;
 

@@ -2,6 +2,7 @@
 
 #include <expected>
 #include <optional>
+#include <print>
 #include <string>
 
 #ifdef SIG_INT_ON_ERROR

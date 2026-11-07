@@ -402,7 +402,7 @@ NodeRenderer::RenderFunction NodeRenderer::default_renderer = [](Renderer& rnd, 
                     break;
                 }
             } break;
-            default:
+            default:;
             }
 
             ImGui::PopID();

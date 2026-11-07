@@ -1,3 +1,5 @@
+#include <memory>
+
 #include <nodeplot/error.h>
 
 #include <SDL_opengl.h>
