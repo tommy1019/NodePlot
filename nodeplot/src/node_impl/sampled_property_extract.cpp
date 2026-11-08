@@ -32,6 +32,9 @@ void register_sampled_property_extract() {
                                         std::vector<double> x = TRY(eng->get_input_value<std::vector<double>>(npf, node_id, "x", true));
                                         std::vector<double> y = TRY(eng->get_input_value<std::vector<double>>(npf, node_id, "y", true));
 
+                                        if (x.size() != y.size())
+                                            return ERR("Columns are not of the same size");
+
                                         struct Bucket {
                                             std::vector<double> vals;
                                             double x_val;
@@ -142,7 +145,7 @@ void register_sampled_property_extract() {
                                         double stdev = std::sqrt(sum / v.size());
 
                                         cache.computed_outputs["min"] = min;
-                                        cache.computed_outputs["avg"] = max;
+                                        cache.computed_outputs["avg"] = avg;
                                         cache.computed_outputs["stdev"] = stdev;
                                         cache.computed_outputs["max"] = max;
                                         cache.computed_outputs["sample_count"] = (double)v.size();

@@ -4,6 +4,7 @@
 #include <print>
 
 #include <sys/mman.h>
+#include <unistd.h>
 
 #include "error.h"
 
@@ -11,7 +12,10 @@ namespace NodePlot {
 
 MappedFile::~MappedFile() {
     if (munmap(data, file_size) == -1) {
-        REQUIRE_NOT_REACHED("Failed to unmap CSV file");
+        REQUIRE_NOT_REACHED("Failed to unmap file");
+    }
+    if (close(fd) != 0) {
+        REQUIRE_NOT_REACHED("Failed to close file");
     }
 }
 

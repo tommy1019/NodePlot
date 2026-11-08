@@ -31,7 +31,7 @@ struct NodeOutputCache;
 struct MappedFile {
     char* data;
     size_t file_size;
-    std::string_view full_string_view;
+    int fd;
     ~MappedFile();
 };
 

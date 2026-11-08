@@ -168,7 +168,7 @@ void register_series_create() {
                 auto y_max_col = TRY(eng->try_data_type_conversion<std::vector<double>>(TRY(Utils::try_find(s.data, "y_max", "Missing"))));
                 auto color = TRY(eng->try_data_type_conversion<Color>(TRY(Utils::try_find(s.data, "color", "Missing"))));
 
-                if (x_col.size() != y_min_col.size() && x_col.size() != y_max_col.size())
+                if (x_col.size() != y_min_col.size() || x_col.size() != y_max_col.size())
                     return ERR("Columns are not of the same size");
 
                 std::vector<std::pair<double, std::pair<double, double>>> in_range_points;
@@ -401,31 +401,29 @@ void register_series_create() {
                         return ERR("Columns are not of the same size");
                 }
 
-                for (auto& v : x_col)
+                for (size_t i = 0; i < x_col.size(); i++) {
+                    auto x = x_col[i];
 
-                    for (size_t i = 0; i < x_col.size(); i++) {
-                        auto x = x_col[i];
+                    if (!bounds.in_range_x(x))
+                        continue;
 
-                        if (!bounds.in_range_x(x))
-                            continue;
+                    double cur_sum = 0;
 
-                        double cur_sum = 0;
+                    for (size_t j = 0; j < cols.size(); j++) {
+                        auto v = cols[j][i];
 
-                        for (size_t j = 0; j < cols.size(); j++) {
-                            auto v = cols[j][i];
+                        auto [x1, y1] = bounds.normalize({(float)(x - width / 2), (float)cur_sum});
+                        auto [x2, y2] = bounds.normalize({(float)(x + width / 2), (float)(cur_sum + v)});
 
-                            auto [x1, y1] = bounds.normalize({(float)(x - width / 2), (float)cur_sum});
-                            auto [x2, y2] = bounds.normalize({(float)(x + width / 2), (float)(cur_sum + v)});
+                        cur_sum += v;
 
-                            cur_sum += v;
-
-                            fig.commands.push_back(DrawCommands::Rect{
-                                .a = Pos{x1, y1},
-                                .b = Pos{x2, y2},
-                                .color = colors[j],
-                            });
-                        }
+                        fig.commands.push_back(DrawCommands::Rect{
+                            .a = Pos{x1, y1},
+                            .b = Pos{x2, y2},
+                            .color = colors[j],
+                        });
                     }
+                }
                 return {};
             },
         });

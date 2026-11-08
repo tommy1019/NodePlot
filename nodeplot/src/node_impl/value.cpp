@@ -126,6 +126,7 @@ void register_value() {
             .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
                 cache.computed_outputs["color"] = TRY(Utils::vectorized(
                     [](double h, double s, double v, double a) -> Color {
+                        h = std::fmod(h, 360.0);
                         while (h < 0)
                             h += 360;
                         h = (int)h % 360 + (h - std::floor(h));

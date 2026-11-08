@@ -155,7 +155,7 @@ ErrorOr<NodeGraph::NodeStorage> NodeGraph::storage_from_json(nlohmann::json json
     node_storage.type_id = TRY(get_typed(std::type_identity<NodeTypeId>{}, json, "type_id", "Missing NodeTypeId for node " + std::to_string(node_id)));
 
     auto pos_json = TRY(get_typed(std::type_identity<nlohmann::json>{}, json, "pos", "Missing node position for node " + std::to_string(node_id)));
-    if (!pos_json.is_array() && pos_json.size() == 2)
+    if (!pos_json.is_array() || pos_json.size() != 2)
         return ERR("Malformed node position data for node " + std::to_string(node_id));
     try {
         node_storage.pos.x = pos_json[0].get<double>();

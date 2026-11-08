@@ -37,11 +37,13 @@ int main(int argc, char** argv) {
             } else {
                 REQUIRE_NOT_REACHED("Too many arguments")
             }
-        } else {
+        } else if (argc == 2) {
             std::ifstream ifs(argv[1]);
             if (!ifs)
                 REQUIRE_NOT_REACHED("Could not open input file: '{}'", argv[1]);
             return MUST(NodePlot::NodePlotFile::from_json(nlohmann::json::parse(ifs), argv[1]));
+        } else {
+            REQUIRE_NOT_REACHED("Incorrect number of arguments. Usage: %s [--new] <filename>", argv[0]);
         }
     }();
 
@@ -105,10 +107,12 @@ int main(int argc, char** argv) {
             auto old = node_renderer;
             node_renderer = new NodeRenderer(&npf, &sub_eng);
             node_renderer->set_current_graph_id = old->set_current_graph_id;
+            delete old;
         } else {
             auto old = node_renderer;
             node_renderer = new NodeRenderer(&npf, &main_eng);
             node_renderer->set_current_graph_id = old->set_current_graph_id;
+            delete old;
         }
     };
     node_renderer = new NodeRenderer(&npf, &main_eng);
@@ -367,7 +371,7 @@ int main(int argc, char** argv) {
             }
 
             for (auto& [id, storage] : nodes) {
-                auto out_cache = cur_eng().cache[id];
+                auto& out_cache = cur_eng().cache[id];
                 auto& node = NodePlot::NodeRegistry::node_map.at(storage.type_id);
 
                 if (show_error_messages && out_cache.error.has_value()) {

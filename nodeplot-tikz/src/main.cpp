@@ -35,6 +35,8 @@ int main(int argc, char** argv) {
             auto figure = MUST(eng.get_input_value<NodePlot::Figure>(&npf, n.first, "figure", true));
 
             FILE* file = fopen(filename.c_str(), "w");
+            if (!file)
+                REQUIRE_NOT_REACHED("Failed to open output file");
 
             fprintf(file, "\\begin{tikzpicture}\n");
 

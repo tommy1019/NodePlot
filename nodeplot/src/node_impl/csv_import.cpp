@@ -1,6 +1,7 @@
 #include "nodeplot.h"
 
 #include <fcntl.h>
+#include <sys/fcntl.h>
 #include <sys/mman.h>
 #include <unistd.h>
 
@@ -44,7 +45,7 @@ void register_csv_import() {
 
                                         auto file_size = std::filesystem::file_size(filename);
 
-                                        int fd = open(filename.c_str(), O_RDWR);
+                                        int fd = open(filename.c_str(), O_RDONLY);
                                         if (fd < 0)
                                             return ERR("Failed to open CSV input file");
 
@@ -54,7 +55,11 @@ void register_csv_import() {
                                             return ERR("Failed to map CSV input file");
                                         }
 
-                                        auto mapped_file = std::shared_ptr<MappedFile>(new MappedFile{.data = map, .file_size = file_size});
+                                        auto mapped_file = std::shared_ptr<MappedFile>(new MappedFile{
+                                            .data = map,
+                                            .file_size = file_size,
+                                            .fd = fd,
+                                        });
 
                                         Table res(new TableData);
                                         auto full_string_view = std::string_view(mapped_file->data, mapped_file->file_size);
