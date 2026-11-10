@@ -23,13 +23,13 @@ void register_figure() {
 
                 res.emplace_back("num_series", Node::Input{.id = "num_series", .display_name = "Number of Series", .valid_data_types = {DataType::INTEGER}});
 
-                res.emplace_back("title", Node::Input{.id = "title", .display_name = "Title", .valid_data_types = {DataType::STRING}});
-                res.emplace_back("x_label", Node::Input{.id = "x_label", .display_name = "X Label", .valid_data_types = {DataType::STRING}});
-                res.emplace_back("y_label", Node::Input{.id = "y_label", .display_name = "Y Label", .valid_data_types = {DataType::STRING}});
+                res.emplace_back("title", Node::Input{.id = "title", .display_name = "Title", .valid_data_types = {DataType::STRING}, .default_value = ""});
+                res.emplace_back("x_label", Node::Input{.id = "x_label", .display_name = "X Label", .valid_data_types = {DataType::STRING}, .default_value = ""});
+                res.emplace_back("y_label", Node::Input{.id = "y_label", .display_name = "Y Label", .valid_data_types = {DataType::STRING}, .default_value = ""});
                 res.emplace_back("x_tick_count", Node::Input{.id = "x_tick_count", .display_name = "X Tick Count", .valid_data_types = {DataType::INTEGER}, .default_value = 3});
                 res.emplace_back("y_tick_count", Node::Input{.id = "y_tick_count", .display_name = "Y Tick Count", .valid_data_types = {DataType::INTEGER}, .default_value = 3});
-                res.emplace_back("x_axis_log_scale", Node::Input{.id = "x_axis_log_scale", .display_name = "X Axis Log Scale", .valid_data_types = {DataType::BOOLEAN}});
-                res.emplace_back("y_axis_log_scale", Node::Input{.id = "y_axis_log_scale", .display_name = "Y Axis Log Scale", .valid_data_types = {DataType::BOOLEAN}});
+                res.emplace_back("x_axis_log_scale", Node::Input{.id = "x_axis_log_scale", .display_name = "X Axis Log Scale", .valid_data_types = {DataType::BOOLEAN}, .default_value = false});
+                res.emplace_back("y_axis_log_scale", Node::Input{.id = "y_axis_log_scale", .display_name = "Y Axis Log Scale", .valid_data_types = {DataType::BOOLEAN}, .default_value = false});
 
                 res.emplace_back("x_range_auto", Node::Input{.id = "x_range_auto", .display_name = "X Range Auto", .valid_data_types = {DataType::BOOLEAN}, .default_value = true});
                 if (!eng->get_input_value<bool>(npf, node_id, "x_range_auto", false).value_or(true)) {
