@@ -76,4 +76,8 @@ struct Window {
     float m_scale;
     bool m_close_requested = false;
     ImVec4 m_clear_color = ImVec4(236.0f / 255.0f, 236.0f / 255.0f, 236.0f / 255.0f, 1.00f);
+
+    bool m_imgui_init = false;
+    bool m_imgui_sdl_init = false;
+    bool m_imgui_opengl_init = false;
 };

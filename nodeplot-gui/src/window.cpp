@@ -31,7 +31,7 @@ ErrorOr<std::shared_ptr<Window>> Window::create(CreateWindowParams params) {
 
     auto window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     res->m_window = SDL_CreateWindow("NodePlot", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, (int)(params.width * res->m_scale), (int)(params.height * res->m_scale), window_flags);
-    if (res->m_window)
+    if (res->m_window == nullptr)
         return ERR(std::string("Could not create a SDL window") + SDL_GetError());
 
     res->m_gl_context = SDL_GL_CreateContext(res->m_window);
@@ -39,6 +39,7 @@ ErrorOr<std::shared_ptr<Window>> Window::create(CreateWindowParams params) {
         return ERR(std::string("Could not create gl context: ") + SDL_GetError());
 
     ImGui::CreateContext();
+    res->m_imgui_init = true;
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
@@ -48,15 +49,22 @@ ErrorOr<std::shared_ptr<Window>> Window::create(CreateWindowParams params) {
 
     const char* glsl_version = "#version 150";
     ImGui_ImplSDL2_InitForOpenGL(res->m_window, res->m_gl_context);
+    res->m_imgui_sdl_init = true;
     ImGui_ImplOpenGL3_Init(glsl_version);
+    res->m_imgui_opengl_init = true;
 
     return res;
 }
 Window::~Window() {
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplSDL2_Shutdown();
-    ImGui::DestroyContext();
+    if (m_imgui_opengl_init)
+        ImGui_ImplOpenGL3_Shutdown();
+    if (m_imgui_sdl_init)
+        ImGui_ImplSDL2_Shutdown();
+    if (m_imgui_init)
+        ImGui::DestroyContext();
 
-    SDL_GL_DeleteContext(m_gl_context);
-    SDL_DestroyWindow(m_window);
+    if (m_gl_context)
+        SDL_GL_DeleteContext(m_gl_context);
+    if (m_window)
+        SDL_DestroyWindow(m_window);
 }
