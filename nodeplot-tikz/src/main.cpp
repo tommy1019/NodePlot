@@ -196,6 +196,7 @@ int main(int argc, char** argv) {
             }
 
             fprintf(file, "\\end{tikzpicture}\n");
+            fclose(file);
         }
     }
 }
