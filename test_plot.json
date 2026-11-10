@@ -389,7 +389,7 @@
                         "filename": {
                             "data_type": "string",
                             "type": "data",
-                            "value": "test.svg"
+                            "value": "test"
                         },
                         "grid_cols": {
                             "data_type": "integer",
@@ -425,5 +425,6 @@
                 }
             }
         }
-    }
+    },
+    "version": "1.0.0"
 }
