@@ -374,7 +374,9 @@ int main(int argc, char** argv) {
                 auto& out_cache = cur_eng().cache[id];
                 auto& node = NodePlot::NodeRegistry::node_map.at(storage.type_id);
 
-                if (show_error_messages && out_cache.error.has_value()) {
+                bool has_error = out_cache.error.has_value();
+
+                if (show_error_messages && has_error) {
                     ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(1.0f, 0.7f, 0.7f, 1.0f));
                 }
 
@@ -474,7 +476,7 @@ int main(int argc, char** argv) {
                     ImGui::PopStyleColor();
                 }
 
-                if (show_error_messages && out_cache.error.has_value()) {
+                if (show_error_messages && has_error) {
                     ImGui::PopStyleColor();
                 }
             }
