@@ -29,10 +29,14 @@ struct EvaluatedNodeGraph;
 struct NodeOutputCache;
 
 struct MappedFile {
+    int fd;
     char* data;
     size_t file_size;
-    int fd;
+
+    MappedFile(int fd, char* mapped_data, size_t file_size) : fd(fd), data(mapped_data), file_size(file_size) {}
     ~MappedFile();
+    MappedFile(const MappedFile& other) = delete;
+    MappedFile& operator=(const MappedFile& other) = delete;
 };
 
 struct Color {
