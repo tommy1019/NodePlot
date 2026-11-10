@@ -1,5 +1,6 @@
 #include "window.h"
 
+#include <SDL_error.h>
 #include <memory>
 
 ErrorOr<void> Window::global_init() {
@@ -30,6 +31,8 @@ ErrorOr<std::shared_ptr<Window>> Window::create(CreateWindowParams params) {
 
     auto window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     res->m_window = SDL_CreateWindow("NodePlot", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, (int)(params.width * res->m_scale), (int)(params.height * res->m_scale), window_flags);
+    if (res->m_window)
+        return ERR(std::string("Could not create a SDL window") + SDL_GetError());
 
     res->m_gl_context = SDL_GL_CreateContext(res->m_window);
     if (res->m_gl_context == nullptr)
