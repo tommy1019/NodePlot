@@ -1,5 +1,6 @@
 #include "nodeplot.h"
 #include "types.h"
+#include <cmath>
 #include <variant>
 
 using namespace NodePlot;
@@ -126,6 +127,8 @@ void register_value() {
             .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
                 cache.computed_outputs["color"] = TRY(Utils::vectorized(
                     [](double h, double s, double v, double a) -> Color {
+                        if (std::isnan(h) || std::isinf(h))
+                            h = 0.0;
                         h = std::fmod(h, 360.0);
                         while (h < 0)
                             h += 360;
