@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "error.h"
+#include "node.h"
 #include "node_graph.h"
 #include "types.h"
 #include "utils.h"
@@ -18,16 +19,98 @@ struct EvaluatedNodeGraph {
 
     struct OutputCache {
         std::map<OutputId, Data> computed_outputs;
-        std::optional<std::string> error;
+        std::optional<Node::EvaluationError> error;
     };
 
     std::map<NodeId, OutputCache> cache;
 
     ErrorOr<std::reference_wrapper<NodeGraph>> node_graph(NodePlotFile* npf);
 
-    ErrorOr<Data> get_output_data(NodePlotFile* npf, NodeId node_id, OutputId output_id);
+    Node::EvaluateData get_output_data(NodePlotFile* npf, NodeId node_id, OutputId output_id);
+    Node::EvaluateData get_input_data(NodePlotFile* npf, NodeId node_id, InputId input_id, bool fill_default_value);
 
-    ErrorOr<Data> get_input_data(NodePlotFile* npf, NodeId node_id, InputId input_id, bool fill_default_value);
+    std::expected<PlotStyle, Node::EvaluationError> get_input_style(NodePlotFile* npf, NodeId node_id, InputId input_id);
+
+    template <typename T>
+    std::expected<T, Node::EvaluationError> get_input_value(NodePlotFile* npf, NodeId node_id, InputId input_id, bool fill_default_value) {
+        auto data_or_err = get_input_data(npf, node_id, input_id, fill_default_value);
+        if (!data_or_err.has_value()) {
+            return std::unexpected(Node::EvaluationError{
+                .description = "Failed to get data for input '" + input_id + "'",
+                .input_errors = {input_id},
+            });
+        }
+
+        auto& data = data_or_err.value();
+
+        if constexpr (requires(Data tmp) { std::get_if<T>(tmp); }) { // Apparently holds_alternative uses a static_assert in clang to check if the type is in the list of the variant, but static_assert
+                                                                     // breaks past requires, so cant use it here, get_if uses SFINAE instead so it works here
+            if (std::holds_alternative<T>(data)) {
+                return std::get<T>(data);
+            }
+        }
+
+        auto convert = try_data_type_conversion<T>(data);
+        if (!convert.has_value()) {
+            return std::unexpected(Node::EvaluationError{
+                .description = "Failed to convert data from input '" + input_id + "' to required type:\n" + convert.error(),
+                .input_errors = {input_id},
+            });
+        }
+
+        return convert.value();
+    }
+
+    template <typename... Ts>
+    std::expected<std::variant<Ts...>, Node::EvaluationError> get_input_value_variant(NodePlotFile* npf, NodeId node_id, InputId input_id, bool fill_default_value) {
+        auto data = get_input_data(npf, node_id, input_id, fill_default_value);
+        if (!data.has_value()) {
+            return std::unexpected(Node::EvaluationError{
+                .description = "Failed to get data for input '" + input_id + "'",
+                .input_errors = {input_id},
+            });
+        }
+
+        auto convert = try_data_type_conversion_variant<Ts...>(data.value());
+        if (!convert.has_value()) {
+            return std::unexpected(Node::EvaluationError{
+                .description = "Failed to convert data from input '" + input_id + "' to required type:\n" + convert.error(),
+                .input_errors = {input_id},
+            });
+        }
+
+        return convert.value();
+    }
+
+    ErrorOr<void> node_inputs_changed(NodePlotFile* npf, NodeId id) {
+        auto& ng = TRY(node_graph(npf)).get();
+
+        std::set<NodeId> seen = {id};
+        std::stack<NodeId> to_check;
+        to_check.push(id);
+
+        while (!to_check.empty()) {
+            auto id = to_check.top();
+            to_check.pop();
+
+            cache[id] = {};
+
+            for (auto [other_id, other_storage] : ng.nodes) {
+                for (auto [input_id, value] : other_storage.input_storage) {
+                    if (std::holds_alternative<InputPin>(value)) {
+                        auto& pin = std::get<InputPin>(value);
+                        if (pin.node_id == id) {
+                            if (seen.insert(other_id).second) {
+                                to_check.push(other_id);
+                            };
+                        }
+                    }
+                }
+            }
+        }
+
+        return {};
+    }
 
     template <typename T>
     ErrorOr<T> try_data_type_conversion(Data data) {
@@ -108,73 +191,6 @@ struct EvaluatedNodeGraph {
                 return res[i];
 
         return ERR("Invalid type");
-    }
-
-    template <typename T>
-    ErrorOr<T> get_input_value(NodePlotFile* npf, NodeId node_id, InputId input_id, bool fill_default_value) {
-        auto data = get_input_data(npf, node_id, input_id, fill_default_value);
-        if (!data.has_value()) {
-            return ERR(input_id + ": " + data.error());
-        }
-
-        if constexpr (requires { requires std::holds_alternative<T>(data); })
-            if (std::holds_alternative<T>(data)) {
-                return std::get<T>(data);
-            }
-
-        auto convert = try_data_type_conversion<T>(data.value());
-        if (!convert.has_value()) {
-            return ERR(input_id + ": " + convert.error());
-        }
-
-        return convert.value();
-    }
-
-    template <typename... Ts>
-    ErrorOr<std::variant<Ts...>> get_input_value_variant(NodePlotFile* npf, NodeId node_id, InputId input_id, bool fill_default_value) {
-        auto data = get_input_data(npf, node_id, input_id, fill_default_value);
-        if (!data.has_value()) {
-            return ERR(input_id + ": " + data.error());
-        }
-
-        auto convert = try_data_type_conversion_variant<Ts...>(data.value());
-        if (!convert.has_value()) {
-            return ERR(input_id + ": Invalid type");
-        }
-
-        return convert.value();
-    }
-
-    ErrorOr<PlotStyle> get_input_style(NodePlotFile* npf, NodeId node_id, InputId input_id);
-
-    ErrorOr<void> node_inputs_changed(NodePlotFile* npf, NodeId id) {
-        auto& ng = TRY(node_graph(npf)).get();
-
-        std::set<NodeId> seen = {id};
-        std::stack<NodeId> to_check;
-        to_check.push(id);
-
-        while (!to_check.empty()) {
-            auto id = to_check.top();
-            to_check.pop();
-
-            cache[id] = {};
-
-            for (auto [other_id, other_storage] : ng.nodes) {
-                for (auto [input_id, value] : other_storage.input_storage) {
-                    if (std::holds_alternative<InputPin>(value)) {
-                        auto& pin = std::get<InputPin>(value);
-                        if (pin.node_id == id) {
-                            if (seen.insert(other_id).second) {
-                                to_check.push(other_id);
-                            };
-                        }
-                    }
-                }
-            }
-        }
-
-        return {};
     }
 };
 

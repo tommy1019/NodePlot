@@ -26,7 +26,6 @@ struct InputPin {
 
 struct NodePlotFile;
 struct EvaluatedNodeGraph;
-struct NodeOutputCache;
 
 struct MappedFile {
     int fd;

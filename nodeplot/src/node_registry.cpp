@@ -1,5 +1,7 @@
 #include "node_registry.h"
-#include "types.h"
+
+#include "eval_node_graph.h"
+#include <expected>
 
 extern void register_output();
 
@@ -49,18 +51,24 @@ void NodeRegistry::register_series(SeriesTypeId series_id, std::vector<std::stri
                               {"series", Node::Output{.id = "series", .display_name = "Series", .valid_data_types = {DataType::SERIES}}},
                           };
                       },
-                      .evaluate = [series_id, input_generator](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
-                          auto inputs = TRY(input_generator(npf, eng, node_id));
+                      .evaluate = [series_id, input_generator](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, std::map<OutputId, Data>& output) -> Node::EvaluateResult {
+                          auto inputs_or_err = input_generator(npf, eng, node_id);
+                          if (!inputs_or_err.has_value()) {
+                              return std::unexpected(Node::EvaluationError{
+                                  .description = "Failed to get series input definition",
+                                  .input_errors = {},
+                              });
+                          }
 
                           GenericSeries res;
                           res.type_id = series_id;
 
-                          for (auto [id, input] : inputs) {
+                          for (auto [id, input] : inputs_or_err.value()) {
                               auto data = TRY(eng->get_input_data(npf, node_id, id, true));
                               res.data[id] = data;
                           }
 
-                          cache.computed_outputs["series"] = res;
+                          output["series"] = res;
 
                           return {};
                       },

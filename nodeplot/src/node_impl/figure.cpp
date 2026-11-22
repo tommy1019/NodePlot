@@ -4,6 +4,7 @@
 #include "types.h"
 #include "utils.h"
 
+#include <expected>
 #include <format>
 #include <limits>
 #include <string>
@@ -58,7 +59,7 @@ void register_figure() {
                     {"figure", Node::Output{.id = "figure", .display_name = "Figure", .valid_data_types = {DataType::FIGURE}}},
                 };
             },
-            .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
+            .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, std::map<OutputId, Data>& output) -> Node::EvaluateResult {
                 std::string title = TRY(eng->get_input_value<std::string>(npf, node_id, "title", true));
 
                 std::string x_label = TRY(eng->get_input_value<std::string>(npf, node_id, "x_label", true));
@@ -99,9 +100,27 @@ void register_figure() {
                 }
 
                 if (x_range_auto || y_range_auto) {
-                    for (auto& series : all_series) {
-                        auto& series_def = TRY(Utils::try_find(NodeRegistry::series_map, series.type_id, "Invalid Series Type")).get();
-                        auto cur_lims = TRY(series_def.get_limits(npf, eng, series));
+                    for (int64_t i = 0; i < num_series; i++) {
+                        auto series_def = NodeRegistry::series_map.find(all_series[i].type_id);
+                        if (series_def == NodeRegistry::series_map.end()) {
+                            auto series_input_id = "series_" + std::to_string(i);
+                            return std::unexpected(Node::EvaluationError{
+                                .description = "Invalid series id for input: " + series_input_id,
+                                .input_errors = {series_input_id},
+                            });
+                        }
+
+                        auto cur_lims_or_error = series_def->second.get_limits(npf, eng, all_series[i]);
+                        if (!cur_lims_or_error.has_value()) {
+                            auto series_input_id = "series_" + std::to_string(i);
+                            return std::unexpected(Node::EvaluationError{
+                                .description = "Failed to get limits for series: " + series_input_id,
+                                .input_errors = {series_input_id},
+                            });
+                        }
+
+                        auto cur_lims = cur_lims_or_error.value();
+
                         if (x_range_auto) {
                             x_lims.first = std::min(x_lims.first, cur_lims.x_low);
                             x_lims.second = std::max(x_lims.second, cur_lims.x_high);
@@ -191,11 +210,24 @@ void register_figure() {
                     .y_transform_post = plot.y - style.internal_plot_margins.bottom,
                 };
 
-                for (auto& series : all_series) {
-                    auto& series_def = TRY(Utils::try_find(NodeRegistry::series_map, series.type_id, "Invalid Series Type")).get();
-                    auto err = series_def.evaluate(npf, eng, series, res, bounds);
-                    if (!err.has_value())
-                        return ERR("Failed to plot series '" + series_def.display_name + "': " + err.error());
+                for (int64_t i = 0; i < num_series; i++) {
+                    auto series_def = NodeRegistry::series_map.find(all_series[i].type_id);
+                    if (series_def == NodeRegistry::series_map.end()) {
+                        auto series_input_id = "series_" + std::to_string(i);
+                        return std::unexpected(Node::EvaluationError{
+                            .description = "Invalid series id for input: " + series_input_id,
+                            .input_errors = {series_input_id},
+                        });
+                    }
+
+                    auto err = series_def->second.evaluate(npf, eng, all_series[i], res, bounds);
+                    if (!err.has_value()) {
+                        auto series_input_id = "series_" + std::to_string(i);
+                        return std::unexpected(Node::EvaluationError{
+                            .description = "Failed to plot series: " + series_input_id + "\n    " + err.error(),
+                            .input_errors = {series_input_id},
+                        });
+                    }
                 }
 
                 res.commands.push_back(DrawCommands::Line{
@@ -308,7 +340,7 @@ void register_figure() {
                     .bold = true,
                 });
 
-                cache.computed_outputs["figure"] = res;
+                output["figure"] = res;
 
                 return {};
             },

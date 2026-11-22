@@ -18,6 +18,7 @@ struct NodeRenderer {
         NodeRenderer& node_renderer;
         NodePlot::NodePlotFile* npf;
         NodePlot::EvaluatedNodeGraph* eng;
+        NodePlot::EvaluatedNodeGraph::OutputCache& output_cache;
 
         NodePlot::NodeId node_id;
         NodePlot::NodeGraph::NodeStorage& node_storage;

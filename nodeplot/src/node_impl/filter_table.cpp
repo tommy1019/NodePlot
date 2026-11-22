@@ -1,6 +1,7 @@
 #include "error.h"
 #include "nodeplot.h"
 #include "utils.h"
+#include <expected>
 #include <string>
 #include <variant>
 #include <vector>
@@ -36,13 +37,18 @@ void register_filter_table() {
                     {"table", Node::Output{.id = "table", .display_name = "Table", .valid_data_types = {DataType::TABLE}}},
                 };
             },
-            .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
+            .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, std::map<OutputId, Data>& output) -> Node::EvaluateResult {
                 Table table = TRY(eng->get_input_value<Table>(npf, node_id, "table", true));
                 std::string column_name = TRY(eng->get_input_value<std::string>(npf, node_id, "column_name", true));
                 std::string compare_type = TRY(eng->get_input_value<std::string>(npf, node_id, "compare_type", true));
                 bool numeric_compare = TRY(eng->get_input_value<bool>(npf, node_id, "numeric_compare", true));
 
-                auto& column = TRY(Utils::try_find(table->columns, column_name, "No column by the specified name found")).get();
+                auto& column = TRY_OR(Utils::try_find(table->columns, column_name, "No column by the specified name found"),
+                                      return std::unexpected(Node::EvaluationError{
+                                          .description = "Table does not contain a column called '" + column_name + "'",
+                                          .input_errors = {"column_name"},
+                                      }))
+                                   .get();
 
                 std::vector<bool> compared_column;
                 compared_column.reserve(column.size());
@@ -64,7 +70,10 @@ void register_filter_table() {
                         } else if (compare_type == ">") {
                             compared_column.push_back(num_v > compare_val);
                         } else {
-                            return ERR("Invalid comparision type");
+                            return std::unexpected(Node::EvaluationError{
+                                .description = "Invalid comparision type",
+                                .input_errors = {"compare_type"},
+                            });
                         }
                     }
                 } else {
@@ -83,7 +92,10 @@ void register_filter_table() {
                         } else if (compare_type == ">") {
                             compared_column.push_back(v > compare_val);
                         } else {
-                            return ERR("Invalid comparision type");
+                            return std::unexpected(Node::EvaluationError{
+                                .description = "Invalid comparision type",
+                                .input_errors = {"compare_type"},
+                            });
                         }
                     }
                 }
@@ -109,7 +121,7 @@ void register_filter_table() {
                     }(c.second);
                 }
 
-                cache.computed_outputs["table"] = res;
+                output["table"] = res;
 
                 return {};
             },

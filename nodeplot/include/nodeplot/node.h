@@ -1,11 +1,26 @@
 #pragma once
 
+#include <expected>
 #include <functional>
+#include <set>
 
-#include "eval_node_graph.h"
+#include "error.h"
 #include "types.h"
 
+#define EVAL_MUST(...)                                                                                                                                                                                 \
+    ({                                                                                                                                                                                                 \
+        auto RESULT = __VA_ARGS__;                                                                                                                                                                     \
+        if (!RESULT.has_value()) {                                                                                                                                                                     \
+            std::print("Failed to evaluate node value: {}\n", RESULT.error().description);                                                                                                             \
+            for (auto input : RESULT.error().input_errors)                                                                                                                                             \
+                std::print("    Error from: {}\n", input);                                                                                                                                             \
+        }                                                                                                                                                                                              \
+        *std::move(RESULT);                                                                                                                                                                            \
+    })
+
 namespace NodePlot {
+
+struct EvaluatedNodeGraph;
 
 namespace InputAttribute {
 
@@ -50,7 +65,14 @@ struct Node {
     InputGenerator inputs;
     OutputGenerator outputs;
 
-    std::function<ErrorOr<void>(NodePlotFile*, EvaluatedNodeGraph*, NodeId, EvaluatedNodeGraph::OutputCache&)> evaluate;
+    struct EvaluationError {
+        std::string description;
+        std::set<InputId> input_errors;
+    };
+    using EvaluateResult = std::expected<void, EvaluationError>;
+    using EvaluateData = std::expected<Data, EvaluationError>;
+
+    std::function<EvaluateResult(NodePlotFile*, EvaluatedNodeGraph*, NodeId, std::map<OutputId, Data>&)> evaluate;
 };
 
 } // namespace NodePlot

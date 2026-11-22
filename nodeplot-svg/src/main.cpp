@@ -25,8 +25,8 @@ int main(int argc, char** argv) {
 
     for (auto& n : main_graph->second.nodes) {
         if (n.second.type_id == "output") {
-            std::string filename = MUST(eng.get_input_value<std::string>(&npf, n.first, "filename", true)) + ".svg";
-            auto svg = MUST(eng.get_output_data(&npf, n.first, "svg"));
+            std::string filename = EVAL_MUST(eng.get_input_value<std::string>(&npf, n.first, "filename", true)) + ".svg";
+            auto svg = EVAL_MUST(eng.get_output_data(&npf, n.first, "svg"));
 
             if (!std::holds_alternative<std::string>(svg))
                 REQUIRE_NOT_REACHED("SVG is not a string type");

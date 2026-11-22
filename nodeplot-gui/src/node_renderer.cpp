@@ -559,7 +559,12 @@ ErrorOr<bool> NodeRenderer::render_node(NodePlot::NodeId node_id, NodePlot::Node
         .input_pin = [](RenderContext& ctx, ImVec2 pos, float size, NodePlot::InputId id, std::optional<NodePlot::Data> default_value) -> bool {
             bool updated = false;
             auto win_pos = ImGui::GetWindowPos();
-            ImGui::GetForegroundDrawList()->AddCircle({win_pos.x + pos.x + size, win_pos.y + pos.y + size}, size, ImGui::GetColorU32(ImVec4(0.3f, 0.3f, 0.3f, 1.0f)), 0);
+
+            auto circle_color = ImGui::GetColorU32(ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
+            if (ctx.output_cache.error.has_value() && ctx.output_cache.error->input_errors.contains(id)) {
+                circle_color = ImGui::GetColorU32(ImVec4(1.0f, 0.0f, 1.0f, 1.0f));
+            }
+            ImGui::GetForegroundDrawList()->AddCircle({win_pos.x + pos.x + size, win_pos.y + pos.y + size}, size, circle_color, 0);
 
             ImGui::SetCursorPos(pos);
             auto reset_value = [&]() {
@@ -723,6 +728,7 @@ ErrorOr<bool> NodeRenderer::render_node(NodePlot::NodeId node_id, NodePlot::Node
         .node_renderer = *this,
         .npf = npf,
         .eng = eng,
+        .output_cache = eng->cache[node_id],
         .node_id = node_id,
         .node_storage = storage,
         .node = node->second,
@@ -791,6 +797,7 @@ ErrorOr<void> NodeRenderer::render_input_paths(NodePlot::NodeId node_id, NodePlo
                     .node_renderer = *this,
                     .npf = npf,
                     .eng = eng,
+                    .output_cache = eng->cache[pin.node_id],
                     .node_id = pin.node_id,
                     .node_storage = output_node_storage->second,
                     .node = output_node->second,
@@ -839,6 +846,7 @@ ErrorOr<void> NodeRenderer::render_input_paths(NodePlot::NodeId node_id, NodePlo
         .node_renderer = *this,
         .npf = npf,
         .eng = eng,
+        .output_cache = eng->cache[node_id],
         .node_id = node_id,
         .node_storage = storage,
         .node = node->second,
@@ -876,6 +884,7 @@ ErrorOr<NodePlot::Pos> NodeRenderer::input_pin_position(NodePlot::GraphId graph_
         .node_renderer = *this,
         .npf = npf,
         .eng = eng,
+        .output_cache = eng->cache[node_id],
         .node_id = node_id,
         .node_storage = node_storage,
         .node = node_registry,
@@ -917,6 +926,7 @@ ErrorOr<NodePlot::Pos> NodeRenderer::output_pin_position(NodePlot::GraphId graph
         .node_renderer = *this,
         .npf = npf,
         .eng = eng,
+        .output_cache = eng->cache[node_id],
         .node_id = node_id,
         .node_storage = node_storage,
         .node = node_registry,

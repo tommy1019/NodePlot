@@ -1,6 +1,8 @@
 #include "eval_node_graph.h"
 
+#include "node_registry.h"
 #include "nodeplot.h"
+#include <expected>
 
 namespace NodePlot {
 
@@ -11,7 +13,7 @@ ErrorOr<std::reference_wrapper<NodeGraph>> EvaluatedNodeGraph::node_graph(NodePl
     return ng->second;
 }
 
-ErrorOr<Data> EvaluatedNodeGraph::get_output_data(NodePlotFile* npf, NodeId node_id, OutputId output_id) {
+Node::EvaluateData EvaluatedNodeGraph::get_output_data(NodePlotFile* npf, NodeId node_id, OutputId output_id) {
     OutputCache& output_cache = cache[node_id];
 
     auto data = output_cache.computed_outputs.find(output_id);
@@ -19,28 +21,88 @@ ErrorOr<Data> EvaluatedNodeGraph::get_output_data(NodePlotFile* npf, NodeId node
         return data->second;
     }
 
-    auto& ng = TRY(node_graph(npf)).get();
-    NodeGraph::NodeStorage& node_input_storage = TRY(Utils::try_find(ng.nodes, node_id, "Invalid NodeID")).get();
-    Node& node = TRY(Utils::try_find(NodeRegistry::node_map, node_input_storage.type_id, "Invalid NodeTypeId")).get();
-
-    auto eval_err = node.evaluate(npf, this, node_id, output_cache);
-    if (!eval_err.has_value()) {
-        output_cache.error = eval_err.error();
+    auto ng = npf->graphs.find(this->graph_id);
+    if (ng == npf->graphs.end()) {
+        output_cache.error = Node::EvaluationError{
+            .description = "Invalid graph id",
+            .input_errors = {},
+        };
+        return std::unexpected(output_cache.error.value());
     }
 
-    return TRY(Utils::try_find(output_cache.computed_outputs, output_id, "OutputId not found")).get();
+    auto node_storage = ng->second.nodes.find(node_id);
+    if (node_storage == ng->second.nodes.end()) {
+        output_cache.error = Node::EvaluationError{
+            .description = "Invalid node id",
+            .input_errors = {},
+        };
+        return std::unexpected(output_cache.error.value());
+    }
+
+    auto node = NodeRegistry::node_map.find(node_storage->second.type_id);
+    if (node == NodeRegistry::node_map.end()) {
+        output_cache.error = Node::EvaluationError{
+            .description = "Invalid node type id",
+            .input_errors = {},
+        };
+        return std::unexpected(output_cache.error.value());
+    }
+
+    auto eval_err = node->second.evaluate(npf, this, node_id, output_cache.computed_outputs);
+    if (!eval_err.has_value()) {
+        output_cache.error = eval_err.error();
+        return std::unexpected(output_cache.error.value());
+    }
+
+    auto res = output_cache.computed_outputs.find(output_id);
+    if (res == output_cache.computed_outputs.end()) {
+        return std::unexpected(Node::EvaluationError{
+            .description = "Invalid output id",
+            .input_errors = {},
+        });
+    }
+
+    return res->second;
 }
 
-ErrorOr<Data> EvaluatedNodeGraph::get_input_data(NodePlotFile* npf, NodeId node_id, InputId input_id, bool fill_default_value) {
-    auto& ng = TRY(node_graph(npf)).get();
-    NodeGraph::NodeStorage& node_storage = TRY(Utils::try_find(ng.nodes, node_id, "Invalid NodeID")).get();
-    auto input_storage_or_error = Utils::try_find(node_storage.input_storage, input_id, "Invalid InputID: " + input_id);
+Node::EvaluateData EvaluatedNodeGraph::get_input_data(NodePlotFile* npf, NodeId node_id, InputId input_id, bool fill_default_value) {
+    auto ng = npf->graphs.find(this->graph_id);
+    if (ng == npf->graphs.end()) {
+        return std::unexpected(Node::EvaluationError{
+            .description = "Invalid graph id",
+            .input_errors = {},
+        });
+    }
 
-    if (!input_storage_or_error.has_value()) {
+    auto node_storage = ng->second.nodes.find(node_id);
+    if (node_storage == ng->second.nodes.end()) {
+        return std::unexpected(Node::EvaluationError{
+            .description = "Invalid node id",
+            .input_errors = {},
+        });
+    }
+
+    auto input_storage = node_storage->second.input_storage.find(input_id);
+    if (input_storage == node_storage->second.input_storage.end()) {
         if (fill_default_value) {
-            auto inputs = TRY(TRY(Utils::try_find(NodeRegistry::node_map, node_storage.type_id, "Invalid Node Type ID")).get().inputs(npf, this, node_id));
 
-            for (auto& input : inputs) {
+            auto node = NodeRegistry::node_map.find(node_storage->second.type_id);
+            if (node == NodeRegistry::node_map.end()) {
+                return std::unexpected(Node::EvaluationError{
+                    .description = "Invalid node type id",
+                    .input_errors = {input_id},
+                });
+            }
+
+            auto inputs = node->second.inputs(npf, this, node_id);
+            if (!inputs.has_value()) {
+                return std::unexpected(Node::EvaluationError{
+                    .description = "Could not get inputs for this node_type " + node_storage->second.type_id,
+                    .input_errors = {input_id},
+                });
+            }
+
+            for (auto& input : inputs.value()) {
                 if (input.first == input_id) {
                     if (input.second.default_value.has_value())
                         return input.second.default_value.value();
@@ -48,21 +110,54 @@ ErrorOr<Data> EvaluatedNodeGraph::get_input_data(NodePlotFile* npf, NodeId node_
                 }
             }
 
-            return ERR("Node has no value for " + input_id + " and no default value");
+            return std::unexpected(Node::EvaluationError{
+                .description = "Node has no value for '" + input_id + "' and no default value",
+                .input_errors = {input_id},
+            });
+
         } else {
-            return ERR("Node has no value for " + input_id);
+            return std::unexpected(Node::EvaluationError{
+                .description = "Node has no value for '" + input_id + "'",
+                .input_errors = {input_id},
+            });
         }
     }
 
     return std::visit(Utils::overloaded{
-                          [&](Data data) -> ErrorOr<Data> { return data; },
-                          [&](InputPin input_pin) -> ErrorOr<Data> { return this->get_output_data(npf, input_pin.node_id, input_pin.output_id); },
+                          [&](Data data) -> std::expected<Data, Node::EvaluationError> { return data; },
+                          [&](InputPin input_pin) -> std::expected<Data, Node::EvaluationError> {
+                              auto res = this->get_output_data(npf, input_pin.node_id, input_pin.output_id);
+                              if (res.has_value())
+                                  return res;
+
+                              return std::unexpected(Node::EvaluationError{
+                                  .description = "Could not get input for '" + input_id + "'",
+                                  .input_errors = {input_id},
+                              });
+                          },
                       },
-                      input_storage_or_error.value().get());
+                      input_storage->second);
 }
 
-ErrorOr<PlotStyle> EvaluatedNodeGraph::get_input_style(NodePlotFile* npf, NodeId node_id, InputId id) {
-    auto& str = TRY(Utils::try_find(TRY(node_graph(npf)).get().nodes, node_id, "Invalid NodeID")).get().input_storage;
+std::expected<PlotStyle, Node::EvaluationError> EvaluatedNodeGraph::get_input_style(NodePlotFile* npf, NodeId node_id, InputId id) {
+
+    auto ng = npf->graphs.find(this->graph_id);
+    if (ng == npf->graphs.end()) {
+        return std::unexpected(Node::EvaluationError{
+            .description = "Invalid graph id",
+            .input_errors = {},
+        });
+    }
+
+    auto node_storage = ng->second.nodes.find(node_id);
+    if (node_storage == ng->second.nodes.end()) {
+        return std::unexpected(Node::EvaluationError{
+            .description = "Invalid node id",
+            .input_errors = {},
+        });
+    }
+
+    auto& str = node_storage->second.input_storage;
 
     PlotStyle res = DEFAULT_PLOT_STYLE;
 

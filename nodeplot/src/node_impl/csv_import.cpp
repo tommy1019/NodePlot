@@ -27,7 +27,7 @@ void register_csv_import() {
                                             {"table", Node::Output{.id = "table", .display_name = "Table", .valid_data_types = {DataType::TABLE}}},
                                         };
                                     },
-                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
+                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, std::map<OutputId, Data>& output) -> Node::EvaluateResult {
                                         std::filesystem::path filename = TRY(eng->get_input_value<std::filesystem::path>(npf, node_id, "filename", true));
                                         bool has_headers = TRY(eng->get_input_value<bool>(npf, node_id, "has_headers", true));
 
@@ -36,23 +36,36 @@ void register_csv_import() {
                                         std::print("Loading: {}\n", filename.string());
 
                                         if (!std::filesystem::exists(filename)) {
-                                            return ERR("Input CSV file does not exist");
+                                            return std::unexpected(Node::EvaluationError{
+                                                .description = "File '" + filename.string() + "' does not exist",
+                                                .input_errors = {"filename"},
+                                            });
                                         }
 
                                         if (std::filesystem::is_directory(filename)) {
-                                            return ERR("Input CSV file is a directory");
+                                            return std::unexpected(Node::EvaluationError{
+                                                .description = "File '" + filename.string() + "' is a directory",
+                                                .input_errors = {"filename"},
+                                            });
                                         }
 
                                         auto file_size = std::filesystem::file_size(filename);
 
                                         int fd = open(filename.c_str(), O_RDONLY);
-                                        if (fd < 0)
-                                            return ERR("Failed to open CSV input file");
+                                        if (fd < 0) {
+                                            return std::unexpected(Node::EvaluationError{
+                                                .description = "Failed to open file '" + filename.string() + "'",
+                                                .input_errors = {"filename"},
+                                            });
+                                        }
 
                                         char* map = static_cast<char*>(mmap(NULL, file_size, PROT_READ, MAP_SHARED, fd, 0));
                                         if (map == MAP_FAILED) {
                                             close(fd);
-                                            return ERR("Failed to map CSV input file");
+                                            return std::unexpected(Node::EvaluationError{
+                                                .description = "Failed to map file '" + filename.string() + "'",
+                                                .input_errors = {"filename"},
+                                            });
                                         }
 
                                         auto mapped_file = std::make_shared<MappedFile>(fd, map, file_size);
@@ -135,7 +148,7 @@ void register_csv_import() {
 
                                         printf("Loaded CSV file with %zu columns and %zu rows\n", res->columns.size(), rows_loaded);
 
-                                        cache.computed_outputs["table"] = res;
+                                        output["table"] = res;
 
                                         return {};
                                     },

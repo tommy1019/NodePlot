@@ -87,7 +87,6 @@ std::optional<T> to_optional(ErrorOr<T> v) {
         auto RESULT = EVAL;                                                                                                                                                                            \
         if (!(RESULT).has_value()) {                                                                                                                                                                   \
             __VA_ARGS__;                                                                                                                                                                               \
-            return std::unexpected(std::move(RESULT.error()));                                                                                                                                         \
         }                                                                                                                                                                                              \
         *std::move(RESULT);                                                                                                                                                                            \
     })

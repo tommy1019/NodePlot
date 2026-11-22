@@ -3,6 +3,7 @@
 #include "nodeplot.h"
 #include "types.h"
 #include "utils.h"
+#include <expected>
 #include <string>
 
 using namespace NodePlot;
@@ -59,7 +60,10 @@ void register_function() {
                 res.emplace_back("name", Node::Input{.id = "name", .display_name = "Function Name", .valid_data_types = {DataType::STRING}, .attributes = {InputAttribute::FunctionName{}}});
 
                 [&]() -> ErrorOr<void> {
-                    std::string name = TRY(eng->get_input_value<std::string>(npf, node_id, "name", false));
+                    auto name_or_err = eng->get_input_value<std::string>(npf, node_id, "name", false);
+                    if (!name_or_err.has_value())
+                        return ERR("");
+                    auto name = name_or_err.value();
 
                     NodeGraph& graph = TRY(Utils::try_find(npf->graphs, name, "")).get();
 
@@ -78,8 +82,15 @@ void register_function() {
                             std::string name_field = param_name + "_name";
                             std::string type_field = param_name + "_type";
 
-                            std::string name = TRY(tmp_eng.get_input_value<std::string>(npf, graph.function_input_id.value(), name_field, false));
-                            DataType type = TRY(parse_data_type(TRY(tmp_eng.get_input_value<std::string>(npf, graph.function_input_id.value(), type_field, false))));
+                            auto name_or_err = tmp_eng.get_input_value<std::string>(npf, graph.function_input_id.value(), name_field, false);
+                            if (!name_or_err.has_value())
+                                return ERR("");
+                            auto name = name_or_err.value();
+
+                            auto type_or_err = tmp_eng.get_input_value<std::string>(npf, graph.function_input_id.value(), type_field, false);
+                            if (!type_or_err.has_value())
+                                return ERR("");
+                            DataType type = TRY(parse_data_type(type_or_err.value()));
 
                             res.emplace_back(param_name, Node::Input{.id = param_name, .display_name = "[" + std::to_string(i) + "] " + name, .valid_data_types = {type}});
 
@@ -96,7 +107,10 @@ void register_function() {
                 std::vector<std::pair<OutputId, Node::Output>> res;
 
                 [&]() -> ErrorOr<void> {
-                    std::string name = TRY(eng->get_input_value<std::string>(npf, node_id, "name", false));
+                    auto name_or_err = eng->get_input_value<std::string>(npf, node_id, "name", false);
+                    if (!name_or_err.has_value())
+                        return ERR("");
+                    auto name = name_or_err.value();
 
                     NodeGraph& graph = TRY(Utils::try_find(npf->graphs, name, "")).get();
 
@@ -115,8 +129,15 @@ void register_function() {
                             std::string name_field = param_name + "_name";
                             std::string type_field = param_name + "_type";
 
-                            std::string name = TRY(tmp_eng.get_input_value<std::string>(npf, graph.function_output_id.value(), name_field, false));
-                            DataType type = TRY(parse_data_type(TRY(tmp_eng.get_input_value<std::string>(npf, graph.function_output_id.value(), type_field, false))));
+                            auto name_or_err = tmp_eng.get_input_value<std::string>(npf, graph.function_input_id.value(), name_field, false);
+                            if (!name_or_err.has_value())
+                                return ERR("");
+                            auto name = name_or_err.value();
+
+                            auto type_or_err = tmp_eng.get_input_value<std::string>(npf, graph.function_input_id.value(), type_field, false);
+                            if (!type_or_err.has_value())
+                                return ERR("");
+                            DataType type = TRY(parse_data_type(type_or_err.value()));
 
                             res.emplace_back(param_name, Node::Output{.id = param_name, .display_name = "[" + std::to_string(i) + "] " + name, .valid_data_types = {type}});
 
@@ -129,21 +150,34 @@ void register_function() {
 
                 return res;
             },
-            .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
+            .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, std::map<OutputId, Data>& output) -> Node::EvaluateResult {
                 std::string function_name = TRY(eng->get_input_value<std::string>(npf, node_id, "name", true));
-                NodeGraph& graph = TRY(Utils::try_find(npf->graphs, function_name, "Unknown function name")).get();
 
-                if (!graph.function_input_id.has_value())
-                    return ERR("Function has invalid input id");
-                if (!graph.function_output_id.has_value())
-                    return ERR("Function has invalid output id");
+                auto graph = npf->graphs.find(function_name);
+                if (graph == npf->graphs.end()) {
+                    return std::unexpected(Node::EvaluationError{
+                        .description = "Unknown function name",
+                        .input_errors = {"name"},
+                    });
+                }
+
+                if (!graph->second.function_input_id.has_value())
+                    return std::unexpected(Node::EvaluationError{
+                        .description = "Function has invalid input id",
+                        .input_errors = {"name"},
+                    });
+                if (!graph->second.function_output_id.has_value())
+                    return std::unexpected(Node::EvaluationError{
+                        .description = "Function has invalid output id",
+                        .input_errors = {"name"},
+                    });
 
                 EvaluatedNodeGraph func_eng{.graph_id = function_name};
 
-                int64_t input_count = std::clamp(func_eng.get_input_value<int64_t>(npf, graph.function_input_id.value(), "count", true).value_or(0), int64_t{0}, int64_t{255});
-                int64_t output_count = std::clamp(func_eng.get_input_value<int64_t>(npf, graph.function_output_id.value(), "count", true).value_or(0), int64_t{0}, int64_t{255});
+                int64_t input_count = std::clamp(func_eng.get_input_value<int64_t>(npf, graph->second.function_input_id.value(), "count", true).value_or(0), int64_t{0}, int64_t{255});
+                int64_t output_count = std::clamp(func_eng.get_input_value<int64_t>(npf, graph->second.function_output_id.value(), "count", true).value_or(0), int64_t{0}, int64_t{255});
 
-                auto& input_cache = func_eng.cache[graph.function_input_id.value()];
+                auto& input_cache = func_eng.cache[graph->second.function_input_id.value()];
 
                 // Get inputs from this nodes inputs and put them in the output cache of the function's input node
                 for (int64_t i = 0; i < input_count; i++) {
@@ -152,11 +186,18 @@ void register_function() {
                     std::string name_field = param_name + "_name";
                     std::string type_field = param_name + "_type";
 
-                    DataType type = TRY(parse_data_type(TRY(func_eng.get_input_value<std::string>(npf, graph.function_input_id.value(), type_field, false))));
+                    auto unparsed_type = TRY(func_eng.get_input_value<std::string>(npf, graph->second.function_input_id.value(), type_field, false));
+                    auto type_or_err = parse_data_type(unparsed_type);
+                    if (!type_or_err.has_value()) {
+                        return std::unexpected(Node::EvaluationError{
+                            .description = "Function has invalid type: " + unparsed_type,
+                            .input_errors = {param_name},
+                        });
+                    }
 
                     Data value;
 
-                    if (type != NodePlot::DataType::PLOT_STYLE) {
+                    if (type_or_err.value() != NodePlot::DataType::PLOT_STYLE) {
                         value = TRY(eng->get_input_data(npf, node_id, param_name, true));
                     } else {
                         value = TRY(eng->get_input_style(npf, node_id, param_name));
@@ -168,8 +209,8 @@ void register_function() {
                 // Get outputs from the function's output node and put them in this nodes cache
                 for (int64_t i = 0; i < output_count; i++) {
                     std::string param_name = "output_" + std::to_string(i);
-                    auto value = TRY(func_eng.get_input_data(npf, graph.function_output_id.value(), param_name, true));
-                    cache.computed_outputs[param_name] = value;
+                    auto value = TRY(func_eng.get_input_data(npf, graph->second.function_output_id.value(), param_name, true));
+                    output[param_name] = value;
                 }
 
                 return {};
@@ -212,8 +253,13 @@ void register_function() {
                     std::string name_field = param_name + "_name";
                     std::string type_field = param_name + "_type";
 
-                    ErrorOr<std::string> name = eng->get_input_value<std::string>(npf, node_id, name_field, false);
-                    ErrorOr<DataType> type = eng->get_input_value<std::string>(npf, node_id, type_field, false).and_then([](std::string s) { return parse_data_type(s); });
+                    auto name = eng->get_input_value<std::string>(npf, node_id, name_field, false);
+                    auto type = eng->get_input_value<std::string>(npf, node_id, type_field, false).and_then([](std::string s) -> std::expected<DataType, Node::EvaluationError> {
+                        auto parse_or_error = parse_data_type(s);
+                        if (!parse_or_error.has_value())
+                            return std::unexpected(Node::EvaluationError{});
+                        return parse_or_error.value();
+                    });
                     if (type.has_value() && name.has_value()) {
                         res.emplace_back(param_name, Node::Output{.id = param_name, .display_name = "[" + std::to_string(i) + "] " + name.value() + " Value", .valid_data_types = {type.value()}});
                     }
@@ -221,7 +267,12 @@ void register_function() {
 
                 return res;
             },
-            .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> { return ERR("Missing input paramater"); },
+            .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, std::map<OutputId, Data>& output) -> Node::EvaluateResult {
+                return std::unexpected(Node::EvaluationError{
+                    .description = "Can't evaluate function input node",
+                    .input_errors = {},
+                });
+            },
         });
 
     NodeRegistry::register_node("function_output",
@@ -254,8 +305,11 @@ void register_function() {
                                         std::vector<std::pair<OutputId, Node::Output>> res;
                                         return res;
                                     },
-                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
-                                        return ERR("Output node must output from function call");
+                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, std::map<OutputId, Data>& output) -> Node::EvaluateResult {
+                                        return std::unexpected(Node::EvaluationError{
+                                            .description = "Can't evaluate function output node",
+                                            .input_errors = {},
+                                        });
                                     },
                                 });
 }

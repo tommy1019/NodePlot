@@ -32,7 +32,7 @@ void register_output() {
                                             {"svg", Node::Output{.id = "svg", .display_name = "SVG", .valid_data_types = {DataType::STRING}}},
                                         };
                                     },
-                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
+                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, std::map<OutputId, Data>& output) -> Node::EvaluateResult {
                                         double width = TRY(eng->get_input_value<double>(npf, node_id, "width", true));
                                         double height = TRY(eng->get_input_value<double>(npf, node_id, "height", true));
 
@@ -113,7 +113,7 @@ void register_output() {
 
                                         // std::println("{}", ss.str());
 
-                                        cache.computed_outputs["svg"] = ss.str();
+                                        output["svg"] = ss.str();
 
                                         return {};
                                     },

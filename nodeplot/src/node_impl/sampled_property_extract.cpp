@@ -1,5 +1,6 @@
 #include "nodeplot.h"
 
+#include <expected>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -28,12 +29,15 @@ void register_sampled_property_extract() {
                                             {"sample_count", Node::Output{.id = "sample_count", .display_name = "Sample Count", .valid_data_types = {DataType::NUMBER_COLUMN}}},
                                         };
                                     },
-                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
+                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, std::map<OutputId, Data>& output) -> Node::EvaluateResult {
                                         std::vector<double> x = TRY(eng->get_input_value<std::vector<double>>(npf, node_id, "x", true));
                                         std::vector<double> y = TRY(eng->get_input_value<std::vector<double>>(npf, node_id, "y", true));
 
                                         if (x.size() != y.size())
-                                            return ERR("Columns are not of the same size");
+                                            return std::unexpected(Node::EvaluationError{
+                                                .description = "Columns 'X' and 'Y' are not of the same size",
+                                                .input_errors = {"x", "y"},
+                                            });
 
                                         struct Bucket {
                                             std::vector<double> vals;
@@ -93,12 +97,12 @@ void register_sampled_property_extract() {
                                             col_sample_count.push_back(bucket.vals.size());
                                         }
 
-                                        cache.computed_outputs["x_vals"] = col_new_x;
-                                        cache.computed_outputs["min"] = col_min;
-                                        cache.computed_outputs["avg"] = col_avg;
-                                        cache.computed_outputs["stdev"] = col_stdev;
-                                        cache.computed_outputs["max"] = col_max;
-                                        cache.computed_outputs["sample_count"] = col_sample_count;
+                                        output["x_vals"] = col_new_x;
+                                        output["min"] = col_min;
+                                        output["avg"] = col_avg;
+                                        output["stdev"] = col_stdev;
+                                        output["max"] = col_max;
+                                        output["sample_count"] = col_sample_count;
 
                                         return {};
                                     },
@@ -123,7 +127,7 @@ void register_sampled_property_extract() {
                                             {"sample_count", Node::Output{.id = "sample_count", .display_name = "Sample Count", .valid_data_types = {DataType::NUMBER}}},
                                         };
                                     },
-                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
+                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, std::map<OutputId, Data>& output) -> Node::EvaluateResult {
                                         std::vector<double> v = TRY(eng->get_input_value<std::vector<double>>(npf, node_id, "values", true));
 
                                         double sum = 0;
@@ -144,11 +148,11 @@ void register_sampled_property_extract() {
                                         }
                                         double stdev = std::sqrt(sum / v.size());
 
-                                        cache.computed_outputs["min"] = min;
-                                        cache.computed_outputs["avg"] = avg;
-                                        cache.computed_outputs["stdev"] = stdev;
-                                        cache.computed_outputs["max"] = max;
-                                        cache.computed_outputs["sample_count"] = (double)v.size();
+                                        output["min"] = min;
+                                        output["avg"] = avg;
+                                        output["stdev"] = stdev;
+                                        output["max"] = max;
+                                        output["sample_count"] = (double)v.size();
 
                                         return {};
                                     },

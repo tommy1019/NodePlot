@@ -27,8 +27,8 @@ void register_create_plot_style() {
                                             {"style", Node::Output{.id = "style", .display_name = "Plot Style", .valid_data_types = {DataType::PLOT_STYLE}}},
                                         };
                                     },
-                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
-                                        cache.computed_outputs["style"] = TRY(eng->get_input_style(npf, node_id, "style"));
+                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, std::map<OutputId, Data>& output) -> Node::EvaluateResult {
+                                        output["style"] = TRY(eng->get_input_style(npf, node_id, "style"));
                                         return {};
                                     },
                                 });

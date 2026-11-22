@@ -2,10 +2,82 @@
 #include "types.h"
 #include <cmath>
 #include <variant>
+#include <vector>
 
 using namespace NodePlot;
 
 void register_value() {
+
+    NodeRegistry::register_node("sequence",
+                                Node{
+                                    .type_id = "sequence",
+                                    .display_name = "Sequence",
+                                    .toolbar_path = {"Value", "Sequence"},
+                                    .inputs = [](NodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::vector<std::pair<InputId, Node::Input>> {
+                                        return {
+                                            {"start", Node::Input{.id = "start", .display_name = "Start", .valid_data_types = {DataType::NUMBER}, .default_value = 0}},
+                                            {"step", Node::Input{.id = "step", .display_name = "Step", .valid_data_types = {DataType::NUMBER}, .default_value = 1}},
+                                            {"count", Node::Input{.id = "count", .display_name = "Count", .valid_data_types = {DataType::NUMBER}, .default_value = 10}},
+                                        };
+                                    },
+                                    .outputs = [](NodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::vector<std::pair<OutputId, Node::Output>> {
+                                        return {
+                                            {"values", Node::Output{.id = "values", .display_name = "Values", .valid_data_types = {DataType::NUMBER}}},
+                                        };
+                                    },
+                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, std::map<OutputId, Data>& output) -> Node::EvaluateResult {
+                                        auto start = TRY(eng->get_input_value<double>(npf, node_id, "start", true));
+                                        auto step = TRY(eng->get_input_value<double>(npf, node_id, "step", true));
+                                        auto count = TRY(eng->get_input_value<double>(npf, node_id, "count", true));
+
+                                        std::vector<double> res;
+                                        for (size_t i = 0; i < count; i++) {
+                                            res.push_back(start + step * i);
+                                        }
+
+                                        output["values"] = res;
+
+                                        return {};
+                                    },
+                                });
+
+    NodeRegistry::register_node("range",
+                                Node{
+                                    .type_id = "range",
+                                    .display_name = "Range",
+                                    .toolbar_path = {"Value", "Range"},
+                                    .inputs = [](NodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::vector<std::pair<InputId, Node::Input>> {
+                                        return {
+                                            {"start", Node::Input{.id = "start", .display_name = "Start", .valid_data_types = {DataType::NUMBER}, .default_value = 0}},
+                                            {"end", Node::Input{.id = "end", .display_name = "End", .valid_data_types = {DataType::NUMBER}, .default_value = 1}},
+                                            {"count", Node::Input{.id = "count", .display_name = "Count", .valid_data_types = {DataType::NUMBER}, .default_value = 10}},
+                                        };
+                                    },
+                                    .outputs = [](NodePlotFile*, EvaluatedNodeGraph*, NodeId) -> std::vector<std::pair<OutputId, Node::Output>> {
+                                        return {
+                                            {"values", Node::Output{.id = "values", .display_name = "Values", .valid_data_types = {DataType::NUMBER}}},
+                                        };
+                                    },
+                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, std::map<OutputId, Data>& output) -> Node::EvaluateResult {
+                                        auto start = TRY(eng->get_input_value<double>(npf, node_id, "start", true));
+                                        auto end = TRY(eng->get_input_value<double>(npf, node_id, "end", true));
+                                        auto count = TRY(eng->get_input_value<double>(npf, node_id, "count", true));
+
+                                        double range = end - start;
+                                        double step = range / (count - 1);
+
+                                        std::vector<double> res;
+
+                                        for (size_t i = 0; i < count; i++) {
+                                            res.push_back(start + step * i);
+                                        }
+
+                                        output["values"] = res;
+
+                                        return {};
+                                    },
+                                });
+
     NodeRegistry::register_node("numeric_value",
                                 Node{
                                     .type_id = "numeric_value",
@@ -21,8 +93,8 @@ void register_value() {
                                             {"value", Node::Output{.id = "value", .display_name = "Value", .valid_data_types = {DataType::NUMBER}}},
                                         };
                                     },
-                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
-                                        cache.computed_outputs["value"] = TRY(eng->get_input_value<double>(npf, node_id, "value", true));
+                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, std::map<OutputId, Data>& output) -> Node::EvaluateResult {
+                                        output["value"] = TRY(eng->get_input_value<double>(npf, node_id, "value", true));
                                         return {};
                                     },
                                 });
@@ -42,8 +114,8 @@ void register_value() {
                                             {"value", Node::Output{.id = "value", .display_name = "Value", .valid_data_types = {DataType::STRING}}},
                                         };
                                     },
-                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
-                                        cache.computed_outputs["value"] = TRY(eng->get_input_value<std::string>(npf, node_id, "value", true));
+                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, std::map<OutputId, Data>& output) -> Node::EvaluateResult {
+                                        output["value"] = TRY(eng->get_input_value<std::string>(npf, node_id, "value", true));
                                         return {};
                                     },
                                 });
@@ -63,8 +135,8 @@ void register_value() {
                                             {"value", Node::Output{.id = "value", .display_name = "Value", .valid_data_types = {DataType::COLOR}}},
                                         };
                                     },
-                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
-                                        cache.computed_outputs["value"] = TRY(eng->get_input_value<Color>(npf, node_id, "value", true));
+                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, std::map<OutputId, Data>& output) -> Node::EvaluateResult {
+                                        output["value"] = TRY(eng->get_input_value<Color>(npf, node_id, "value", true));
                                         return {};
                                     },
                                 });
@@ -87,8 +159,8 @@ void register_value() {
                                             {"color", Node::Output{.id = "color", .display_name = "Color", .valid_data_types = {DataType::COLOR, DataType::COLOR_COLUMN}}},
                                         };
                                     },
-                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
-                                        cache.computed_outputs["color"] = TRY(Utils::vectorized(
+                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, std::map<OutputId, Data>& output) -> Node::EvaluateResult {
+                                        output["color"] = TRY(Utils::vectorized(
                                             [](double r, double g, double b, double a) -> Color {
                                                 return Color{
                                                     .r = (float)r,
@@ -97,10 +169,10 @@ void register_value() {
                                                     .a = (float)a,
                                                 };
                                             },
-                                            TRY(eng->get_input_value_variant<double, std::vector<double>>(npf, node_id, "red", true)),
-                                            TRY(eng->get_input_value_variant<double, std::vector<double>>(npf, node_id, "green", true)),
-                                            TRY(eng->get_input_value_variant<double, std::vector<double>>(npf, node_id, "blue", true)),
-                                            TRY(eng->get_input_value_variant<double, std::vector<double>>(npf, node_id, "alpha", true))));
+                                            std::make_pair(std::string("red"), TRY(eng->get_input_value_variant<double, std::vector<double>>(npf, node_id, "red", true))),
+                                            std::make_pair(std::string("green"), TRY(eng->get_input_value_variant<double, std::vector<double>>(npf, node_id, "green", true))),
+                                            std::make_pair(std::string("blue"), TRY(eng->get_input_value_variant<double, std::vector<double>>(npf, node_id, "blue", true))),
+                                            std::make_pair(std::string("alpha"), TRY(eng->get_input_value_variant<double, std::vector<double>>(npf, node_id, "alpha", true)))));
                                         return {};
                                     },
                                 });
@@ -124,8 +196,8 @@ void register_value() {
                     {"color", Node::Output{.id = "color", .display_name = "Color", .valid_data_types = {DataType::COLOR, DataType::COLOR_COLUMN}}},
                 };
             },
-            .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
-                cache.computed_outputs["color"] = TRY(Utils::vectorized(
+            .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, std::map<OutputId, Data>& output) -> Node::EvaluateResult {
+                output["color"] = TRY(Utils::vectorized(
                     [](double h, double s, double v, double a) -> Color {
                         if (std::isnan(h) || std::isinf(h))
                             h = 0.0;
@@ -170,10 +242,10 @@ void register_value() {
                             .a = (float)a,
                         };
                     },
-                    TRY(eng->get_input_value_variant<double, std::vector<double>>(npf, node_id, "hue", true)),
-                    TRY(eng->get_input_value_variant<double, std::vector<double>>(npf, node_id, "saturation", true)),
-                    TRY(eng->get_input_value_variant<double, std::vector<double>>(npf, node_id, "value", true)),
-                    TRY(eng->get_input_value_variant<double, std::vector<double>>(npf, node_id, "alpha", true))));
+                    std::make_pair(std::string("hue"), TRY(eng->get_input_value_variant<double, std::vector<double>>(npf, node_id, "hue", true))),
+                    std::make_pair(std::string("saturation"), TRY(eng->get_input_value_variant<double, std::vector<double>>(npf, node_id, "saturation", true))),
+                    std::make_pair(std::string("value"), TRY(eng->get_input_value_variant<double, std::vector<double>>(npf, node_id, "value", true))),
+                    std::make_pair(std::string("alpha"), TRY(eng->get_input_value_variant<double, std::vector<double>>(npf, node_id, "alpha", true)))));
                 return {};
             },
         });
@@ -195,12 +267,12 @@ void register_value() {
                                             {"alpha", Node::Output{.id = "alpha", .display_name = "Alpha", .valid_data_types = {DataType::NUMBER, DataType::NUMBER_COLUMN}}},
                                         };
                                     },
-                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
+                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, std::map<OutputId, Data>& output) -> Node::EvaluateResult {
                                         auto color = TRY(eng->get_input_value_variant<Color, std::vector<Color>>(npf, node_id, "color", true));
-                                        cache.computed_outputs["red"] = TRY(Utils::vectorized([](Color c) -> double { return c.r; }, color));
-                                        cache.computed_outputs["green"] = TRY(Utils::vectorized([](Color c) -> double { return c.g; }, color));
-                                        cache.computed_outputs["blue"] = TRY(Utils::vectorized([](Color c) -> double { return c.b; }, color));
-                                        cache.computed_outputs["alpha"] = TRY(Utils::vectorized([](Color c) -> double { return c.a; }, color));
+                                        output["red"] = TRY(Utils::vectorized([](Color c) -> double { return c.r; }, std::make_pair(std::string("color"), color)));
+                                        output["green"] = TRY(Utils::vectorized([](Color c) -> double { return c.g; }, std::make_pair(std::string("color"), color)));
+                                        output["blue"] = TRY(Utils::vectorized([](Color c) -> double { return c.b; }, std::make_pair(std::string("color"), color)));
+                                        output["alpha"] = TRY(Utils::vectorized([](Color c) -> double { return c.a; }, std::make_pair(std::string("color"), color)));
                                         return {};
                                     },
                                 });

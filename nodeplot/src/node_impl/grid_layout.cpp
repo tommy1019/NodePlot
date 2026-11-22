@@ -35,7 +35,7 @@ void register_grid_layout() {
                                             {"figure", Node::Output{.id = "figure", .display_name = "Figure", .valid_data_types = {DataType::FIGURE}}},
                                         };
                                     },
-                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, EvaluatedNodeGraph::OutputCache& cache) -> ErrorOr<void> {
+                                    .evaluate = [](NodePlotFile* npf, EvaluatedNodeGraph* eng, NodeId node_id, std::map<OutputId, Data>& output) -> Node::EvaluateResult {
                                         int64_t cols = std::clamp(eng->get_input_value<int64_t>(npf, node_id, "cols", true).value_or(0), int64_t{0}, int64_t{255});
                                         int64_t rows = std::clamp(eng->get_input_value<int64_t>(npf, node_id, "rows", true).value_or(0), int64_t{0}, int64_t{255});
 
@@ -116,7 +116,7 @@ void register_grid_layout() {
                                             }
                                         }
 
-                                        cache.computed_outputs["figure"] = res;
+                                        output["figure"] = res;
 
                                         return {};
                                     },

@@ -27,12 +27,12 @@ int main(int argc, char** argv) {
 
     for (auto& n : main_graph->second.nodes) {
         if (n.second.type_id == "output") {
-            std::string filename = MUST(eng.get_input_value<std::string>(&npf, n.first, "filename", true)) + ".tex";
+            std::string filename = EVAL_MUST(eng.get_input_value<std::string>(&npf, n.first, "filename", true)) + ".tex";
 
-            auto width = MUST(eng.get_input_value<double>(&npf, n.first, "width", true));
-            auto height = MUST(eng.get_input_value<double>(&npf, n.first, "height", true));
+            auto width = EVAL_MUST(eng.get_input_value<double>(&npf, n.first, "width", true));
+            auto height = EVAL_MUST(eng.get_input_value<double>(&npf, n.first, "height", true));
 
-            auto figure = MUST(eng.get_input_value<NodePlot::Figure>(&npf, n.first, "figure", true));
+            auto figure = EVAL_MUST(eng.get_input_value<NodePlot::Figure>(&npf, n.first, "figure", true));
 
             FILE* file = fopen(filename.c_str(), "w");
             if (!file)
