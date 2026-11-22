@@ -1,4 +1,3 @@
-#include <cstdio>
 #include <functional>
 #include <optional>
 #include <string>
@@ -14,7 +13,6 @@
 #include "nodeplot/node.h"
 #include "nodeplot/node_graph.h"
 #include "nodeplot/node_registry.h"
-#include "nodeplot/nodeplot.h"
 #include "nodeplot/types.h"
 #include "nodeplot/utils.h"
 
@@ -161,7 +159,7 @@ NodeRenderer::RenderFunction NodeRenderer::default_renderer = [](Renderer& rnd, 
                                     if (std::holds_alternative<std::string>(data)) {
                                         auto fn_name = std::get<std::string>(data);
                                         if (ctx.npf->graphs.contains(fn_name)) {
-                                            ctx.node_renderer.set_current_graph_id(fn_name);
+                                            ctx.node_renderer.ui_callbacks->examine_function_call(fn_name, ctx.node_id);
                                         }
                                     }
                                 }

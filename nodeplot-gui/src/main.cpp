@@ -3,7 +3,6 @@
 #include <limits>
 #include <memory>
 #include <optional>
-#include <print>
 #include <ranges>
 #include <string>
 
@@ -91,32 +90,56 @@ int main(int argc, char** argv) {
     };
 
     NodePlot::EvaluatedNodeGraph main_eng = create_eng(current_graph);
-    NodePlot::EvaluatedNodeGraph sub_eng = create_eng(current_graph);
-    auto cur_eng = [&]() -> NodePlot::EvaluatedNodeGraph& {
+    NodePlot::EvaluatedNodeGraph tmp_eng = create_eng(current_graph);
+
+    std::vector<NodePlot::NodeId> view_call_stack;
+
+    auto find_cur_eng = [&]() -> NodePlot::EvaluatedNodeGraph* {
         if (current_graph == "main")
-            return main_eng;
-        return sub_eng;
+            return &main_eng;
+
+        if (view_call_stack.empty()) {
+            tmp_eng = create_eng(current_graph);
+            return &tmp_eng;
+        }
+
+        NodePlot::EvaluatedNodeGraph* cur_eng = &main_eng;
+
+        auto err = [&]() -> ErrorOr<void> {
+            for (size_t i = 0; i < view_call_stack.size(); i++) {
+                auto& ng = TRY(cur_eng->node_graph(&npf)).get();
+                auto& n = TRY(NodePlot::Utils::try_find(ng.nodes, view_call_stack[i], "")).get();
+                if (n.type_id != "function")
+                    return ERR("");
+                auto& cache = TRY(NodePlot::Utils::try_find(cur_eng->cache, view_call_stack[i], "")).get();
+                if (cache.function_eval_eng.get() == nullptr)
+                    return ERR("");
+                cur_eng = cache.function_eval_eng.get();
+            }
+            return {};
+        }();
+
+        if (!err.has_value()) {
+            tmp_eng = create_eng(current_graph);
+            return &tmp_eng;
+        }
+
+        return cur_eng;
     };
 
-    NodeRenderer* node_renderer;
-    auto set_current_graph = [&](NodePlot::GraphId new_id) {
+    NodeRenderer::UICallbacks ui_callbacks;
+
+    auto* eng = find_cur_eng();
+    NodeRenderer node_renderer(&npf, eng, &ui_callbacks);
+
+    ui_callbacks.examine_function_call = [&](NodePlot::GraphId new_id, std::optional<NodePlot::NodeId> calling_node) {
         current_graph = new_id;
-        if (current_graph != "main") {
-            sub_eng = create_eng(current_graph);
-            // This is a hacky way to keep this callback around, there should be a better way to design this callback
-            auto old = node_renderer;
-            node_renderer = new NodeRenderer(&npf, &sub_eng);
-            node_renderer->set_current_graph_id = old->set_current_graph_id;
-            delete old;
+        if (calling_node.has_value()) {
+            view_call_stack.push_back(calling_node.value());
         } else {
-            auto old = node_renderer;
-            node_renderer = new NodeRenderer(&npf, &main_eng);
-            node_renderer->set_current_graph_id = old->set_current_graph_id;
-            delete old;
+            view_call_stack.clear();
         }
     };
-    node_renderer = new NodeRenderer(&npf, &main_eng);
-    node_renderer->set_current_graph_id = set_current_graph;
 
     auto update_svg = [&]() {
         for (auto& n : MUST(main_eng.node_graph(&npf)).get().nodes) {
@@ -132,16 +155,10 @@ int main(int argc, char** argv) {
     };
     update_svg();
 
-    std::optional<ImVec2> left_drag_start = std::nullopt;
-    std::set<NodePlot::NodeId> dragged_windows = {};
-    std::set<NodePlot::NodeId> selected_windows;
-
     struct Toolbar {
         std::map<std::string, std::variant<NodePlot::NodeTypeId, Toolbar>> map;
     };
-
     Toolbar main_bar{};
-
     for (auto& [type_id, node] : NodePlot::NodeRegistry::node_map) {
         Toolbar* bar = &main_bar;
 
@@ -150,7 +167,6 @@ int main(int argc, char** argv) {
             path = {node.display_name};
 
         for (auto path_item : path | std::ranges::views::take(path.size() - 1)) {
-
             if (!bar->map.contains(path_item)) {
                 bar->map.insert(std::make_pair(path_item, Toolbar{}));
             }
@@ -165,7 +181,21 @@ int main(int argc, char** argv) {
         bar->map.insert(std::make_pair(path.back(), type_id));
     }
 
+    std::optional<ImVec2> left_drag_start = std::nullopt;
+    std::set<NodePlot::NodeId> dragged_windows = {};
+    std::set<NodePlot::NodeId> selected_windows;
+
     MUST(window->event_loop(NodePlot::Utils::overloaded{[&](Window::RenderEvent) -> ErrorOr<void> {
+        float status_bar_height = ImGui::GetFrameHeight() + ImGui::GetStyle().WindowPadding.y * 2.0f;
+
+        {
+            auto* new_eng = find_cur_eng();
+            if (eng != new_eng) {
+                eng = new_eng;
+                node_renderer = NodeRenderer(&npf, eng, &ui_callbacks);
+            }
+        }
+
         ImGuiViewport* viewport = ImGui::GetMainViewport();
         ImGui::SetNextWindowPos(viewport->WorkPos);
         ImGui::SetNextWindowSize(viewport->WorkSize);
@@ -210,7 +240,7 @@ int main(int argc, char** argv) {
                 if (ImGui::BeginMenu("Edit Function")) {
                     for (auto [id, graph] : npf.graphs) {
                         if (ImGui::MenuItem(id.c_str())) {
-                            set_current_graph(id);
+                            ui_callbacks.examine_function_call(id, std::nullopt);
                         }
                     }
                     ImGui::EndMenu();
@@ -223,7 +253,7 @@ int main(int argc, char** argv) {
                                            [&](NodePlot::NodeTypeId type_id) {
                                                if (ImGui::MenuItem(name.c_str())) {
                                                    auto win_size = ImGui::GetWindowSize();
-                                                   auto placement_pos = node_renderer->screen_to_world(ImVec2(win_size.x, win_size.y));
+                                                   auto placement_pos = node_renderer.screen_to_world(ImVec2(win_size.x, win_size.y));
                                                    MUST(cur_ng().create_node(&npf, current_graph, type_id, placement_pos.x, placement_pos.y));
                                                }
                                            },
@@ -250,7 +280,7 @@ int main(int argc, char** argv) {
 
         ImGui::SetNextWindowBgAlpha(0.0f);
         ImGui::BeginChild("NodeEditor",
-                          ImVec2(ImGui::GetContentRegionAvail().x * 0.75, 0),
+                          ImVec2(ImGui::GetContentRegionAvail().x * 0.75, -status_bar_height),
                           ImGuiChildFlags_ResizeX | ImGuiChildFlags_Borders,
                           ImGuiWindowFlags_None | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
         {
@@ -279,11 +309,11 @@ int main(int argc, char** argv) {
 
                 ImVec2 grid_size = ImVec2(100, 100);
 
-                ImVec2 grid_size_screen = ImVec2(node_renderer->world_to_screen(grid_size).x - node_renderer->world_to_screen(ImVec2(0, 0)).x,
-                                                 node_renderer->world_to_screen(grid_size).y - node_renderer->world_to_screen(ImVec2(0, 0)).y);
+                ImVec2 grid_size_screen = ImVec2(node_renderer.world_to_screen(grid_size).x - node_renderer.world_to_screen(ImVec2(0, 0)).x,
+                                                 node_renderer.world_to_screen(grid_size).y - node_renderer.world_to_screen(ImVec2(0, 0)).y);
 
-                ImVec2 start = node_renderer->screen_to_world(render_node_editor_position);
-                ImVec2 end = node_renderer->screen_to_world(render_node_editor_size);
+                ImVec2 start = node_renderer.screen_to_world(render_node_editor_position);
+                ImVec2 end = node_renderer.screen_to_world(render_node_editor_size);
 
                 start.x = std::floor(start.x / 100.0f) * 100.0f;
                 start.y = std::floor(start.y / 100.0f) * 100.0f;
@@ -291,8 +321,8 @@ int main(int argc, char** argv) {
                 end.x = std::ceil(end.x / 100.0f) * 100.0f;
                 end.y = std::ceil(end.y / 100.0f) * 100.0f;
 
-                start = node_renderer->world_to_screen(start);
-                end = node_renderer->world_to_screen(end);
+                start = node_renderer.world_to_screen(start);
+                end = node_renderer.world_to_screen(end);
 
                 for (float x = start.x; x <= end.x; x += grid_size_screen.x) {
                     render_list->AddLine({x, start.y}, {x, end.y}, color);
@@ -304,12 +334,12 @@ int main(int argc, char** argv) {
             }
 
             for (auto& [id, storage] : nodes) {
-                MAYBE(node_renderer->render_input_paths(id, storage));
+                MAYBE(node_renderer.render_input_paths(id, storage));
             }
 
             auto old_style = ImGui::GetStyle();
-            ImGui::GetStyle().ScaleAllSizes(node_renderer->scene_scale);
-            ImGui::PushFont(nullptr, node_renderer->scene_scale * 13);
+            ImGui::GetStyle().ScaleAllSizes(node_renderer.scene_scale);
+            ImGui::PushFont(nullptr, node_renderer.scene_scale * 13);
             ImGui::GetStyle().SeparatorSize = 1.0f;
 
             std::set<NodePlot::NodeId> nodes_to_delete;
@@ -333,8 +363,8 @@ int main(int argc, char** argv) {
                 } else {
                     for (auto& id : dragged_windows) {
                         MAYBE(NodePlot::Utils::try_find(nodes, id, "Invalid dragged window").and_then([&](NodePlot::NodeGraph::NodeStorage& storage) -> ErrorOr<void> {
-                            storage.pos.x += io.MouseDelta.x / node_renderer->scene_scale;
-                            storage.pos.y += io.MouseDelta.y / node_renderer->scene_scale;
+                            storage.pos.x += io.MouseDelta.x / node_renderer.scene_scale;
+                            storage.pos.y += io.MouseDelta.y / node_renderer.scene_scale;
                             return {};
                         }));
                     }
@@ -346,8 +376,8 @@ int main(int argc, char** argv) {
                             selected_windows.clear();
                         auto cur_mouse = ImGui::GetIO().MousePos;
                         for (auto& [id, storage] : nodes) {
-                            auto b_top_left = node_renderer->world_to_screen({storage.pos.x, storage.pos.y});
-                            auto b_bot_right = node_renderer->world_to_screen({storage.end_pos.x, storage.end_pos.y});
+                            auto b_top_left = node_renderer.world_to_screen({storage.pos.x, storage.pos.y});
+                            auto b_bot_right = node_renderer.world_to_screen({storage.end_pos.x, storage.end_pos.y});
 
                             ImVec2 a_top_left = {std::min(cur_mouse.x, left_drag_start->x), std::min(cur_mouse.y, left_drag_start->y)};
                             ImVec2 a_bot_right = {std::max(cur_mouse.x, left_drag_start->x), std::max(cur_mouse.y, left_drag_start->y)};
@@ -369,12 +399,13 @@ int main(int argc, char** argv) {
             }
 
             for (auto& [id, storage] : nodes) {
-                auto& out_cache = cur_eng().cache[id];
+                auto& out_cache = eng->cache[id];
                 auto& node = NodePlot::NodeRegistry::node_map.at(storage.type_id);
 
                 auto error = out_cache.error;
-                if (current_graph != "main")
+                if (current_graph != "main" && view_call_stack.empty()) {
                     error = std::nullopt;
+                }
 
                 if (error.has_value()) {
                     ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(1.0f, 0.7f, 0.7f, 1.0f));
@@ -384,15 +415,15 @@ int main(int argc, char** argv) {
                     ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.9f, 0.9f, 1.0f, 1.0f));
                 }
 
-                ImGui::SetNextWindowPos(node_renderer->world_to_screen(ImVec2(storage.pos.x, storage.pos.y)), ImGuiCond_Always);
+                ImGui::SetNextWindowPos(node_renderer.world_to_screen(ImVec2(storage.pos.x, storage.pos.y)), ImGuiCond_Always);
                 if (ImGui::BeginChild(std::to_string(id).c_str(),
                                       {0, 0},
                                       ImGuiChildFlags_FrameStyle | ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY,
                                       ImGuiWindowFlags_None | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
 
-                    if (MUST(node_renderer->render_node(id, storage))) {
+                    if (MUST(node_renderer.render_node(id, storage))) {
                         did_update = true;
-                        MUST(cur_eng().node_inputs_changed(&npf, id));
+                        MUST(eng->node_inputs_changed(&npf, id));
 
                         if (current_graph != "main") {
                             auto& ng = npf.graphs.at("main");
@@ -509,7 +540,7 @@ int main(int argc, char** argv) {
                             }
                         }
 
-                        auto click_pos = node_renderer->screen_to_world(ImGui::GetCursorScreenPos());
+                        auto click_pos = node_renderer.screen_to_world(ImGui::GetCursorScreenPos());
 
                         std::map<NodePlot::NodeId, NodePlot::NodeId> id_map;
 
@@ -566,10 +597,10 @@ int main(int argc, char** argv) {
                     if (node.has_value()) {
                         auto node_pos = node.value().get().pos;
 
-                        auto pin_pos = node_renderer->output_pin_position(current_graph, pin.first, pin.second);
+                        auto pin_pos = node_renderer.output_pin_position(current_graph, pin.first, pin.second);
                         if (pin_pos.has_value()) {
-                            auto screen_pos = node_renderer->world_to_screen({pin_pos->x, pin_pos->y});
-                            node_renderer->draw_node_path(screen_pos.x, {screen_pos.x, screen_pos.y}, ImGui::GetIO().MousePos, ImGui::GetIO().MousePos.x);
+                            auto screen_pos = node_renderer.world_to_screen({pin_pos->x, pin_pos->y});
+                            node_renderer.draw_node_path(screen_pos.x, {screen_pos.x, screen_pos.y}, ImGui::GetIO().MousePos, ImGui::GetIO().MousePos.x);
                         } else {
                             printf("PIN POS ERROR: %s\n", pin_pos.error().c_str());
                         }
@@ -622,7 +653,7 @@ int main(int argc, char** argv) {
                     auto& dst = MUST(NodePlot::Utils::try_find(nodes, dst_id, "Failed to find created node")).get();
 
                     auto& type = MUST(NodePlot::Utils::try_find(NodePlot::NodeRegistry::node_map, src.type_id, "Invalid type")).get();
-                    auto inputs = MUST(type.inputs(&npf, &cur_eng(), src_id));
+                    auto inputs = MUST(type.inputs(&npf, eng, src_id));
 
                     for (auto& i : inputs) {
                         dst.input_storage[i.first] = src.input_storage[i.first];
@@ -650,32 +681,32 @@ int main(int argc, char** argv) {
                 }
 
                 if (ImGui::IsMouseDragging(ImGuiMouseButton_Middle)) {
-                    node_renderer->scene_translation.x -= io.MouseDelta.x / node_renderer->scene_scale;
-                    node_renderer->scene_translation.y -= io.MouseDelta.y / node_renderer->scene_scale;
+                    node_renderer.scene_translation.x -= io.MouseDelta.x / node_renderer.scene_scale;
+                    node_renderer.scene_translation.y -= io.MouseDelta.y / node_renderer.scene_scale;
                 }
 
                 if (ImGui::GetIO().KeyShift) {
                     if (ImGui::GetIO().MouseWheel != 0.0 || ImGui::GetIO().MouseWheelH != 0.0) {
                         ImVec2 mouse_pos = ImVec2(ImGui::GetIO().MousePos.x - ImGui::GetWindowPos().x, ImGui::GetIO().MousePos.y - ImGui::GetWindowPos().y);
 
-                        auto pre = node_renderer->screen_to_world(mouse_pos);
+                        auto pre = node_renderer.screen_to_world(mouse_pos);
 
                         float scroll = ImGui::GetIO().MouseWheel + ImGui::GetIO().MouseWheelH;
                         float scale_delta = (scroll > 0.0f) ? 1.1f : 0.9f;
-                        node_renderer->scene_scale *= scale_delta;
+                        node_renderer.scene_scale *= scale_delta;
 
-                        auto post = node_renderer->screen_to_world(mouse_pos);
+                        auto post = node_renderer.screen_to_world(mouse_pos);
 
-                        node_renderer->scene_translation.x += pre.x - post.x;
-                        node_renderer->scene_translation.y += pre.y - post.y;
+                        node_renderer.scene_translation.x += pre.x - post.x;
+                        node_renderer.scene_translation.y += pre.y - post.y;
                     }
                 } else {
                     constexpr float SCROLL_SPEED = 8;
                     if (ImGui::GetIO().MouseWheel != 0.0) {
-                        node_renderer->scene_translation.y -= ImGui::GetIO().MouseWheel * SCROLL_SPEED / node_renderer->scene_scale;
+                        node_renderer.scene_translation.y -= ImGui::GetIO().MouseWheel * SCROLL_SPEED / node_renderer.scene_scale;
                     }
                     if (ImGui::GetIO().MouseWheelH != 0.0) {
-                        node_renderer->scene_translation.x -= ImGui::GetIO().MouseWheelH * SCROLL_SPEED / node_renderer->scene_scale;
+                        node_renderer.scene_translation.x -= ImGui::GetIO().MouseWheelH * SCROLL_SPEED / node_renderer.scene_scale;
                     }
                 }
             }
@@ -692,12 +723,71 @@ int main(int argc, char** argv) {
         }
 
         ImGui::SameLine();
-        ImGui::BeginChild("PlotViewer", ImVec2(0, 0), ImGuiChildFlags_None, ImGuiWindowFlags_None);
+        ImGui::BeginChild("PlotViewer", ImVec2(0, -status_bar_height), ImGuiChildFlags_None, ImGuiWindowFlags_None);
         {
             MAYBE(svg_renderer->set_size({ImGui::GetWindowSize().x, ImGui::GetWindowSize().y}));
             svg_renderer->draw();
         }
         ImGui::EndChild();
+
+        {
+            const ImGuiViewport* viewport = ImGui::GetMainViewport();
+
+            // Position at the bottom-left of the main viewport
+            ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x, viewport->Pos.y + viewport->Size.y - status_bar_height));
+            ImGui::SetNextWindowSize(ImVec2(viewport->Size.x, status_bar_height));
+            ImGui::SetNextWindowViewport(viewport->ID);
+
+            ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoSavedSettings
+                                     | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+            ImGui::PushStyleColor(ImGuiCol_WindowBg, ImGui::GetStyleColorVec4(ImGuiCol_MenuBarBg));
+
+            if (ImGui::Begin("##ViewportFooter", nullptr, flags)) {
+
+                std::string current_function_text = "Editing function: " + current_graph;
+
+                if (!view_call_stack.empty()) {
+
+                    std::string edit_path = "";
+
+                    NodePlot::EvaluatedNodeGraph* cur_eng = &main_eng;
+
+                    auto err = [&]() -> ErrorOr<void> {
+                        for (size_t i = 0; i < view_call_stack.size(); i++) {
+                            auto& ng = TRY(cur_eng->node_graph(&npf)).get();
+                            auto& n = TRY(NodePlot::Utils::try_find(ng.nodes, view_call_stack[i], "")).get();
+                            if (n.type_id != "function")
+                                return ERR("");
+                            auto& cache = TRY(NodePlot::Utils::try_find(cur_eng->cache, view_call_stack[i], "")).get();
+                            if (cache.function_eval_eng.get() == nullptr)
+                                return ERR("");
+                            cur_eng = cache.function_eval_eng.get();
+                            edit_path += "." + std::to_string(view_call_stack[i]) + " -> " + current_graph;
+                        }
+                        return {};
+                    }();
+
+                    if (err.has_value()) {
+                        current_function_text = "Editing function: " + current_graph + "           Context: main" + edit_path;
+                    }
+                }
+
+                ImGui::Text("%s", current_function_text.c_str());
+
+                // Example: Right-aligned text
+                const char* rightText = "FPS: 60.0";
+                float textWidth = ImGui::CalcTextSize(rightText).x;
+                ImGui::SameLine(ImGui::GetWindowWidth() - textWidth - ImGui::GetStyle().WindowPadding.x);
+                ImGui::Text("%s", rightText);
+            }
+            ImGui::End();
+
+            ImGui::PopStyleColor();
+            ImGui::PopStyleVar(2);
+        }
 
         ImGui::End();
 

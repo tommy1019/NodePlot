@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <memory>
 #include <set>
 #include <stack>
 #include <variant>
@@ -20,6 +21,7 @@ struct EvaluatedNodeGraph {
     struct OutputCache {
         std::map<OutputId, Data> computed_outputs;
         std::optional<Node::EvaluationError> error;
+        std::unique_ptr<EvaluatedNodeGraph> function_eval_eng;
     };
 
     std::map<NodeId, OutputCache> cache;

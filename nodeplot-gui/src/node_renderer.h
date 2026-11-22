@@ -70,13 +70,15 @@ struct NodeRenderer {
     ImVec2 world_to_screen(ImVec2 p) { return ImVec2((p.x - scene_translation.x) * scene_scale, (p.y - scene_translation.y) * scene_scale); };
     ImVec2 screen_to_world(ImVec2 p) { return ImVec2(p.x / scene_scale + scene_translation.x, p.y / scene_scale + scene_translation.y); };
 
+    struct UICallbacks {
+        std::function<void(NodePlot::GraphId, std::optional<NodePlot::NodeId>)> examine_function_call = [](NodePlot::GraphId, std::optional<NodePlot::NodeId>) {};
+    };
+
     NodePlot::NodePlotFile* npf;
     NodePlot::EvaluatedNodeGraph* eng;
+    UICallbacks* ui_callbacks;
 
-    // TODO: this is a bad way to do a callback, refractor this
-    std::function<void(NodePlot::GraphId)> set_current_graph_id = [](NodePlot::GraphId) {};
-
-    NodeRenderer(NodePlot::NodePlotFile* npf, NodePlot::EvaluatedNodeGraph* eng) : npf(npf), eng(eng) {}
+    NodeRenderer(NodePlot::NodePlotFile* npf, NodePlot::EvaluatedNodeGraph* eng, UICallbacks* callbacks) : npf(npf), eng(eng), ui_callbacks(callbacks) {}
 
     void draw_node_path(float start_node_pos, ImVec2 start, ImVec2 end, float end_node_pos);
 
