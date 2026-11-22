@@ -57,9 +57,6 @@ void NodeRegistry::register_series(SeriesTypeId series_id, std::vector<std::stri
 
                           for (auto [id, input] : inputs) {
                               auto data = TRY(eng->get_input_data(npf, node_id, id, true));
-                              if (!eng->validate_data_types(data, input.valid_data_types)) {
-                                  return ERR(id + ": " + "Invalid data type");
-                              }
                               res.data[id] = data;
                           }
 

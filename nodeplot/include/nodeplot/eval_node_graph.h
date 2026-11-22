@@ -147,17 +147,6 @@ struct EvaluatedNodeGraph {
 
     ErrorOr<PlotStyle> get_input_style(NodePlotFile* npf, NodeId node_id, InputId input_id);
 
-    bool validate_data_type(Data& data, DataType type) {
-        // TODO: Actually validate data type here
-        return true;
-    }
-    bool validate_data_types(Data& data, std::vector<DataType> types) {
-        bool success = false;
-        for (auto& t : types)
-            success |= validate_data_type(data, t);
-        return success;
-    }
-
     ErrorOr<void> node_inputs_changed(NodePlotFile* npf, NodeId id) {
         auto& ng = TRY(node_graph(npf)).get();
 
