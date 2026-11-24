@@ -54,65 +54,66 @@ void register_grid_layout() {
                                                     };
                                                 };
 
-                                                auto fig = TRY(eng->get_input_value<Figure>(npf, node_id, "figure_" + std::to_string(c) + "_" + std::to_string(r), true));
-                                                for (auto& cmd : fig.commands) {
-                                                    std::visit(NodePlot::Utils::overloaded{
-                                                                   [&](DrawCommands::Line& l) {
-                                                                       std::vector<Pos> new_points;
-                                                                       new_points.reserve(l.points.size());
-                                                                       for (auto& p : l.points)
-                                                                           new_points.push_back(transform_pos(p));
-                                                                       res.commands.push_back(DrawCommands::Line{
-                                                                           .points = new_points,
-                                                                           .color = l.color,
-                                                                           .stroke_width = l.stroke_width,
-                                                                           .dash_pattern = l.dash_pattern,
-                                                                       });
-                                                                   },
-                                                                   [&](DrawCommands::Circle& c) {
-                                                                       res.commands.push_back(DrawCommands::Circle{
-                                                                           .pos = transform_pos(c.pos),
-                                                                           .r = c.r,
-                                                                           .color = c.color,
-                                                                       });
-                                                                   },
-                                                                   [&](DrawCommands::Rect& r) {
-                                                                       res.commands.push_back(DrawCommands::Rect{
-                                                                           .a = transform_pos(r.a),
-                                                                           .b = transform_pos(r.b),
-                                                                           .color = r.color,
-                                                                           .stroke_color = r.stroke_color,
-                                                                           .stroke_width = r.stroke_width,
-                                                                       });
-                                                                   },
-                                                                   [&](DrawCommands::Polygon& p) {
-                                                                       std::vector<Pos> new_pos;
-                                                                       new_pos.reserve(p.points.size());
+                                                auto fig = eng->get_input_value<Figure>(npf, node_id, "figure_" + std::to_string(c) + "_" + std::to_string(r), true);
+                                                if (fig.has_value())
+                                                    for (auto& cmd : fig.value().commands) {
+                                                        std::visit(NodePlot::Utils::overloaded{
+                                                                       [&](DrawCommands::Line& l) {
+                                                                           std::vector<Pos> new_points;
+                                                                           new_points.reserve(l.points.size());
+                                                                           for (auto& p : l.points)
+                                                                               new_points.push_back(transform_pos(p));
+                                                                           res.commands.push_back(DrawCommands::Line{
+                                                                               .points = new_points,
+                                                                               .color = l.color,
+                                                                               .stroke_width = l.stroke_width,
+                                                                               .dash_pattern = l.dash_pattern,
+                                                                           });
+                                                                       },
+                                                                       [&](DrawCommands::Circle& c) {
+                                                                           res.commands.push_back(DrawCommands::Circle{
+                                                                               .pos = transform_pos(c.pos),
+                                                                               .r = c.r,
+                                                                               .color = c.color,
+                                                                           });
+                                                                       },
+                                                                       [&](DrawCommands::Rect& r) {
+                                                                           res.commands.push_back(DrawCommands::Rect{
+                                                                               .a = transform_pos(r.a),
+                                                                               .b = transform_pos(r.b),
+                                                                               .color = r.color,
+                                                                               .stroke_color = r.stroke_color,
+                                                                               .stroke_width = r.stroke_width,
+                                                                           });
+                                                                       },
+                                                                       [&](DrawCommands::Polygon& p) {
+                                                                           std::vector<Pos> new_pos;
+                                                                           new_pos.reserve(p.points.size());
 
-                                                                       for (auto& point : p.points) {
-                                                                           new_pos.push_back(transform_pos(point));
-                                                                       }
+                                                                           for (auto& point : p.points) {
+                                                                               new_pos.push_back(transform_pos(point));
+                                                                           }
 
-                                                                       res.commands.push_back(DrawCommands::Polygon{
-                                                                           .points = new_pos,
-                                                                           .stroke_color = p.stroke_color,
-                                                                           .fill_color = p.fill_color,
-                                                                           .stroke_width = p.stroke_width,
-                                                                       });
+                                                                           res.commands.push_back(DrawCommands::Polygon{
+                                                                               .points = new_pos,
+                                                                               .stroke_color = p.stroke_color,
+                                                                               .fill_color = p.fill_color,
+                                                                               .stroke_width = p.stroke_width,
+                                                                           });
+                                                                       },
+                                                                       [&](DrawCommands::Text& t) {
+                                                                           res.commands.push_back(DrawCommands::Text{
+                                                                               .pos = transform_pos(t.pos),
+                                                                               .text = t.text,
+                                                                               .anchor = t.anchor,
+                                                                               .font_size = t.font_size,
+                                                                               .rotate = t.rotate,
+                                                                               .bold = t.bold,
+                                                                           });
+                                                                       },
                                                                    },
-                                                                   [&](DrawCommands::Text& t) {
-                                                                       res.commands.push_back(DrawCommands::Text{
-                                                                           .pos = transform_pos(t.pos),
-                                                                           .text = t.text,
-                                                                           .anchor = t.anchor,
-                                                                           .font_size = t.font_size,
-                                                                           .rotate = t.rotate,
-                                                                           .bold = t.bold,
-                                                                       });
-                                                                   },
-                                                               },
-                                                               cmd);
-                                                }
+                                                                   cmd);
+                                                    }
                                             }
                                         }
 
